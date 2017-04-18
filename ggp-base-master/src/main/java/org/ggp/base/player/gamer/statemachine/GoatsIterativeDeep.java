@@ -10,12 +10,7 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class GoatsAlphaBeta extends the_men_who_stare_at_goats {
-
-	private StateMachine machine;
-	private List<Role> roles;
-	private int self_index;
-	private long finishBy;
+public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
@@ -35,36 +30,54 @@ public class GoatsAlphaBeta extends the_men_who_stare_at_goats {
 		if (moves.size() == 1) return moves.get(0);
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
 
-		Move action = jointMoves.get(0).get(self_index);
-		int score = 0;
-		for(List<Move> jointMove : jointMoves) {
-			int nextPlayer = self_index + 1;
-			MachineState nextState = machine.getNextState(state, jointMove);
-			int result = alphabeta(nextPlayer % roles.size(), nextState, 0, 100);
-			if(result == 100) {
-				return jointMove.get(self_index);
-			} else if(result > score) {
-				score = result;
-				action = jointMove.get(self_index);
+		Move bestAction = jointMoves.get(0).get(self_index);
+		int bestScore = 0;
+		int depth = 1;
+		int maxdepth = 10;
+		while (depth < maxdepth) {
+			int score = 0;
+			Move action = bestAction;
+			//System.out.println("Depth: " + depth + "BestScore: " + bestScore);
+			for(List<Move> jointMove : jointMoves) {
+				int nextPlayer = self_index + 1;
+				MachineState nextState = machine.getNextState(state, jointMove);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, 0, 100, depth);
+				//System.out.println(jointMove.get(self_index) + " " + result);
+				if(result == 100) {
+					return jointMove.get(self_index);
+				} else if(result > score) {
+					score = result;
+					action = jointMove.get(self_index);
+				}
+				if(System.currentTimeMillis() > finishBy) break;
+			}
+			if (score >= bestScore) {
+				bestScore = score;
+				bestAction = action;
 			}
 			if(System.currentTimeMillis() > finishBy) break;
+			depth += 1;
 		}
-		return action;
+		return bestAction;
 	}
 
-	protected int alphabeta(int player, MachineState state, int alpha, int beta) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
+	protected int alphabeta(int player, MachineState state, int alpha, int beta, int d) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
 		if (machine.isTerminal(state))
 			return machine.getGoal(state, roles.get(self_index));
+		if (d == 0) {
+			return 1;
+		}
 
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
-		int score = 100;
+		int score;
 		if (player == self_index) score = 0;
+		else score = 100;
 		int nextPlayer = player + 1;
-
+		if (nextPlayer == roles.size()) d -=1;
 		if (player == self_index) {
 			for (List<Move> jointMove: jointMoves) {
 				MachineState nextState = machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta, d);
 				if (result == 100 ||  result >= beta) return 100;
 				if (result > alpha) alpha = result;
 				if (result > score) score = result;
@@ -73,7 +86,7 @@ public class GoatsAlphaBeta extends the_men_who_stare_at_goats {
 		} else {
 			for (List<Move> jointMove: jointMoves) {
 				MachineState nextState = machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta, d);
 				if (result == 0 || score <= alpha) return 0;
 				if (result < beta) beta = result;
 				if (result < score) score = result;
@@ -85,6 +98,10 @@ public class GoatsAlphaBeta extends the_men_who_stare_at_goats {
 
 	}
 
+	private StateMachine machine;
+	private List<Role> roles;
+	private int self_index;
+	private long finishBy;
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
@@ -96,7 +113,7 @@ public class GoatsAlphaBeta extends the_men_who_stare_at_goats {
 
 	@Override
 	public String getName() {
-		return "AlphaBeta Player";
+		return "IterativeDeep Player";
 	}
 
 }
