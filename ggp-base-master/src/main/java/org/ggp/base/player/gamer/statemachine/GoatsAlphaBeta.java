@@ -89,7 +89,7 @@ public class GoatsAlphaBeta extends the_men_who_stare_at_goats {
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
-		finishBy = timeout - 1000;
+		finishBy = timeout - 100;
 		return bestmove();
 	}
 
