@@ -14,9 +14,11 @@ import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.cache.CachedStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
+import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 
 /**
@@ -33,7 +35,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public abstract class StateMachineGamer extends Gamer
 {
     // =====================================================================
-    // First, the abstract methods which need to be overriden by subclasses.
+    // First, the abstract methods which need to be overridden by subclasses.
     // These determine what state machine is used, what the gamer does during
     // metagaming, and how the gamer selects moves.
 
@@ -76,30 +78,30 @@ public abstract class StateMachineGamer extends Gamer
     // Next, methods which can be used by subclasses to get information about
     // the current state of the game, and tweak the state machine on the fly.
 
-    /**
-     * Returns the current state of the game.
-     */
-    public final MachineState getCurrentState()
-    {
-        return currentState;
-    }
+	/**
+	 * Returns the current state of the game.
+	 */
+	public final MachineState getCurrentState()
+	{
+		return currentState;
+	}
 
-    /**
-     * Returns the role that this gamer is playing as in the game.
-     */
-    public final Role getRole()
-    {
-        return role;
-    }
+	/**
+	 * Returns the role that this gamer is playing as in the game.
+	 */
+	public final Role getRole()
+	{
+		return role;
+	}
 
-    /**
-     * Returns the state machine.  This is used for calculating the next state and other operations, such as computing
-     * the legal moves for all players, whether states are terminal, and the goal values of terminal states.
-     */
-    public final StateMachine getStateMachine()
-    {
-        return stateMachine;
-    }
+	/**
+	 * Returns the state machine.  This is used for calculating the next state and other operations, such as computing
+	 * the legal moves for all players, whether states are terminal, and the goal values of terminal states.
+	 */
+	public final StateMachine getStateMachine()
+	{
+		return stateMachine;
+	}
 
     /**
      * Cleans up the role, currentState and stateMachine. This should only be
@@ -154,119 +156,120 @@ public abstract class StateMachineGamer extends Gamer
      * state machine gamer back to the internal state that it has when it
      * arrives at a particular game state.
      */
-    public final void resetStateFromMatch() {
+	public final void resetStateFromMatch() {
         stateMachine = getInitialStateMachine();
         stateMachine.initialize(getMatch().getGame().getRules());
         currentState = stateMachine.getMachineStateFromSentenceList(getMatch().getMostRecentState());
         role = stateMachine.getRoleFromConstant(getRoleName());
-    }
+	}
 
     // =====================================================================
     // Finally, methods which are overridden with proper state-machine-based
-    // semantics. These basically wrap a state-machine-based view of the world
-    // around the ordinary metaGame() and selectMove() functions, calling the
-    // new stateMachineMetaGame() and stateMachineSelectMove() functions after
-    // doing the state-machine-related book-keeping.
+	// semantics. These basically wrap a state-machine-based view of the world
+	// around the ordinary metaGame() and selectMove() functions, calling the
+	// new stateMachineMetaGame() and stateMachineSelectMove() functions after
+	// doing the state-machine-related book-keeping.
 
-    /**
-     * A wrapper function for stateMachineMetaGame. When the match begins, this
-     * initializes the state machine and role using the match description, and
-     * then calls stateMachineMetaGame.
-     */
-    @Override
-    public final void metaGame(long timeout) throws MetaGamingException
-    {
-        try
-        {
-            stateMachine = getInitialStateMachine();
-            stateMachine.initialize(getMatch().getGame().getRules());
-            currentState = stateMachine.getInitialState();
-            role = stateMachine.getRoleFromConstant(getRoleName());
-            getMatch().appendState(currentState.getContents());
+	/**
+	 * A wrapper function for stateMachineMetaGame. When the match begins, this
+	 * initializes the state machine and role using the match description, and
+	 * then calls stateMachineMetaGame.
+	 */
+	@Override
+	public final void metaGame(long timeout) throws MetaGamingException
+	{
+		try
+		{
+			stateMachine = getInitialStateMachine();
+			stateMachine.initialize(getMatch().getGame().getRules());
+			currentState = stateMachine.getInitialState();
 
-            stateMachineMetaGame(timeout);
-        }
-        catch (Exception e)
-        {
-            GamerLogger.logStackTrace("GamePlayer", e);
-            throw new MetaGamingException(e);
-        }
-    }
+			role = stateMachine.getRoleFromConstant(getRoleName());
+			getMatch().appendState(currentState.getContents());
 
-    /**
-     * A wrapper function for stateMachineSelectMove. When we are asked to
-     * select a move, this advances the state machine up to the current state
-     * and then calls stateMachineSelectMove to select a move based on that
-     * current state.
-     */
-    @Override
-    public final GdlTerm selectMove(long timeout) throws MoveSelectionException
-    {
-        try
-        {
-            stateMachine.doPerMoveWork();
+			stateMachineMetaGame(timeout);
+		}
+		catch (Exception e)
+		{
+		    GamerLogger.logStackTrace("GamePlayer", e);
+			throw new MetaGamingException(e);
+		}
+	}
 
-            List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
-            if (lastMoves != null)
-            {
-                List<Move> moves = new ArrayList<Move>();
-                for (GdlTerm sentence : lastMoves)
-                {
-                    moves.add(stateMachine.getMoveFromTerm(sentence));
-                }
+	/**
+	 * A wrapper function for stateMachineSelectMove. When we are asked to
+	 * select a move, this advances the state machine up to the current state
+	 * and then calls stateMachineSelectMove to select a move based on that
+	 * current state.
+	 */
+	@Override
+	public final GdlTerm selectMove(long timeout) throws MoveSelectionException
+	{
+		try
+		{
+			stateMachine.doPerMoveWork();
 
-                currentState = stateMachine.getNextState(currentState, moves);
-                getMatch().appendState(currentState.getContents());
-            }
+			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
+			if (lastMoves != null)
+			{
+				List<Move> moves = new ArrayList<Move>();
+				for (GdlTerm sentence : lastMoves)
+				{
+					moves.add(stateMachine.getMoveFromTerm(sentence));
+				}
 
-            return stateMachineSelectMove(timeout).getContents();
-        }
-        catch (Exception e)
-        {
-            GamerLogger.logStackTrace("GamePlayer", e);
-            throw new MoveSelectionException(e);
-        }
-    }
+				currentState = stateMachine.getNextState(currentState, moves);
+				getMatch().appendState(currentState.getContents());
+			}
 
-    @Override
-    public void stop() throws StoppingException {
-        try {
-            stateMachine.doPerMoveWork();
+			return stateMachineSelectMove(timeout).getContents();
+		}
+		catch (Exception e)
+		{
+		    GamerLogger.logStackTrace("GamePlayer", e);
+			throw new MoveSelectionException(e);
+		}
+	}
 
-            List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
-            if (lastMoves != null)
-            {
-                List<Move> moves = new ArrayList<Move>();
-                for (GdlTerm sentence : lastMoves)
-                {
-                    moves.add(stateMachine.getMoveFromTerm(sentence));
-                }
+	@Override
+	public void stop() throws StoppingException {
+		try {
+			stateMachine.doPerMoveWork();
 
-                currentState = stateMachine.getNextState(currentState, moves);
-                getMatch().appendState(currentState.getContents());
-                getMatch().markCompleted(stateMachine.getGoals(currentState));
-            }
+			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
+			if (lastMoves != null)
+			{
+				List<Move> moves = new ArrayList<Move>();
+				for (GdlTerm sentence : lastMoves)
+				{
+					moves.add(stateMachine.getMoveFromTerm(sentence));
+				}
 
-            stateMachineStop();
-        }
-        catch (Exception e)
-        {
-            GamerLogger.logStackTrace("GamePlayer", e);
-            throw new StoppingException(e);
-        }
-    }
+				currentState = stateMachine.getNextState(currentState, moves);
+				getMatch().appendState(currentState.getContents());
+				getMatch().markCompleted(stateMachine.getGoals(currentState));
+			}
 
-    @Override
-    public void abort() throws AbortingException {
-        try {
-            stateMachineAbort();
-        }
-        catch (Exception e)
-        {
-            GamerLogger.logStackTrace("GamePlayer", e);
-            throw new AbortingException(e);
-        }
-    }
+			stateMachineStop();
+		}
+		catch (Exception e)
+		{
+			GamerLogger.logStackTrace("GamePlayer", e);
+			throw new StoppingException(e);
+		}
+	}
+
+	@Override
+	public void abort() throws AbortingException {
+		try {
+			stateMachineAbort();
+		}
+		catch (Exception e)
+		{
+			GamerLogger.logStackTrace("GamePlayer", e);
+			throw new AbortingException(e);
+		}
+	}
 
     // Internal state about the current state of the state machine.
     private Role role;

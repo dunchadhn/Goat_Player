@@ -28,8 +28,6 @@
 		<pathelement location="lib/Batik/batik-1.7.jar"/>
 		<pathelement location="lib/Htmlparser/htmlparser-1.4.jar"/>
 		<pathelement location="lib/javassist/javassist.jar"/>
-    	<pathelement location="lib/gdl-validation/gdl-validation-0.2.2.jar"/>
-    	<pathelement location="lib/gdl-validation/java-cup-11b-runtime-2015.03.26.jar"/>
     </path>
     <target name="init">
         <mkdir dir="bin"/>
@@ -96,7 +94,7 @@
     </target>
     <target name="PlayerRunner">
         <java classname="org.ggp.base.apps.player.PlayerRunner" failonerror="true" fork="yes">
-            <jvmarg line="-Xmx1500m -server -XX:-DontCompileHugeMethods -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=10"/>
+            <jvmarg line="-mx1500m -server -XX:-DontCompileHugeMethods -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=10"/>
             <arg value="${arg0}"/>
             <arg value="${arg1}"/>
             <classpath refid="GGP_Base.classpath"/>
@@ -104,7 +102,7 @@
     </target>
     <target name="Kiosk">
         <java classname="org.ggp.base.apps.kiosk.Kiosk" failonerror="true" fork="yes">
-            <jvmarg line="-Xmx1500m -server -XX:-DontCompileHugeMethods -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=10"/>
+            <jvmarg line="-mx1500m -server -XX:-DontCompileHugeMethods -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=10"/>
             <classpath refid="GGP_Base.classpath"/>
         </java>
     </target>

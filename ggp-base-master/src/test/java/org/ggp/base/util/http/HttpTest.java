@@ -7,8 +7,6 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -22,23 +20,13 @@ import org.junit.Test;
  * @author Sam
  */
 public class HttpTest extends Assert {
-    @Test
+	@Test
     public void testSimpleEcho() throws IOException {
         SocketPair testPair = new SocketPair();
         doSimpleEchoCheck(testPair, "Hello World", "SamplePlayer");
     }
 
-    @SuppressWarnings("serial")
-    @Test
-    public void testSimpleEchoWithHeaders() throws IOException {
-        SocketPair testPair = new SocketPair();
-        doSimpleEchoCheckPlusHeaders(testPair, "Hello World", "SamplePlayer",
-                new HashMap<String, String>() {{
-                    put("Foo", "Que"); put("Bar", "Quux"); put("Baz", "Quuu");
-                }});
-    }
-
-    @Test
+	@Test
     public void testPathologicalEchos() throws IOException {
         SocketPair testPair = new SocketPair();
         doSimpleEchoCheck(testPair, "", "");
@@ -50,7 +38,7 @@ public class HttpTest extends Assert {
         doSimpleEchoCheck(testPair, "Test String", "abcdefgijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
     }
 
-    @Test
+	@Test
     public void testGenericPOSTs() throws IOException {
         SocketPair testPair = new SocketPair();
         doClientEchoCheckOverPOST(testPair, "", "");
@@ -59,8 +47,8 @@ public class HttpTest extends Assert {
         doClientEchoCheckOverPOST(testPair, "1234567890abcdefgijklmnopqrstuvwxyz!@#$%^&*()1234567890", "");
     }
 
-    @Ignore
-    @Test
+	@Ignore
+	@Test
     public void testGenericPOSTsWithoutContentLength() throws IOException {
         SocketPair testPair = new SocketPair();
         doClientEchoCheckOverPOSTWithoutContentLength(testPair, "", "");
@@ -69,7 +57,7 @@ public class HttpTest extends Assert {
         doClientEchoCheckOverPOSTWithoutContentLength(testPair, "1234567890abcdefgijklmnopqrstuvwxyz!@#$%^&*()1234567890", "");
     }
 
-    @Test
+	@Test
     public void testGenericGETs() throws IOException {
         SocketPair testPair = new SocketPair();
         doClientEchoCheckOverGET(testPair, "", "");
@@ -81,17 +69,7 @@ public class HttpTest extends Assert {
     // Helper functions for running specific checks.
 
     private void doSimpleEchoCheck(SocketPair p, String data, String playerName) throws IOException {
-        HttpWriter.writeAsClient(p.client, "", data, playerName, null);
-        String readData = HttpReader.readAsServer(p.server);
-        assertEquals(readData.toUpperCase(), data.toUpperCase());
-
-        HttpWriter.writeAsServer(p.server, data);
-        readData = HttpReader.readAsClient(p.client);
-        assertEquals(readData.toUpperCase(), data.toUpperCase());
-    }
-
-    private void doSimpleEchoCheckPlusHeaders(SocketPair p, String data, String playerName, Map<String, String> extraHeaders) throws IOException {
-        HttpWriter.writeAsClient(p.client, "", data, playerName, extraHeaders);
+        HttpWriter.writeAsClient(p.client, "", data, playerName);
         String readData = HttpReader.readAsServer(p.server);
         assertEquals(readData.toUpperCase(), data.toUpperCase());
 

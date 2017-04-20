@@ -18,21 +18,21 @@ import external.JSON.JSONObject;
  * stylesheet, and maybe a human-readable description, and also any available
  * metadata, like the game's name and its associated game repository URL.
  *
- * <p>Games do not necessarily have all of these fields. Games loaded from local
+ * Games do not necessarily have all of these fields. Games loaded from local
  * storage will not have a repository URL, and probably will be missing other
  * metadata as well. Games sent over the wire from a game server rather than
  * loaded from a repository are called "ephemeral" games, and contain only
  * their rulesheet; they have no metadata, and do not even have unique keys.
  *
- * <p>Aside from ephemeral games, all games have a key that is unique within their
+ * Aside from ephemeral games, all games have a key that is unique within their
  * containing repository (either local storage or a remote repository). Games
  * can be indexed internally using this key. Whenever possible, the user should
  * be shown the game's name (if available) rather than the internal key, since
  * the game's name is more readable/informative than the key.
  *
- * <p>(e.g. A game with the name "Three-Player Free-For-All" but the key "3pffa".)
+ * (e.g. A game with the name "Three-Player Free-For-All" but the key "3pffa".)
  *
- * <p>NOTE: Games are different from matches. Games represent the actual game
+ * NOTE: Games are different from matches. Games represent the actual game
  * being played, whereas matches are particular instances in which players
  * played through the game. For example, you might have a Game object that
  * contains information about chess: it would contain the rules for chess,
@@ -44,7 +44,7 @@ import external.JSON.JSONObject;
  * can be many Match objects all associated with a single Game object, just
  * as there can be many matches played of a particular game.
  *
- * <p>NOTE: Games operate only on "processed" rulesheets, which have been stripped
+ * NOTE: Games operate only on "processed" rulesheets, which have been stripped
  * of comments and are properly formatted as SymbolLists. Rulesheets which have
  * not been processed in this fashion will break the Game object. This processing
  * can be done by calling "Game.preprocessRulesheet" on the raw rulesheet. Note
@@ -95,7 +95,7 @@ public final class Game {
     }
 
     public String getRulesheet() {
-        return theRulesheet;
+    	return theRulesheet;
     }
 
     /**
@@ -106,25 +106,26 @@ public final class Game {
      * before they're stored in Game objects or sent over the network as part
      * of a START request.
      *
+     * @param raw rulesheet
      * @return processed rulesheet
      */
     public static String preprocessRulesheet(String rawRulesheet) {
-        // First, strip all of the comments from the rulesheet.
-        StringBuilder rulesheetBuilder = new StringBuilder();
-        String[] rulesheetLines = rawRulesheet.split("[\n\r]");
-        for (int i = 0; i < rulesheetLines.length; i++) {
-            String line = rulesheetLines[i];
-            int comment = line.indexOf(';');
-            int cutoff = (comment == -1) ? line.length() : comment;
-            rulesheetBuilder.append(line.substring(0, cutoff));
-            rulesheetBuilder.append(" ");
-        }
-        String processedRulesheet = rulesheetBuilder.toString();
+		// First, strip all of the comments from the rulesheet.
+		StringBuilder rulesheetBuilder = new StringBuilder();
+		String[] rulesheetLines = rawRulesheet.split("[\n\r]");
+		for (int i = 0; i < rulesheetLines.length; i++) {
+			String line = rulesheetLines[i];
+			int comment = line.indexOf(';');
+			int cutoff = (comment == -1) ? line.length() : comment;
+			rulesheetBuilder.append(line.substring(0, cutoff));
+			rulesheetBuilder.append(" ");
+		}
+		String processedRulesheet = rulesheetBuilder.toString();
 
-        // Add opening and closing parens for parsing as symbol list.
-        processedRulesheet = "( " + processedRulesheet + " )";
+		// Add opening and closing parens for parsing as symbol list.
+		processedRulesheet = "( " + processedRulesheet + " )";
 
-        return processedRulesheet;
+		return processedRulesheet;
     }
 
     /**
@@ -140,21 +141,21 @@ public final class Game {
      * @return
      */
     public List<Gdl> getRules() {
-        try {
-            List<Gdl> rules = new ArrayList<Gdl>();
-            SymbolList list = (SymbolList) SymbolFactory.create(theRulesheet);
-            for (int i = 0; i < list.size(); i++)
-            {
-                rules.add(GdlFactory.create(list.get(i)));
-            }
-            return rules;
-        } catch (GdlFormatException e) {
-            e.printStackTrace();
-            return null;
-        } catch (SymbolFormatException e) {
-            e.printStackTrace();
-            return null;
-        }
+    	try {
+	        List<Gdl> rules = new ArrayList<Gdl>();
+	        SymbolList list = (SymbolList) SymbolFactory.create(theRulesheet);
+	        for (int i = 0; i < list.size(); i++)
+	        {
+	            rules.add(GdlFactory.create(list.get(i)));
+	        }
+	        return rules;
+    	} catch (GdlFormatException e) {
+    		e.printStackTrace();
+    		return null;
+    	} catch (SymbolFormatException e) {
+    		e.printStackTrace();
+    		return null;
+    	}
     }
 
     public String serializeToJSON() {
@@ -205,7 +206,7 @@ public final class Game {
 
             String theRulesheet = null;
             try {
-                theRulesheet = theGameObject.getString("theRulesheet");
+            	theRulesheet = theGameObject.getString("theRulesheet");
             } catch (Exception e) {}
 
             return new Game(theKey, theName, theDescription, theRepositoryURL, theStylesheet, theRulesheet);

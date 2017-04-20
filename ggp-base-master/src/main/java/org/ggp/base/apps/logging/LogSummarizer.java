@@ -27,14 +27,10 @@ import external.JSON.JSONException;
  */
 public class LogSummarizer
 {
-    public final LogSummaryGenerator theGenerator;
+    public static LogSummaryGenerator theGenerator;
     public static final int SERVER_PORT = 9199;
 
-    public LogSummarizer(LogSummaryGenerator theGenerator) {
-        this.theGenerator = theGenerator;
-    }
-
-    class SummarizeLogThread extends Thread {
+    static class SummarizeLogThread extends Thread {
         private Socket connection;
 
         public SummarizeLogThread(Socket connection) throws IOException, JSONException {
@@ -45,12 +41,9 @@ public class LogSummarizer
         public void run() {
             try {
                 String matchId = HttpReader.readAsServer(connection);
-                System.out.println(System.currentTimeMillis() + ": Got request for logs for " + matchId);
                 String theResponse = theGenerator.getLogSummary(matchId);
-                System.out.println(System.currentTimeMillis() + ": Got " + theResponse.length() + " bytes of logs for " + matchId);
                 HttpWriter.writeAsServer(connection, theResponse);
                 connection.close();
-                System.out.println(System.currentTimeMillis() + ": Successfully replied to log request for " + matchId);
             } catch (IOException e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
@@ -58,27 +51,18 @@ public class LogSummarizer
         }
     }
 
-    private boolean shouldStop = false;
-    private ServerSocket listener = null;
-
-    public void stopAbruptly() throws IOException {
-        shouldStop = true;
-        if (listener != null) {
-            listener.close();
-            listener = null;
-        }
-    }
-
-    public void runSummarizer() {
+    @SuppressWarnings("resource")
+	public static void main(String[] args) {
+        ServerSocket listener = null;
         try {
-            listener = new ServerSocket(SERVER_PORT);
+             listener = new ServerSocket(SERVER_PORT);
         } catch (IOException e) {
             System.err.println("Could not open server on port " + SERVER_PORT + ": " + e);
             e.printStackTrace();
             return;
         }
 
-        while (!shouldStop) {
+        while (true) {
             try {
                 Socket connection = listener.accept();
                 Thread handlerThread = new SummarizeLogThread(connection);
@@ -87,9 +71,5 @@ public class LogSummarizer
                 System.err.println(e);
             }
         }
-    }
-
-    public static void main(String[] args) {
-        new LogSummarizer(null).runSummarizer();
     }
 }

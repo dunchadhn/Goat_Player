@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
@@ -24,6 +24,89 @@ import com.google.common.collect.ImmutableMap;
  */
 public abstract class StateMachine
 {
+	// ============================================
+    // These methods (through findterminalp) layer over other methods
+	// in order to align with notation in the notes for Stanford's CS227B course
+
+	/**
+	 * Returns the list of roles for the game.
+	 */
+	public List<Role> findRoles()
+    {
+    	return getRoles();
+    }
+
+	/**
+	 * Returns a list of all possible actions the role
+	 * can perform in the game, regardless of legality at any
+	 * particular state in the game.
+     * @throws MoveDefinitionException if the role has no possible moves. This indicates
+     * an error in either the game description or the StateMachine implementation.
+	 */
+	public abstract List<Move> findActions(Role role) throws MoveDefinitionException;
+
+	/**
+	 * Returns the initial state of the game.
+	 */
+    public MachineState findInits()
+    {
+    	return getInitialState();
+    }
+
+    /**
+     * Returns the first action that is legal for the specified role
+     * in the specified state.
+     * @throws MoveDefinitionException if the role has no legal moves. This indicates
+     * an error in either the game description or the StateMachine implementation.
+     */
+    public Move findLegalx(Role role, MachineState state) throws MoveDefinitionException
+    {
+    	return getLegalMoves(state, role).get(0);
+    }
+
+    /**
+     * Returns a list of all legal actions for the specified role in the specified state.
+     * @throws MoveDefinitionException if the role has no legal moves. This indicates
+     * an error in either the game description or the StateMachine implementation.
+     */
+    public List<Move> findLegals(Role role, MachineState state) throws MoveDefinitionException
+    {
+    	return getLegalMoves(state, role);
+    }
+
+    // order of moves in moves must correspond exactly to the order of roles
+    // in list return by findroles
+    /**
+     * Returns the state that results from the joint move given by moves in the specified state.
+     * The order of moves in moves must correspond exactly to the order of roles in the list
+     * returned by findroles().
+     * @throws TransitionDefinitionException
+     */
+    public MachineState findNext(List<Move> moves, MachineState state) throws TransitionDefinitionException
+    {
+    	return getNextState(state, moves);
+    }
+
+    /**
+     * Returns the goal value for the specified role in the specified state.
+     * @throws GoalDefinitionException if there is no goal value or more than one
+     * goal value for the given role in the given state. If this occurs when this
+     * is called on a terminal state, this indicates an error in either the game
+     * description or the StateMachine implementation.
+     */
+    public int findReward(Role role, MachineState state) throws GoalDefinitionException
+    {
+    	return getGoal(state, role);
+    }
+
+    /**
+     * Returns true if and only if the given state is a terminal state (i.e. the
+     * game is over).
+     */
+    public boolean findTerminalp(MachineState state)
+    {
+    	return isTerminal(state);
+    }
     // ============================================
     //          Stubs for implementations
     // ============================================
@@ -324,7 +407,7 @@ public abstract class StateMachine
     public Move getRandomMove(MachineState state, Role role) throws MoveDefinitionException
     {
         List<Move> legals = getLegalMoves(state, role);
-        return legals.get(ThreadLocalRandom.current().nextInt(legals.size()));
+        return legals.get(new Random().nextInt(legals.size()));
     }
 
     /**

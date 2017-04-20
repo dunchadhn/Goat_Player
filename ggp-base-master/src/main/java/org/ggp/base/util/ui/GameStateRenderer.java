@@ -102,6 +102,9 @@ public class GameStateRenderer {
     }
 
     private static String getXHTMLfromGameXML(String gameXML, String XSL) {
+        XSL = XSL.replace("<!DOCTYPE stylesheet [<!ENTITY ROOT \"http://games.ggp.org/base\">]>", "");
+        XSL = XSL.replace("&ROOT;", "http://games.ggp.org/base").trim();
+
         IOString game = new IOString(gameXML);
         IOString xslIOString = new IOString(XSL);
         IOString content = new IOString("");
@@ -116,15 +119,15 @@ public class GameStateRenderer {
             ex.printStackTrace();
         }
 
-        return content.getString();
+       return content.getString();
     }
 
     //========IOstring code========
     private static class IOString
     {
-        private StringBuilder buf;
+        private StringBuffer buf;
         public IOString(String s) {
-            buf = new StringBuilder(s);
+            buf = new StringBuffer(s);
         }
         public String getString() {
             return buf.toString();
@@ -140,7 +143,7 @@ public class GameStateRenderer {
         class IOStringInputStream extends java.io.InputStream {
             private int position = 0;
             @Override
-            public int read() throws java.io.IOException
+			public int read() throws java.io.IOException
             {
                 if (position < buf.length()) {
                     return buf.charAt(position++);
@@ -151,7 +154,7 @@ public class GameStateRenderer {
         }
         class IOStringOutputStream extends java.io.OutputStream {
             @Override
-            public void write(int character) throws java.io.IOException {
+			public void write(int character) throws java.io.IOException {
                 buf.append((char)character);
             }
         }

@@ -23,6 +23,7 @@ public final class CachedStateMachine extends StateMachine
     private final class Entry
     {
         public Map<Role, Integer> goals;
+        public Map<Role, List<Move>> actions;
         public Map<Role, List<Move>> moves;
         public Map<List<Move>, MachineState> nexts;
         public Boolean terminal;
@@ -30,6 +31,7 @@ public final class CachedStateMachine extends StateMachine
         public Entry()
         {
             goals = new HashMap<Role, Integer>();
+            actions = new HashMap<Role, List<Move>>();
             moves = new HashMap<Role, List<Move>>();
             nexts = new HashMap<List<Move>, MachineState>();
             terminal = null;
@@ -64,6 +66,22 @@ public final class CachedStateMachine extends StateMachine
             }
 
             return entry.goals.get(role);
+        }
+    }
+
+    @Override
+    public List<Move> findActions(Role role) throws MoveDefinitionException
+    {
+    	MachineState initialState = backingStateMachine.getInitialState();
+        Entry entry = getEntry(initialState);
+        synchronized (entry)
+        {
+            if (!entry.actions.containsKey(role))
+            {
+                entry.actions.put(role, ImmutableList.copyOf(backingStateMachine.findActions(role)));
+            }
+
+            return entry.actions.get(role);
         }
     }
 

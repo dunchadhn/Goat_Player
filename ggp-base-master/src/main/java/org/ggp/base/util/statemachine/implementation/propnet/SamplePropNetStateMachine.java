@@ -86,6 +86,16 @@ public class SamplePropNetStateMachine extends StateMachine {
     }
 
     /**
+     * Computes all possible actions for role.
+     */
+    @Override
+    public List<Move> findActions(Role role)
+            throws MoveDefinitionException {
+        // TODO: Compute legal moves.
+        return null;
+    }
+
+    /**
      * Computes the legal moves for role in state.
      */
     @Override

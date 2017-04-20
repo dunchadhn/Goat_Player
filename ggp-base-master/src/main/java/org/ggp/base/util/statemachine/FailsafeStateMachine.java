@@ -144,6 +144,28 @@ public class FailsafeStateMachine extends StateMachine
     }
 
     @Override
+    public List<Move> findActions(Role role) throws MoveDefinitionException {
+        if(theBackingMachine == null)
+            return null;
+
+        try {
+            return theBackingMachine.findActions(role);
+        } catch(MoveDefinitionException me) {
+            throw me;
+        } catch(Exception e) {
+            failGracefully(e, null);
+        } catch(OutOfMemoryError e) {
+            throw e;
+        } catch(ThreadDeath d) {
+            throw d;
+        } catch(Error e) {
+            failGracefully(null, e);
+        }
+
+        return findActions(role);
+    }
+
+    @Override
     public List<Move> getLegalMoves(MachineState state, Role role) throws MoveDefinitionException {
         if(theBackingMachine == null)
             return null;

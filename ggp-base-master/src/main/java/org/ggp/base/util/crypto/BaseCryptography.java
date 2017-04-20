@@ -19,9 +19,6 @@ import external.JSON.JSONException;
 import external.JSON.JSONObject;
 
 public class BaseCryptography {
-    private BaseCryptography() {
-    }
-
     public static void main(String args[]) {
         EncodedKeyPair k = generateKeys();
         System.out.println("{\"PK\":\"" + k.thePublicKey + "\", \"SK\":\"" + k.thePrivateKey + "\"}");

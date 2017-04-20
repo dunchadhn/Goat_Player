@@ -9,14 +9,12 @@ public abstract class LogSummaryGenerator {
         File logsDirectory = new File("logs");
         FilenameFilter logsFilter = new FilenameFilter() {
             @Override
-            public boolean accept(File dir, String name) {
+			public boolean accept(File dir, String name) {
                 return name.startsWith(thePrefix);
             }
         };
         String[] theMatchingMatches = logsDirectory.list(logsFilter);
-        if (theMatchingMatches == null) {
-            System.err.println("Log summary retrieval for " + matchId + " yielded an error.");
-        } else if (theMatchingMatches.length > 1) {
+        if (theMatchingMatches.length > 1) {
             System.err.println("Log summary retrieval for " + matchId + " matched multiple matches.");
         } else if (theMatchingMatches.length == 0) {
             System.err.println("Log summary retrieval for " + matchId + " matched zero matches.");

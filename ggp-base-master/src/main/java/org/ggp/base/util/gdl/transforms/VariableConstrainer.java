@@ -44,9 +44,6 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
 public class VariableConstrainer {
-    private VariableConstrainer() {
-    }
-
     /**
      * Modifies a GDL description by replacing all rules in which variables could be bound to
      * functions, so that the new rules will only bind constants to variables. Also automatically
@@ -380,7 +377,7 @@ public class VariableConstrainer {
         return results;
     }
 
-    private abstract static class UnusedVariableGenerator {
+    private static abstract class UnusedVariableGenerator {
         public GdlFunction replaceVariablesAndConstants(GdlFunction function) {
             Map<GdlVariable, GdlVariable> assignment = Maps.newHashMap();
 

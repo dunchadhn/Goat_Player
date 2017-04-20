@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,6 @@ import org.ggp.base.server.threads.PreviewRequestThread;
 import org.ggp.base.server.threads.RandomPlayRequestThread;
 import org.ggp.base.server.threads.StartRequestThread;
 import org.ggp.base.server.threads.StopRequestThread;
-import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.match.Match;
 import org.ggp.base.util.match.MatchPublisher;
 import org.ggp.base.util.observer.Event;
@@ -39,26 +39,26 @@ import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
-public final class GameServer extends Thread implements Subject
+public class GameServer extends Thread implements Subject
 {
-    private final Match match;
-    private final StateMachine stateMachine;
-    private MachineState currentState;
+    protected final Match match;
+    protected final StateMachine stateMachine;
+    protected MachineState currentState;
 
-    private final List<String> hosts;
-    private final List<Integer> ports;
-    private final boolean[] playerGetsUnlimitedTime;
-    private final boolean[] playerPlaysRandomly;
+    protected final List<String> hosts;
+    protected final List<Integer> ports;
+    private final Boolean[] playerGetsUnlimitedTime;
+    private final Boolean[] playerPlaysRandomly;
 
     private final List<Observer> observers;
-    private List<Move> previousMoves;
+    protected List<Move> previousMoves;
 
     private Map<Role,String> mostRecentErrors;
 
     private String saveToFilename;
     private String spectatorServerURL;
     private String spectatorServerKey;
-    private boolean forceUsingEntireClock;
+    protected boolean forceUsingEntireClock;
 
     public GameServer(Match match, List<String> hosts, List<Integer> ports) {
         this.match = match;
@@ -66,14 +66,11 @@ public final class GameServer extends Thread implements Subject
         this.hosts = hosts;
         this.ports = ports;
 
-        playerGetsUnlimitedTime = new boolean[hosts.size()];
-        playerPlaysRandomly = new boolean[hosts.size()];
-        List<Role> roles = Role.computeRoles(match.getGame().getRules());
-        for (int r = 0; r < roles.size(); r++) {
-            if (roles.get(r).getName() == GdlPool.RANDOM) {
-                playerPlaysRandomly[r] = true;
-            }
-        }
+        playerGetsUnlimitedTime = new Boolean[hosts.size()];
+        Arrays.fill(playerGetsUnlimitedTime, Boolean.FALSE);
+
+        playerPlaysRandomly = new Boolean[hosts.size()];
+        Arrays.fill(playerPlaysRandomly, Boolean.FALSE);
 
         stateMachine = new ProverStateMachine();
         stateMachine.initialize(match.getGame().getRules());
@@ -91,7 +88,7 @@ public final class GameServer extends Thread implements Subject
     }
 
     public void startSavingToFilename(String theFilename) {
-        saveToFilename = theFilename;
+    	saveToFilename = theFilename;
     }
 
     public String startPublishingToSpectatorServer(String theURL) {
@@ -100,7 +97,7 @@ public final class GameServer extends Thread implements Subject
     }
 
     @Override
-    public void addObserver(Observer observer) {
+	public void addObserver(Observer observer) {
         observers.add(observer);
     }
 
@@ -117,8 +114,12 @@ public final class GameServer extends Thread implements Subject
         return stateMachine;
     }
 
+    public MachineState getCurrentState() {
+    	return currentState;
+    }
+
     @Override
-    public void notifyObservers(Event event) {
+	public void notifyObservers(Event event) {
         for (Observer observer : observers) {
             observer.observe(event);
         }
@@ -138,7 +139,7 @@ public final class GameServer extends Thread implements Subject
 
     // Should be called after each move, to collect all of the errors
     // caused by players and write them into the match description.
-    private void appendErrorsToMatchDescription() {
+    protected void appendErrorsToMatchDescription() {
         List<String> theErrors = new ArrayList<String>();
         for (int i = 0; i < stateMachine.getRoles().size(); i++) {
             Role r = stateMachine.getRoles().get(i);
@@ -155,9 +156,9 @@ public final class GameServer extends Thread implements Subject
     @Override
     public void run() {
         try {
-            if (match.getPreviewClock() >= 0) {
-                sendPreviewRequests();
-            }
+        	if (match.getPreviewClock() >= 0) {
+        		sendPreviewRequests();
+        	}
 
             notifyObservers(new ServerNewMatchEvent(stateMachine.getRoles(), currentState));
             notifyObservers(new ServerTimeEvent(match.getStartClock() * 1000));
@@ -180,7 +181,7 @@ public final class GameServer extends Thread implements Subject
                 appendErrorsToMatchDescription();
 
                 if (match.isAborted()) {
-                    return;
+                	return;
                 }
             }
             match.markCompleted(stateMachine.getGoals(currentState));
@@ -191,79 +192,79 @@ public final class GameServer extends Thread implements Subject
             notifyObservers(new ServerMatchUpdatedEvent(match, spectatorServerKey, saveToFilename));
             sendStopRequests(previousMoves);
         } catch (InterruptedException ie) {
-            if (match.isAborted()) {
-                return;
-            } else {
-                ie.printStackTrace();
-            }
+        	if (match.isAborted()) {
+        		return;
+        	} else {
+        		ie.printStackTrace();
+        	}
         } catch (Exception e) {
-            e.printStackTrace();
+        	e.printStackTrace();
         }
     }
 
     public void abort() {
-        try {
-            match.markAborted();
-            sendAbortRequests();
-            saveWhenNecessary();
-            publishWhenNecessary();
-            notifyObservers(new ServerAbortedMatchEvent());
-            notifyObservers(new ServerMatchUpdatedEvent(match, spectatorServerKey, saveToFilename));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    	try {
+    		match.markAborted();
+    		sendAbortRequests();
+    		saveWhenNecessary();
+    		publishWhenNecessary();
+    		notifyObservers(new ServerAbortedMatchEvent());
+    		notifyObservers(new ServerMatchUpdatedEvent(match, spectatorServerKey, saveToFilename));
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    	}
     }
 
-    private void saveWhenNecessary() {
-        if (saveToFilename == null) {
-            return;
-        }
+    protected void saveWhenNecessary() {
+    	if (saveToFilename == null) {
+    		return;
+    	}
 
-        try {
-            File file = new File(saveToFilename);
-            if (!file.exists()) {
-                file.createNewFile();
-            }
-            FileWriter fw = new FileWriter(file);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(match.toJSON().toString());
-            bw.close();
-            fw.close();
-        } catch (IOException ie) {
-            ie.printStackTrace();
-        }
+    	try {
+			File file = new File(saveToFilename);
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			FileWriter fw = new FileWriter(file);
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write(match.toJSON().toString());
+			bw.close();
+			fw.close();
+    	} catch (IOException ie) {
+    		ie.printStackTrace();
+    	}
     }
 
-    private String publishWhenNecessary() {
+    protected String publishWhenNecessary() {
         if (spectatorServerURL == null) {
-            return null;
+        	return null;
         }
 
-        int nAttempt = 0;
-        while (true) {
+    	int nAttempt = 0;
+    	while (true) {
             try {
-                spectatorServerKey = MatchPublisher.publishToSpectatorServer(spectatorServerURL, match);
-                return spectatorServerKey;
+            	spectatorServerKey = MatchPublisher.publishToSpectatorServer(spectatorServerURL, match);
+            	return spectatorServerKey;
             } catch (IOException e) {
-                if (nAttempt > 9) {
-                    e.printStackTrace();
-                    return null;
-                }
+            	if (nAttempt > 9) {
+            		e.printStackTrace();
+            		return null;
+            	}
             }
-            nAttempt++;
-        }
+    		nAttempt++;
+    	}
     }
 
     public String getSpectatorServerKey() {
-        return spectatorServerKey;
+    	return spectatorServerKey;
     }
 
-    private synchronized List<Move> sendPlayRequests() throws InterruptedException, MoveDefinitionException {
+    protected synchronized List<Move> sendPlayRequests() throws InterruptedException, MoveDefinitionException {
         List<PlayRequestThread> threads = new ArrayList<PlayRequestThread>(hosts.size());
         for (int i = 0; i < hosts.size(); i++) {
             List<Move> legalMoves = stateMachine.getLegalMoves(currentState, stateMachine.getRoles().get(i));
             if (playerPlaysRandomly[i]) {
-                threads.add(new RandomPlayRequestThread(match, legalMoves));
+            	threads.add(new RandomPlayRequestThread(match, legalMoves));
             } else {
                 threads.add(new PlayRequestThread(this, match, previousMoves, legalMoves, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i), playerGetsUnlimitedTime[i]));
             }
@@ -285,12 +286,12 @@ public final class GameServer extends Thread implements Subject
         return moves;
     }
 
-    private synchronized void sendPreviewRequests() throws InterruptedException {
+    protected synchronized void sendPreviewRequests() throws InterruptedException {
         List<PreviewRequestThread> threads = new ArrayList<PreviewRequestThread>(hosts.size());
         for (int i = 0; i < hosts.size(); i++) {
-            if (!playerPlaysRandomly[i]) {
-                threads.add(new PreviewRequestThread(this, match, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
-            }
+        	if (!playerPlaysRandomly[i]) {
+        		threads.add(new PreviewRequestThread(this, match, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
+        	}
         }
         for (PreviewRequestThread thread : threads) {
             thread.start();
@@ -303,12 +304,12 @@ public final class GameServer extends Thread implements Subject
         }
     }
 
-    private synchronized void sendStartRequests() throws InterruptedException {
+    protected synchronized void sendStartRequests() throws InterruptedException {
         List<StartRequestThread> threads = new ArrayList<StartRequestThread>(hosts.size());
         for (int i = 0; i < hosts.size(); i++) {
-            if (!playerPlaysRandomly[i]) {
-                threads.add(new StartRequestThread(this, match, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
-            }
+        	if (!playerPlaysRandomly[i]) {
+        		threads.add(new StartRequestThread(this, match, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
+        	}
         }
         for (StartRequestThread thread : threads) {
             thread.start();
@@ -324,9 +325,9 @@ public final class GameServer extends Thread implements Subject
     private synchronized void sendStopRequests(List<Move> previousMoves) throws InterruptedException {
         List<StopRequestThread> threads = new ArrayList<StopRequestThread>(hosts.size());
         for (int i = 0; i < hosts.size(); i++) {
-            if (!playerPlaysRandomly[i]) {
-                threads.add(new StopRequestThread(this, match, previousMoves, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
-            }
+        	if (!playerPlaysRandomly[i]) {
+        		threads.add(new StopRequestThread(this, match, previousMoves, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
+        	}
         }
         for (StopRequestThread thread : threads) {
             thread.start();
@@ -336,12 +337,12 @@ public final class GameServer extends Thread implements Subject
         }
     }
 
-    private void sendAbortRequests() throws InterruptedException {
+    protected void sendAbortRequests() throws InterruptedException {
         List<AbortRequestThread> threads = new ArrayList<AbortRequestThread>(hosts.size());
         for (int i = 0; i < hosts.size(); i++) {
-            if (!playerPlaysRandomly[i]) {
-                threads.add(new AbortRequestThread(this, match, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
-            }
+        	if (!playerPlaysRandomly[i]) {
+        		threads.add(new AbortRequestThread(this, match, stateMachine.getRoles().get(i), hosts.get(i), ports.get(i), getPlayerNameFromMatchForRequest(i)));
+        	}
         }
         for (AbortRequestThread thread : threads) {
             thread.start();
@@ -372,10 +373,22 @@ public final class GameServer extends Thread implements Subject
     }
 
     private String getPlayerNameFromMatchForRequest(int i) {
-        if (match.getPlayerNamesFromHost() != null) {
-            return match.getPlayerNamesFromHost().get(i);
-        } else {
-            return "";
-        }
+    	if (match.getPlayerNamesFromHost() != null) {
+    		return match.getPlayerNamesFromHost().get(i);
+    	} else {
+    		return "";
+    	}
     }
+
+    public String getSaveToFilename() {
+    	return saveToFilename;
+    }
+
+	public boolean getPlayerPlaysRandomly(int i) {
+		return playerPlaysRandomly[i];
+	}
+
+	public boolean getPlayerGetsUnlimitedTime(int i) {
+		return playerGetsUnlimitedTime[i];
+	}
 }

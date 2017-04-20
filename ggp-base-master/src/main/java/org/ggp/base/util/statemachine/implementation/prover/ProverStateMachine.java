@@ -83,11 +83,24 @@ public class ProverStateMachine extends StateMachine
     }
 
     @Override
+    public List<Move> findActions(Role role) throws MoveDefinitionException
+    {
+    	Set<GdlSentence> results = prover.askAll(ProverQueryBuilder.getInputQuery(role), ProverQueryBuilder.getContext(initialState));
+
+        if (results.size() == 0)
+        {
+            throw new MoveDefinitionException(initialState, role);
+        }
+
+        return new ProverResultParser().toMoves(results);
+    }
+
+    @Override
     public List<Move> getLegalMoves(MachineState state, Role role) throws MoveDefinitionException
     {
         Set<GdlSentence> results = prover.askAll(ProverQueryBuilder.getLegalQuery(role), ProverQueryBuilder.getContext(state));
 
-        if (results.isEmpty())
+        if (results.size() == 0)
         {
             throw new MoveDefinitionException(state, role);
         }
