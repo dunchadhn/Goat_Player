@@ -61,7 +61,7 @@ public class GoatsCompulsive extends the_men_who_stare_at_goats {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "compulsive Player";
+		return "Compulsive Player";
 	}
 
 }
