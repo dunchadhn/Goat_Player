@@ -32,8 +32,8 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 		Move bestAction = jointMoves.get(0).get(self_index);
 		int bestScore = 0;
-		int depth = 1;
-		int maxdepth = 10;
+		int depth = 5;
+		int maxdepth = 6;
 		while (depth < maxdepth) {
 			int score = 0;
 			Move action = bestAction;
@@ -51,7 +51,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 				}
 				if(System.currentTimeMillis() > finishBy) break;
 			}
-			if (score >= bestScore) {
+			if (score > bestScore) {
 				bestScore = score;
 				bestAction = action;
 			}
@@ -61,11 +61,21 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		return bestAction;
 	}
 
+	protected int mobilityFn(int player, MachineState state) throws MoveDefinitionException {
+		return (int) (100 * (machine.getLegalMoves(state, roles.get(player)).size() /
+				((double) machine.findActions(roles.get(player)))));
+	}
+	protected int evalFn(int player, MachineState state, int fn) throws MoveDefinitionException {
+		switch (fn) {
+		case 0: return mobilityFn(player, state);
+		default: return 0;
+		}
+	}
 	protected int alphabeta(int player, MachineState state, int alpha, int beta, int d) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
 		if (machine.isTerminal(state))
 			return machine.getGoal(state, roles.get(self_index));
 		if (d == 0) {
-			return 1;
+			return evalFn(player, state, 0);
 		}
 
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
