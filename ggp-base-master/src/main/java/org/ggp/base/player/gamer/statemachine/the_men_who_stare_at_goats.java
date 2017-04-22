@@ -38,7 +38,8 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
 		StateMachine machine = getStateMachine();
-
+		//More efficient to use Compulsive Deliberation for one player games
+		//Use two-player implementation for two player games
 		Role role = getRole();
 		return bestmove(role, machine);
 

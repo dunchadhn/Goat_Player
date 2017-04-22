@@ -34,7 +34,7 @@ public class GoatsMinimax extends the_men_who_stare_at_goats {
 				list = Lists.reverse(list);
 			}
 			int result = maxscore(role, machine.getNextState(state, list), machine);
-
+			if (result == 0) return result;
 			if(result < score) {
 				score = result;
 			}
@@ -52,7 +52,7 @@ public class GoatsMinimax extends the_men_who_stare_at_goats {
 		int score = 0;
 		for(int i = 0; i < moves.size(); i++) {
 			int result = minscore(role, moves.get(i), state, machine);
-
+			if (result == 100) return result;
 			if(result > score) {
 				score = result;
 			}
@@ -71,7 +71,8 @@ public class GoatsMinimax extends the_men_who_stare_at_goats {
 			List<Move> list = new ArrayList<Move>();
 			list.add(moves.get(i));
 			int result = minscore(role, moves.get(i), state, machine);
-
+			System.out.println(result);
+			if (result == 100) return moves.get(i);
 			if(result > score) {
 				score = result;
 				action = moves.get(i);
