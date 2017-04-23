@@ -23,8 +23,8 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		Role role = getRole();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(role);
-		mob_n = 1;
-		weights = new int[]{1, 1, 1};
+		mob_n = 0;
+		weights = new double[]{0.5, 0.25, 0.25};
 
 	}
 
@@ -38,8 +38,8 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		List<Move> bestActions = new ArrayList<Move>();
 		bestActions.add(jointMoves.get(0).get(self_index));
 		int bestScore = 0;
-		int depth = 3;
-		int maxdepth = 20;
+		int depth = 2;
+		int maxdepth = 100000;
 		while (depth < maxdepth) {
 			int score = 0;
 			List<Move> actions = new ArrayList<Move>();
@@ -48,7 +48,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 			for(List<Move> jointMove : jointMoves) {
 				int nextPlayer = self_index + 1;
 				MachineState nextState = machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, 0, 100, depth);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, 0, 100, depth, WEIGHTED_FN);
 				System.out.println(jointMove.get(self_index) + " " + result);
 				if(result == 100) {
 					return jointMove.get(self_index);
@@ -60,7 +60,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 					actions.add(jointMove.get(self_index));
 				}
 				num_actions += 1;
-				if(System.currentTimeMillis() > finishBy) break;
+				if(System.currentTimeMillis() >= finishBy) break;
 			}
 			if (score >= bestScore) {
 				bestScore = score;
@@ -88,7 +88,14 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 	}
 
 	protected int nStepFocusFn(int player, MachineState state, int n) throws MoveDefinitionException, TransitionDefinitionException {
-		return 100 - nStepMobilityFn(player, state, n);
+		if (roles.size() == 1) return 0;
+		int score = 0;
+		MachineState next_state = state;
+		for (int i = player + 1; i != player; i = (i+1) % roles.size()) {
+			next_state = machine.getNextState(next_state, machine.getRandomJointMove(next_state));
+			score += 100 - nStepMobilityFn(i, next_state, n);
+		}
+		return score / (roles.size() - 1);
 	}
 	//Only adds states which are reachable by origin_player
 	protected void statesReachable(int player, MachineState state, int n,
@@ -142,7 +149,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		for (int i = 0; i < numFns; i++) {
 			total += weights[i] * evalFn(player, state, i);
 		}
-		return total;
+		return total / numFns;
 	}
 
 	protected int evalFn(int player, MachineState state, int fn) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
@@ -150,27 +157,29 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		case 0: return goalProxFn(player, state);
 		case 1: return nStepMobilityFn(player, state, mob_n);
 		case 2: return nStepFocusFn(player, state, mob_n);
+		case 3: return weightedCombo(player, state);
 		default: return 0;
 		}
 	}
-	protected int alphabeta(int player, MachineState state, int alpha, int beta, int d) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
+	protected int alphabeta(int player, MachineState state, int alpha, int beta, int d, int fn) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
 		if (machine.isTerminal(state)) {
 			return machine.getGoal(state, roles.get(self_index));
 		}
 		if (d == 0) {
-			return evalFn(player, state, DEFAULT);
+			return evalFn(player, state, fn);
 		}
 
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
 		int score;
 		if (player == self_index) score = 0;
 		else score = 100;
-		int nextPlayer = player + 1;
-		if (nextPlayer == self_index) d -=1;
+		int nextPlayer = (player + 1) % roles.size();
+		if (nextPlayer == self_index) d -= 1;
+
 		if (player == self_index) {
 			for (List<Move> jointMove: jointMoves) {
 				MachineState nextState = machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta, d);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta, d, fn);
 				if (result == 100 ||  result >= beta) return 100;
 				if (result > alpha) alpha = result;
 				if (result > score) score = result;
@@ -179,7 +188,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		} else {
 			for (List<Move> jointMove: jointMoves) {
 				MachineState nextState = machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta, d);
+				int result = alphabeta(nextPlayer, nextState, alpha, beta, d, fn);
 				if (result == 0 || score <= alpha) return 0;
 				if (result < beta) beta = result;
 				if (result < score) score = result;
@@ -194,18 +203,19 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 	private StateMachine machine;
 	private List<Role> roles;
 	private int self_index, origin_player, mob_n;
-	private int weights[];
+	private double[] weights;
 	private long finishBy;
 
 	private static final int GOAL_FN = 0;
 	private static final int MOBILITY_FN = 1;
 	private static final int FOCUS_FN = 2;
-	private static final int DEFAULT = 3;
+	private static final int WEIGHTED_FN = 3;
+	private static final int DEFAULT = 4;
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
-		finishBy = timeout - 500;
+		finishBy = timeout - 2500;
 		return bestmove();
 	}
 
