@@ -24,7 +24,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		roles = machine.getRoles();
 		self_index = roles.indexOf(role);
 		mob_n = 0;
-		weights = new double[]{0.5, 0.25, 0.25};
+		weights = new double[]{0.75, 0.125, 0.125};
 
 	}
 
