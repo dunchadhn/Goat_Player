@@ -24,7 +24,10 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		roles = machine.getRoles();
 		self_index = roles.indexOf(role);
 		mob_n = 0;
+		repetitions = 8;
 		self_focus = false; //if set to true, heuristic will try to limit player's mobility
+		//start with doing monte carlo depth charges to estimate state value
+		//add focus heuristic for player and mobility heuristic for opponent; let simulations parameterize weights
 		weights = new double[]{0.75, 0.0125, 0.0125};
 
 	}
@@ -39,7 +42,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		List<Move> bestActions = new ArrayList<Move>();
 		bestActions.add(jointMoves.get(0).get(self_index));
 		int bestScore = 0;
-		int depth = 2;
+		int depth = 1;
 		int maxdepth = 100000;
 		while (depth < maxdepth) {
 			int score = 0;
@@ -80,7 +83,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		if (machine.isTerminal(state))
 			return machine.getGoal(state, roles.get(self_index));
 		if (d == 0)
-			return evalFn(player, state, FOCUS_FN);
+			return UNKNOWN_DEFAULT + evalFn(player, state, MONTE_CARLO_FN);
 
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
 		int score;
@@ -119,7 +122,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 	private StateMachine machine;
 	private List<Role> roles;
-	private int self_index, origin_player, mob_n;
+	private int self_index, origin_player, mob_n, repetitions;
 	private double[] weights;
 	private long finishBy;
 	private boolean self_focus;
@@ -129,8 +132,71 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 	private static final int FOCUS_FN = 2;
 	private static final int STATE_MOB_FN = 3;
 	private static final int COMBO_FN = 4;
+	private static final int MONTE_CARLO_FN = 5;
 	private static final int DEFAULT = 5;
 	private static final int NUM_FNS = 3;
+	private static final double DISCOUNT_FACTOR = .9;
+	private static final int UNKNOWN_DEFAULT = 1;
+
+
+	protected int evalFn(int player, MachineState state, int fn) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
+		origin_player = player;
+		switch (fn) {
+		case 0: return goalProxFn(player, state);
+		case 1: return nStepMobilityFn(player, state, mob_n);
+		case 2: return nStepFocusFn(player, state, mob_n);
+		//case 3: return nStepStateMobilityFn(player, state, mob_n + 1);
+		case 4: return weightedCombo(player, state);
+		case 5: return monteCarlo(player, state);
+		default: return 1;
+		}
+	}
+
+	protected int monteCarlo(int player, MachineState state) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		double[] avgScores = new double[roles.size()];
+		double[] avgDepth = new double[1];
+
+		machine.getAverageDiscountedScoresFromRepeatedDepthCharges(state, avgScores, avgDepth, DISCOUNT_FACTOR, repetitions);
+		//System.out.println("Avg Score: " + avgScores[player] + " Avg Depth: " + avgDepth[0]);
+		return (int) avgScores[player];
+	}
+
+    protected MachineState performDepthCharge(MachineState state, final int[] theDepth) throws TransitionDefinitionException, MoveDefinitionException {
+        int nDepth = 0;
+        while(!machine.isTerminal(state)) {
+        	if (System.currentTimeMillis() >= finishBy) break;
+            nDepth++;
+            state = machine.getNextStateDestructively(state, machine.getRandomJointMove(state));
+        }
+        if(theDepth != null)
+            theDepth[0] = nDepth;
+        return state;
+    }
+
+    protected void getAverageDiscountedScoresFromRepeatedDepthCharges(final MachineState state, final double[] avgScores,
+    		final double[] avgDepth, final double discountFactor, final int repetitions) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+        avgDepth[0] = 0;
+        for (int j = 0; j < avgScores.length; j++) {
+            avgScores[j] = 0;
+        }
+        final int[] depth = new int[1];
+        int i;
+        for (i = 0; i < repetitions; i++) {
+        	if (System.currentTimeMillis() >= finishBy) break;
+            MachineState stateForCharge = state.clone();
+            stateForCharge = performDepthCharge(stateForCharge, depth);
+            avgDepth[0] += depth[0];
+            final double accumulatedDiscountFactor = Math.pow(discountFactor, depth[0]);
+            for (int j = 0; j < avgScores.length; j++) {
+                avgScores[j] += machine.getGoal(stateForCharge, roles.get(j)) * accumulatedDiscountFactor;
+            }
+        }
+        if (i == 0) return;
+        avgDepth[0] /= i;
+        for (int j = 0; j < avgScores.length; j++) {
+            avgScores[j] /= i;
+        }
+    }
 
 	protected int nStepMobilityFn(int player, MachineState state, int n) throws MoveDefinitionException, TransitionDefinitionException {
 		int mobility = (int) (100 * (nStepActions(player, state, n) /
@@ -217,23 +283,11 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		return (int) total;
 	}
 
-	protected int evalFn(int player, MachineState state, int fn) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
-		origin_player = player;
-		switch (fn) {
-		case 0: return goalProxFn(player, state);
-		case 1: return nStepMobilityFn(player, state, mob_n);
-		case 2: return nStepFocusFn(player, state, mob_n);
-		//case 3: return nStepStateMobilityFn(player, state, mob_n + 1);
-		case 3: return weightedCombo(player, state);
-		default: return 1;
-		}
-	}
-
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
-		finishBy = timeout - 2500;
+		finishBy = timeout - 1500;
 		return bestmove();
 	}
 
