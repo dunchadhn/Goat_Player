@@ -28,7 +28,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		self_focus = false; //if set to true, heuristic will try to limit player's mobility
 		//start with doing monte carlo depth charges to estimate state value
 		//add focus heuristic for player and mobility heuristic for opponent; let simulations parameterize weights
-		weights = new double[]{0.75, 0.0125, 0.0125};
+		weights = new double[]{0.75, 0.125, 0.125};
 
 	}
 
@@ -83,7 +83,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		if (machine.isTerminal(state))
 			return machine.getGoal(state, roles.get(self_index));
 		if (d == 0)
-			return UNKNOWN_DEFAULT + evalFn(player, state, MONTE_CARLO_FN);
+			return UNKNOWN_DEFAULT + evalFn(player, state, COMBO_FN);
 
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
 		int score;
