@@ -42,7 +42,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		List<Move> bestActions = new ArrayList<Move>();
 		bestActions.add(jointMoves.get(0).get(self_index));
 		int bestScore = 0;
-		int depth = 1;
+		int depth = 2;
 		int maxdepth = 100000;
 		while (depth < maxdepth) {
 			int score = 0;
@@ -83,7 +83,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		if (machine.isTerminal(state))
 			return machine.getGoal(state, roles.get(self_index));
 		if (d == 0)
-			return UNKNOWN_DEFAULT + evalFn(player, state, COMBO_FN);
+			return UNKNOWN_DEFAULT + evalFn(player, state, MONTE_CARLO_FN);
 
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
 		int score;
