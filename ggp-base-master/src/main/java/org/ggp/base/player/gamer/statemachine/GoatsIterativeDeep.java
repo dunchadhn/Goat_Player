@@ -26,7 +26,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		mob_n = 0;
 		repetitions = 6;
 		//add focus heuristic for player and mobility heuristic for opponent; let simulations parameterize weights
-		weights = new double[]{1, 0, 0};
+		weights = new double[]{.75, .125, .125};
 
 	}
 
@@ -78,8 +78,10 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 
 	protected int alphabeta(int player, MachineState state, int alpha, int beta, int d) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
-		if (machine.isTerminal(state))
-			return machine.getGoal(state, roles.get(self_index));
+		if (machine.isTerminal(state)) {
+			int value = machine.getGoal(state, roles.get(self_index));
+			return (value == 100 ? value : goalProxFn(player, state));
+		}
 		if (d == 0) {
 			int heuristic = evalFn(player, state, COMBO_FN);
 			return (heuristic == 0 ? UNKNOWN_DEFAULT : heuristic);
@@ -238,6 +240,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 	protected int nStepFocusFn(int player, MachineState state, int n, boolean self_focus) throws MoveDefinitionException, TransitionDefinitionException {
 		if (self_focus) return 100 - nStepMobilityFn(player, state, n); //Reduce player's mobility
+		if (roles.size() == 1) return 0;
 		//Reduce the average mobility of all opponents
 		double opp_focus = 0;
 		for (int i = (player + 1) % roles.size(); i != player; i = (i + 1) % roles.size()) {
@@ -283,6 +286,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 	protected int goalProxFn(int player, MachineState state) throws GoalDefinitionException {
 		int self_value = machine.getGoal(state, roles.get(self_index));
+		if (roles.size() == 1) return self_value;
 		int opp_value = 0;
 		for (int i = (self_index + 1) % roles.size(); i != self_index; i = (i + 1) % roles.size()) {
 			if (System.currentTimeMillis() >= finishBy) break;
