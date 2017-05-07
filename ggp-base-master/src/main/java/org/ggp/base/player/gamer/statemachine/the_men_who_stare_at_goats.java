@@ -2,6 +2,7 @@ package org.ggp.base.player.gamer.statemachine;
 
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.ggp.base.apps.player.Player;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
@@ -28,7 +29,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException, InterruptedException{
+			GoalDefinitionException, InterruptedException, ExecutionException{
 		// TODO Auto-generated method stub
 
 	}
@@ -36,7 +37,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException, InterruptedException {
+			GoalDefinitionException, InterruptedException, ExecutionException {
 		StateMachine machine = getStateMachine();
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games

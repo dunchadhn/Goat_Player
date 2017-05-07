@@ -2,6 +2,7 @@ package org.ggp.base.player.gamer.statemachine;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.ggp.base.player.gamer.Gamer;
 import org.ggp.base.player.gamer.exception.AbortingException;
@@ -49,8 +50,9 @@ public abstract class StateMachineGamer extends Gamer
      * @throws TransitionDefinitionException
      * @throws MoveDefinitionException
      * @throws GoalDefinitionException
+     * @throws ExecutionException
      */
-    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException;
+    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException;
 
     /**
      * Defines the algorithm that the player uses to select their move.
@@ -59,8 +61,9 @@ public abstract class StateMachineGamer extends Gamer
      * @throws TransitionDefinitionException
      * @throws MoveDefinitionException
      * @throws GoalDefinitionException
+     * @throws ExecutionException
      */
-    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException;
+    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException;
 
     /**
      * Defines any actions that the player takes upon the game cleanly ending.
