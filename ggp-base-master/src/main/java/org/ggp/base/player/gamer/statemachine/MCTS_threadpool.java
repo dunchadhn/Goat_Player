@@ -243,21 +243,21 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 
 	@Override
 	public void stateMachineStop() {
-
+		executor.shutdownNow();
 
 	}
 
 	@Override
 	public void stateMachineAbort() {
 		// TODO Auto-generated method stub
-
+		executor.shutdownNow();
 	}
 
 
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "Monte Carlo Tree Search Player";
+		return "MCTS_threadpool Player";
 	}
 
 
