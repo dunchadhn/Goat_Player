@@ -11,12 +11,15 @@ public class Node {
 		this.state = state;
 		this.isTerminal = false;
 		this.children = new HashMap<List<Move>, Node>();
+		this.legalJointMoves = new HashMap<Move, List<List<Move>>>();
 		this.utility = 0;
 		this.visits = 0;
 	}
 	public MachineState state;
 	public double utility;
 	public double visits;
+	public List<Move> legalMoves;
 	public HashMap<List<Move>, Node> children;
+	public HashMap<Move, List<List<Move>>> legalJointMoves;
 	public boolean isTerminal;
 }

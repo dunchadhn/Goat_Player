@@ -23,7 +23,7 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 	private List<Thread> threads;
 	private Node n;
 	private Lock lock;
-	private int depth_charges;
+	private int depthCharges;
 	private int num_threads =  Runtime.getRuntime().availableProcessors();
 
 	private static final double C_CONST = 50;
@@ -79,7 +79,7 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 	}
 
 	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException {
-		depth_charges = 0;
+		depthCharges = 0;
 		while (System.currentTimeMillis() < finishBy) {
 			path = new ArrayList<Node>();
 			threads = new ArrayList<Thread>();
@@ -95,14 +95,14 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 				t.start();
 				threads.add(t);
 			}
-			depth_charges += threads.size();
+			depthCharges += threads.size();
 			for(int i = 0; i < threads.size(); ++i) {
 				Thread t = threads.get(i);
 				t.join();
 			}
 		}
 		System.out.println(num_threads);
-		System.out.println(depth_charges);
+		System.out.println("Depth Charges: " + depthCharges);
 	}
 
 	public class RunMe implements Runnable {
@@ -123,10 +123,10 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 
 	protected Move bestMove(Node n) throws MoveDefinitionException {
 		double maxValue = Double.NEGATIVE_INFINITY;
-		Move maxMove = machine.getLegalMoves(n.state, roles.get(self_index)).get(0);
-		for(Move move: machine.getLegalMoves(n.state, roles.get(self_index))) {
+		Move maxMove = n.legalMoves.get(0);
+		for(Move move: n.legalMoves) {
 			double minValue = Double.POSITIVE_INFINITY;
-			for (List<Move> jointMove : machine.getLegalJointMoves(n.state, roles.get(self_index), move)) {
+			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				Node succNode = n.children.get(jointMove);
 				if (succNode.visits != 0) {
 					double nodeValue = succNode.utility / succNode.visits;
@@ -168,10 +168,12 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
 		Node maxChild = null;
-		for(Move move: machine.getLegalMoves(n.state, roles.get(self_index))) {
+		//assert n.legalMoves == machine.getLegalMoves(n.state, roles.get(self_index));//remove during game
+		for(Move move: n.legalMoves) {
 			double minValue = Double.NEGATIVE_INFINITY;
 			Node minChild = null;
-			for (List<Move> jointMove : machine.getLegalJointMoves(n.state, roles.get(self_index), move)) {
+			//assert n.legalJointMoves.get(move) == machine.getLegalJointMoves(n.state, roles.get(self_index), move);//remove during game
+			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				Node succNode = n.children.get(jointMove);
 				if (succNode.visits == 0) {
 					path.add(succNode);
@@ -206,8 +208,13 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 
 	protected void Expand(Node n, List<Node> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
+			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
+			for (Move move: n.legalMoves) {
+				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
+			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
 				Node child = new Node(machine.getNextState(n.state, jointMove));
+				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
 			path.add(n.children.get(machine.getRandomJointMove(n.state)));
@@ -218,8 +225,13 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 
 	protected void Expand(Node n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
+			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
+			for (Move move: n.legalMoves) {
+				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
+			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
 				Node child = new Node(machine.getNextState(n.state, jointMove));
+				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
 		} else if (!machine.isTerminal(n.state)) {
