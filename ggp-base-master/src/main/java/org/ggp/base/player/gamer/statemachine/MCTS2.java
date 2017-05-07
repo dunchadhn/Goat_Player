@@ -16,7 +16,7 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 	private List<Role> roles;
 	private int self_index;
 	private long finishBy, depthCharges;
-	private Node2 root;
+	private Node root;
 
 	private static final double C_CONST = 50;
 
@@ -33,7 +33,7 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 		machine = getStateMachine();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(getRole());
-		root = new Node2(machine.getInitialState());
+		root = new Node(machine.getInitialState());
 		Expand(root);
 		finishBy = timeout - 1000;
 	}
@@ -61,7 +61,7 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 			}
 		}
 		System.out.println("ERROR. Current State not in tree");
-		root = new Node2(currentState);
+		root = new Node(currentState);
 	}
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
@@ -73,10 +73,10 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		depthCharges = 0;
 		while (System.currentTimeMillis() < finishBy) {
-			List<Node2> path = new ArrayList<Node2>();
+			List<Node> path = new ArrayList<Node>();
 			path.add(root);
 			Select(root, path);
-			Node2 n = path.get(path.size() - 1);
+			Node n = path.get(path.size() - 1);
 			Expand(n, path);
 			double val = Playout(n);
 			Backpropogate(val, path);
@@ -85,13 +85,13 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 		System.out.println("Depth Charges: " + depthCharges);
 	}
 
-	protected Move bestMove(Node2 n) throws MoveDefinitionException {
+	protected Move bestMove(Node n) throws MoveDefinitionException {
 		double maxValue = Double.NEGATIVE_INFINITY;
 		Move maxMove = n.legalMoves.get(0);
 		for(Move move: n.legalMoves) {
 			double minValue = Double.POSITIVE_INFINITY;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
-				Node2 succNode = n.children.get(jointMove);
+				Node succNode = n.children.get(jointMove);
 				if (succNode.visits != 0) {
 					double nodeValue = succNode.utility / succNode.visits;
 					if (nodeValue < minValue) minValue = nodeValue;
@@ -107,8 +107,8 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 		return maxMove;
 	}
 
-	protected void Backpropogate(double val, List<Node2> path) {
-		Node2 n = path.get(path.size() - 1);
+	protected void Backpropogate(double val, List<Node> path) {
+		Node n = path.get(path.size() - 1);
 		if (machine.isTerminal(n.state)) {
 			n.isTerminal = true;
 		}
@@ -119,7 +119,7 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 		}
 	}
 
-	protected double Playout(Node2 n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected double Playout(Node n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		MachineState state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
@@ -128,18 +128,18 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 	}
 
 
-	protected void Select(Node2 n, List<Node2> path) throws MoveDefinitionException {
+	protected void Select(Node n, List<Node> path) throws MoveDefinitionException {
 		if (machine.isTerminal(n.state)) return;
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
-		Node2 maxChild = null;
+		Node maxChild = null;
 		assert n.legalMoves == machine.getLegalMoves(n.state, roles.get(self_index));//remove during game
 		for(Move move: n.legalMoves) {
 			double minValue = Double.NEGATIVE_INFINITY;
-			Node2 minChild = null;
+			Node minChild = null;
 			assert n.legalJointMoves.get(move) == machine.getLegalJointMoves(n.state, roles.get(self_index), move);//remove during game
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
-				Node2 succNode = n.children.get(jointMove);
+				Node succNode = n.children.get(jointMove);
 				if (succNode.visits == 0) {
 					path.add(succNode);
 					return;
@@ -161,24 +161,24 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 	}
 
 
-	protected double uctMin(Node2 n, double parentVisits) {
+	protected double uctMin(Node n, double parentVisits) {
 		double value = n.utility / n.visits;
 		return -value + C_CONST * Math.sqrt(Math.log(parentVisits) / n.visits);
 	}
 
-	protected double uctMax(Node2 n, double parentVisits) {
+	protected double uctMax(Node n, double parentVisits) {
 		double value = n.utility / n.visits;
 		return value + C_CONST * Math.sqrt(Math.log(parentVisits) / n.visits);
 	}
 
-	protected void Expand(Node2 n, List<Node2> path) throws MoveDefinitionException, TransitionDefinitionException {
+	protected void Expand(Node n, List<Node> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
 			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
 			for (Move move: n.legalMoves) {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				Node2 child = new Node2(machine.getNextState(n.state, jointMove));
+				Node child = new Node(machine.getNextState(n.state, jointMove));
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -188,14 +188,14 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 		}
 	}
 
-	protected void Expand(Node2 n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
+	protected void Expand(Node n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
 			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
 			for (Move move: n.legalMoves) {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				Node2 child = new Node2(machine.getNextState(n.state, jointMove));
+				Node child = new Node(machine.getNextState(n.state, jointMove));
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
