@@ -243,7 +243,6 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 
 	@Override
 	public void stateMachineStop() {
-		executor.shutdownNow();
 
 	}
 
