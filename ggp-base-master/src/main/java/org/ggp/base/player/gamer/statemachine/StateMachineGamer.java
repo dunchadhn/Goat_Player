@@ -14,11 +14,9 @@ import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.StateMachine;
-import org.ggp.base.util.statemachine.cache.CachedStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
-import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 
 /**
@@ -52,7 +50,7 @@ public abstract class StateMachineGamer extends Gamer
      * @throws MoveDefinitionException
      * @throws GoalDefinitionException
      */
-    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException;
+    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException;
 
     /**
      * Defines the algorithm that the player uses to select their move.
@@ -62,7 +60,7 @@ public abstract class StateMachineGamer extends Gamer
      * @throws MoveDefinitionException
      * @throws GoalDefinitionException
      */
-    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException;
+    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException;
 
     /**
      * Defines any actions that the player takes upon the game cleanly ending.

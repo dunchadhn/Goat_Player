@@ -28,7 +28,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException {
+			GoalDefinitionException, InterruptedException{
 		// TODO Auto-generated method stub
 
 	}
@@ -36,7 +36,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException {
+			GoalDefinitionException, InterruptedException {
 		StateMachine machine = getStateMachine();
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games

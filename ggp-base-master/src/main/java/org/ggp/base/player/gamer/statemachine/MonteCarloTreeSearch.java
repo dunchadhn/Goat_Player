@@ -1,6 +1,8 @@
 package org.ggp.base.player.gamer.statemachine;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
@@ -17,19 +19,25 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 	private int self_index;
 	private long finishBy;
 	private Node root;
+	private List<Node> path;
+	private List<Thread> threads;
+	private Node n;
+	private Lock lock;
+	private int depth_charges;
+	private int num_threads =  Runtime.getRuntime().availableProcessors();
 
 	private static final double C_CONST = 50;
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException {
+			GoalDefinitionException, InterruptedException {
 		initialize(timeout);
 		runMCTS();
 		bestMove(root);
 	}
 
-	protected void initialize(long timeout) throws MoveDefinitionException, TransitionDefinitionException {
+	protected void initialize(long timeout) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		machine = getStateMachine();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(getRole());
@@ -41,14 +49,14 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException {
+			GoalDefinitionException, InterruptedException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
 		finishBy = timeout - 1000;
 		return MCTS();
 	}
 
-	protected void initializeMCTS() throws MoveDefinitionException, TransitionDefinitionException {
+	protected void initializeMCTS() throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		MachineState currentState = getCurrentState();
 		if (root == null) System.out.println("NULL ROOT");
 		if (root.state == currentState) return;
@@ -64,22 +72,53 @@ public class MonteCarloTreeSearch extends the_men_who_stare_at_goats {
 		root = new Node(currentState);
 	}
 
-	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException {
 		initializeMCTS();
 		runMCTS();
 		return bestMove(root);
 	}
 
-	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException {
+		depth_charges = 0;
 		while (System.currentTimeMillis() < finishBy) {
-			List<Node> path = new ArrayList<Node>();
+			path = new ArrayList<Node>();
+			threads = new ArrayList<Thread>();
+			lock = new ReentrantLock();
 			path.add(root);
 			Select(root, path);
-			Node n = path.get(path.size() - 1);
+			n = path.get(path.size() - 1);
 			Expand(n, path);
-			double val = Playout(n);
-			Backpropogate(val, path);
+			// spawn off multiple threads
+			for(int i = 0; i < num_threads; ++i) {
+				RunMe r = new RunMe();
+				Thread t = new Thread(r);
+				t.start();
+				threads.add(t);
+			}
+			depth_charges += threads.size();
+			for(int i = 0; i < threads.size(); ++i) {
+				Thread t = threads.get(i);
+				t.join();
+			}
 		}
+		System.out.println(num_threads);
+		System.out.println(depth_charges);
+	}
+
+	public class RunMe implements Runnable {
+		@Override
+		public void run() {
+	    	double val = 0;
+			try {
+				val = Playout(n);
+			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	    	lock.lock();
+	    	Backpropogate(val, path);
+	    	lock.unlock();
+	    }
 	}
 
 	protected Move bestMove(Node n) throws MoveDefinitionException {
