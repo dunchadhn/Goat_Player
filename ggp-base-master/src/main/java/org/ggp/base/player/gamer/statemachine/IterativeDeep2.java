@@ -13,7 +13,7 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
+public class IterativeDeep2 extends the_men_who_stare_at_goats {
 
 	private StateMachine machine;
 	private List<Role> roles;
@@ -54,10 +54,10 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		learnWeights();//TO-DO: Keeping learning weights after meta-game
 		System.out.println("Time Left: " + (timeout - System.currentTimeMillis()));
 		for (int i = 0; i < maxMin.length; ++i) {
-			printDoubleArray(maxMin[i], maxMin[i].length);
+			printDoubleArray(maxMin[i]);
 		}
 		System.out.println("Max: " + maxScore + " Min: " + minScore);
-		printDoubleArray(weights, weights.length);
+		printDoubleArray(weights);
 	}
 
 	protected void initializeGlobals() {
@@ -65,24 +65,37 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		Role role = getRole();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(role);
-		num_simuls = 1000000;
+		num_simuls = 500000;
 		NUM_GOAL_FEATURES = roles.size();
 		correlationN = 0;
 		weightsHistory = new ArrayList<double[]>();
 	}
 
-	protected void initFeatures() throws GoalDefinitionException, MoveDefinitionException {
+	protected void initFeatures() throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		MachineState state = machine.getInitialState();
+		for (int i = 0; i < self_index; ++i) {
+			state = machine.getNextStateDestructively(state, machine.getRandomJointMove(state));
+		}
 		ArrayList<Double> features = new ArrayList<Double>();
 		for (int i = 0; i < roles.size(); ++i) {
 			double goalVal = (double)machine.getGoal(state, roles.get(i));
 			features.add(goalVal);
 		}
-		for (int i = 0; i < roles.size(); ++i) {
+		double self_mobility = 100 * ((double)machine.getLegalMoves(state, roles.get(self_index)).size()) /
+				machine.findActions(roles.get(self_index)).size();
+		features.add(self_mobility);
+		features.add(100 - self_mobility);
+		for (int i = (self_index + 1) % roles.size(), j = 1; i != self_index; i = (i + 1) % roles.size(), ++j) {
+			double[] mobility = nStepMobilityFn(state, j);
+			features.add(mobility[i]);
+			features.add(100 - mobility[i]);
+		}
+
+		/*for (int i = 0; i < roles.size(); ++i) {
 			double mobility = ((double)machine.getLegalMoves(state, roles.get(i)).size()) / machine.findActions(roles.get(i)).size();
 			features.add(100 * mobility);
 			features.add(100 * (1 - mobility));
-		}
+		}*/
 		NUM_FEATURES = features.size();
 		maxMin = new double[NUM_FEATURES][2];//first index is min, second is max
 		for (int i = 0; i < NUM_GOAL_FEATURES; ++i) {
@@ -111,35 +124,53 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 			double goalVal = (double)machine.getGoal(state, roles.get(i));
 			features[index++] = goalVal;
 		}
-		for (int i = 0; i < roles.size(); ++i) {
+		double self_mobility = 100 * (((double)machine.getLegalMoves(state, roles.get(self_index)).size()) /
+				machine.findActions(roles.get(self_index)).size());
+		features[index++] = self_mobility;
+		features[index++] = 100 - self_mobility;
+		for (int i = (self_index + 1) % roles.size(), j = 1; i != self_index; i = (i + 1) % roles.size(), ++j) {
+			double[] mobility = nStepMobilityFn(state, j);
+			features[index++] = mobility[i];
+			features[index++] = 100 - mobility[i];
+		}
+		/*for (int i = 0; i < roles.size(); ++i) {
 			double mobility = ((double)machine.getLegalMoves(state, roles.get(i)).size()) / machine.findActions(roles.get(i)).size();
 			features[index++] = 100 * mobility;
 			features[index++] = 100 * (1 - mobility);
-		}
+		}*/
 		//add others later
 		return features;
 	}
 
 	protected int getData(double [][]X, double[]Y) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-		int i, nDepth, player;
-		double goalVal;
-		for (i = 0; i < num_simuls && System.currentTimeMillis() < finishBy; i += nDepth) {
-			nDepth = 0; player = 0;
+		int i;
+		for (i = 0; i < num_simuls && System.currentTimeMillis() < finishBy; ++i) {
+			int nDepth = 0;
+			int nextPlayer = 1 % roles.size();
 			MachineState state = machine.getInitialState();
 			double[] features;
+			if (self_index == 0) {
+				features = getFeatures(state);
+				updateMaxMin(features);
+			} else {
+				features = new double[NUM_FEATURES];
+			}
+			state = machine.getNextStateDestructively(state, machine.getRandomJointMove(state));
+			double[] newFeatures;
 	        while(!machine.isTerminal(state)) {
 	        	if (System.currentTimeMillis() >= finishBy) return i;
-	        	if (player == self_index) {
-	        		features = getFeatures(state);
-		        	updateMaxMin(features);
-		        	X[i + nDepth++] = features;
+	        	if (nextPlayer == self_index) {
+	        		newFeatures = getFeatures(state);
+		        	updateMaxMin(newFeatures);
+		            addArrays(features, newFeatures);
+		            nDepth++;
 	        	}
-	        	player = (player + 1) % roles.size();
 	            state = machine.getNextStateDestructively(state, machine.getRandomJointMove(state));
+	            nextPlayer = (nextPlayer + 1) % roles.size();
 	        }
-	        goalVal = (double) machine.getGoal(state, roles.get(self_index));
-	        for (int j = 0; j < nDepth; ++j)
-	        	Y[i + j] = goalVal;
+	        divideArray(features, nDepth);
+	        X[i] = features;
+	        Y[i] = (double) machine.getGoal(state, roles.get(self_index));
 		}
 		return i;
 	}
@@ -150,6 +181,9 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		int datapts = getData(X, Y);
 		System.out.println("Data Points: " + datapts);
 		correlationParams = new double[NUM_FEATURES][NUM_CORR_PARAMS];
+		/*TO-DO: Start off by using only a part of the data, then
+		 * continue using more as long as we have time remaining
+		 */
 		for (int f = 0; f < NUM_FEATURES; ++f) {
 			double[] X_feature = new double[datapts];
 			for (int i = 0; i < datapts; ++i)
@@ -168,8 +202,8 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		MachineState state = getCurrentState();
 		List<Move> moves = machine.getLegalMoves(state, roles.get(self_index));
 		if (moves.size() == 1) {
-			//learnWeights();
-			//printDoubleArray(weights, weights.length);
+			learnWeights();
+			printDoubleArray(weights);
 			return moves.get(0);
 		}
 		List<List<Move>> jointMoves = machine.getLegalJointMoves(state);
@@ -357,7 +391,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 	protected double[] nStepMobilityFn(MachineState state, int n) throws MoveDefinitionException, TransitionDefinitionException {
 		double[] mobility = nStepActions(state, n);
 		for (int i = 0; i < roles.size(); ++i)
-			mobility[i] *= ((((double)100) / machine.findActions(roles.get(origin_player)).size()));
+			mobility[i] *= ((((double)100) / machine.findActions(roles.get(i)).size()));
 		return mobility;
 	}
 
@@ -380,7 +414,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		MachineState nextState;
 		for (List<Move> jointMove: jointMoves) {
 			nextState = machine.getNextState(state, jointMove);
-			addArrays(nStepActions(nextState, n - 1), numActions);
+			addArrays(numActions, nStepActions(nextState, n - 1));
 		}
 		divideArray(numActions, jointMoves.size());
 		return numActions;
@@ -467,7 +501,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 	}
 
 	protected void divideArray(double[] arr, int d) {
-		assert d != 0;//Remove during game
+		if (d == 0) return;
 		for (int i = 0; i < arr.length; ++i) {
 			arr[i] /= d;
 		}
@@ -480,12 +514,12 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 		return arr;
 	}
 
-	protected void printDoubleArray(double[] arr, int length) {
+	protected void printDoubleArray(double[] arr) {
 		System.out.print("[");
-		for (int i = 0; i < (length - 1); ++i) {
+		for (int i = 0; i < (arr.length - 1); ++i) {
 			System.out.print(arr[i] + ", ");
 		}
-		System.out.println(arr[length - 1] + "]");
+		System.out.println(arr[arr.length - 1] + "]");
 	}
 
 	protected void updateMaxMin(double[] features) {
@@ -566,7 +600,7 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 
 	@Override
 	public String getName() {
-		return "IterativeDeep Player";
+		return "IterativeDeep2 Player";
 	}
 
 	@Override
@@ -578,5 +612,6 @@ public class GoatsIterativeDeep extends the_men_who_stare_at_goats {
 	public void stateMachineAbort() {
 		System.out.println(weightsHistory);
 	}
-
 }
+
+

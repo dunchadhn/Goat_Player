@@ -47,7 +47,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 
 	@Override
 	public void stateMachineStop() {
-		// TODO Auto-generated method stub
+
 
 	}
 
@@ -76,5 +76,6 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 		List<Move> moves = machine.getLegalMoves(state, role);
 		return moves.get(0);
 	}
+
 
 }
