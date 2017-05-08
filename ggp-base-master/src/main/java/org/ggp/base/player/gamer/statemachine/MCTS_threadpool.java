@@ -24,8 +24,8 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	private long finishBy;
 	private Node root;
 	private List<Node> path;
-	private int num_threads = Runtime.getRuntime().availableProcessors();
-	private ExecutorService executor = Executors.newFixedThreadPool(num_threads);
+	private int num_threads;
+	private ExecutorService executor;
 	private List<Future<?>> futures;
 	private Node n;
 	private Lock lock;
@@ -48,7 +48,10 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new Node(machine.getInitialState());
 		Expand(root);
+		num_threads = Runtime.getRuntime().availableProcessors();
+		executor = Executors.newFixedThreadPool(num_threads);
 		finishBy = timeout - 1000;
+		System.out.println("NumThreads: " + num_threads);
 	}
 
 	@Override
@@ -103,7 +106,6 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		        f.get(); //blocks until the runnable completes
 		    }
 		}
-		System.out.println(num_threads);
 		System.out.println("Depth Charges: " + depthCharges);
 	}
 
@@ -128,20 +130,24 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		Move maxMove = n.legalMoves.get(0);
 		for(Move move: n.legalMoves) {
 			double minValue = Double.POSITIVE_INFINITY;
+			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				Node succNode = n.children.get(jointMove);
 				if (succNode.visits != 0) {
 					double nodeValue = succNode.utility / succNode.visits;
-					if (nodeValue < minValue) minValue = nodeValue;
+					if (nodeValue < minValue) {
+						minValue = nodeValue;
+						visits = succNode.visits;
+					}
 				}
-				System.out.println("Move: " + move + " Value: " + (succNode.visits > 0 ? minValue : Double.NaN) + " Visits: " + succNode.visits);
 			}
+			System.out.println("Move: " + move + " Value: " + minValue + " Visits: " + visits);
 			if (minValue > maxValue) {
 				maxValue = minValue;
 				maxMove = move;
 			}
 		}
-		System.out.println("Max Move: " + maxMove + " Max Value: " + maxValue);
+		System.out.println(getName() + " Max Move: " + maxMove + " Max Value: " + maxValue);
 		return maxMove;
 	}
 
@@ -170,11 +176,9 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
 		Node maxChild = null;
-		//assert n.legalMoves == machine.getLegalMoves(n.state, roles.get(self_index));//remove during game
 		for(Move move: n.legalMoves) {
 			double minValue = Double.NEGATIVE_INFINITY;
 			Node minChild = null;
-			//assert n.legalJointMoves.get(move) == machine.getLegalJointMoves(n.state, roles.get(self_index), move);//remove during game
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				Node succNode = n.children.get(jointMove);
 				if (succNode.visits == 0) {
@@ -219,6 +223,8 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
+			Move m = machine.getLegalMoves(n.state, roles.get(self_index)).get(0);
+			assert (n.legalJointMoves.get(m)).size() == 1;
 			path.add(n.children.get(machine.getRandomJointMove(n.state)));
 		} else if (!machine.isTerminal(n.state)) {
 			System.out.println("ERROR. Tried to expand node that was previously expanded");

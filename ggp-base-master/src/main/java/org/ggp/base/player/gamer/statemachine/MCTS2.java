@@ -103,7 +103,7 @@ public class MCTS2 extends the_men_who_stare_at_goats {
 				maxMove = move;
 			}
 		}
-		System.out.println("Max Move: " + maxMove + " Max Value: " + maxValue);
+		System.out.println(getName() + " Max Move: " + maxMove + " Max Value: " + maxValue);
 		return maxMove;
 	}
 
