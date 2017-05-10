@@ -46,9 +46,9 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new Node(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors();
+		num_threads = Runtime.getRuntime().availableProcessors() * 5;
 		executor = Executors.newFixedThreadPool(num_threads);
-		finishBy = timeout - 1000;
+		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
 	}
 
@@ -58,7 +58,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
-		finishBy = timeout - 1000;
+		finishBy = timeout - 2500;
 		return MCTS();
 	}
 
@@ -104,7 +104,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		        f.get(); //blocks until the runnable completes
 		    }
 		}
-		System.out.println("Depth Charges: " + depthCharges);
+		System.out.println("20 Depth Charges: " + depthCharges);
 	}
 
 	public class RunMe implements Runnable {
@@ -245,13 +245,13 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 
 	@Override
 	public void stateMachineStop() {
-		executor.shutdownNow();
+		//executor.shutdownNow();
 	}
 
 	@Override
 	public void stateMachineAbort() {
 		// TODO Auto-generated method stub
-		executor.shutdownNow();
+		//executor.shutdownNow();
 	}
 
 
