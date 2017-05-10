@@ -17,7 +17,7 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class MCTS_threadpool extends the_men_who_stare_at_goats {
+public class MCTS_Max_Threaded extends the_men_who_stare_at_goats {
 	private StateMachine machine;
 	private List<Role> roles;
 	private int self_index, num_threads, depthCharges;
@@ -149,24 +149,34 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		return maxMove;
 	}
 
-	protected void Backpropogate(double val, List<Node> path) {
-		Node n = path.get(path.size() - 1);
+	protected void Backpropogate(double[] values, List<Node2> path) {
+		Node2 n = path.get(path.size() - 1);
 		if (machine.isTerminal(n.state)) {
 			n.isTerminal = true;
 		}
 		for (int i = path.size() - 1; i >= 0; --i) {
 			n = path.get(i);
-			n.utility += val;
+			for (int j = 0; j < roles.size(); ++j) {
+				n.utilities[j] += values[j];
+			}
 			++n.visits;
 		}
 	}
 
-	protected double Playout(Node n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected double[] Playout(Node2 n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		MachineState state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
 		}
-		return machine.getGoal(state, roles.get(self_index));
+		return getGoals(state);
+	}
+
+	protected double[] getGoals(MachineState state) throws GoalDefinitionException {
+		double[] scores = new double[roles.size()];
+		for (int i = 0; i < roles.size(); ++i) {
+			scores[i] = machine.getGoal(state, roles.get(i));
+		}
+		return scores;
 	}
 
 	protected void Select(Node n, List<Node> path) throws MoveDefinitionException {
@@ -210,14 +220,15 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		return value + C_CONST * Math.sqrt(Math.log(parentVisits) / n.visits);
 	}
 
-	protected void Expand(Node n, List<Node> path) throws MoveDefinitionException, TransitionDefinitionException {
+	protected void Expand(Node2 n, List<Node2> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
 			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
 			for (Move move: n.legalMoves) {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				Node child = new Node(machine.getNextState(n.state, jointMove));
+				Node2 child = new Node2(machine.getNextState(n.state, jointMove));
+				child.utilities = new double[roles.size()];
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -227,14 +238,15 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		}
 	}
 
-	protected void Expand(Node n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
+	protected void Expand(Node2 n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
 			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
 			for (Move move: n.legalMoves) {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				Node child = new Node(machine.getNextState(n.state, jointMove));
+				Node2 child = new Node2(machine.getNextState(n.state, jointMove));
+				child.utilities = new double[roles.size()];
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -258,11 +270,12 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "MCTS_threadpool Player";
+		return "MCTS_Max_Threaded Player";
 	}
 
 
 
 
 }
+
 
