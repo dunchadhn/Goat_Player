@@ -155,14 +155,14 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected void Backpropogate(double val, List<Node> path) {
-		Node n = path.get(path.size() - 1);
-		if (machine.isTerminal(n.state)) {
-			n.isTerminal = true;
+		Node nod = path.get(path.size() - 1);
+		if (machine.isTerminal(nod.state)) {
+			nod.isTerminal = true;
 		}
 		for (int i = path.size() - 1; i >= 0; --i) {
-			n = path.get(i);
-			n.utility += val;
-			++n.visits;
+			nod = path.get(i);
+			nod.utility += val;
+			++nod.visits;
 		}
 	}
 
