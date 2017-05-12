@@ -19,6 +19,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	private StateMachine machine;
+	private List<StateMachine> machines;
 	private List<Role> roles;
 	private int self_index, num_threads, depthCharges;
 	private long finishBy;
@@ -48,6 +49,10 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		Expand(root);
 		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
+		machines = new ArrayList<StateMachine>();
+		for(int i = 0; i < num_threads; i++) {
+			machines.add(getStateMachine());
+		}
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
 	}
@@ -162,6 +167,8 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected double Playout(Node n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		int threadId = (int) (Thread.currentThread().getId() % num_threads);
+		StateMachine machine = machines.get(threadId);
 		MachineState state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
