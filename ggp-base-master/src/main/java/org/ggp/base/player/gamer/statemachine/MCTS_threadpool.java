@@ -46,7 +46,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new Node(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 5;
+		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
