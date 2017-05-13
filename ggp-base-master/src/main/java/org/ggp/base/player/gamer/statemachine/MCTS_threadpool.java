@@ -19,6 +19,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	private StateMachine machine;
+	private List<StateMachine> machines;
 	private List<Role> roles;
 	private int self_index, num_threads, depthCharges;
 	private long finishBy;
@@ -46,8 +47,12 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new Node(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 5;
+		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
+		machines = new ArrayList<StateMachine>();
+		for(int i = 0; i < num_threads; i++) {
+			machines.add(getStateMachine());
+		}
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
 	}
@@ -150,18 +155,20 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected void Backpropogate(double val, List<Node> path) {
-		Node n = path.get(path.size() - 1);
-		if (machine.isTerminal(n.state)) {
-			n.isTerminal = true;
+		Node nod = path.get(path.size() - 1);
+		if (machine.isTerminal(nod.state)) {
+			nod.isTerminal = true;
 		}
 		for (int i = path.size() - 1; i >= 0; --i) {
-			n = path.get(i);
-			n.utility += val;
-			++n.visits;
+			nod = path.get(i);
+			nod.utility += val;
+			++nod.visits;
 		}
 	}
 
 	protected double Playout(Node n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		int threadId = (int) (Thread.currentThread().getId() % num_threads);
+		StateMachine machine = machines.get(threadId);
 		MachineState state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
