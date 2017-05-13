@@ -8,6 +8,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.ggp.base.apps.logging.DataLogger;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
@@ -31,6 +32,9 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	private Lock lock;
 
 	private static final double C_CONST = 50;
+	private int timeoutVal;
+	private static final DataLogger dataLogger = new DataLogger("/home/robertchuchro/Logs/log.txt");
+
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
@@ -47,7 +51,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new Node(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
+		num_threads = Runtime.getRuntime().availableProcessors() * 2;
 		executor = Executors.newFixedThreadPool(num_threads);
 		machines = new ArrayList<StateMachine>();
 		long curr_time = System.currentTimeMillis();
@@ -58,6 +62,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		}
 		long displacement = System.currentTimeMillis() - curr_time;
 		finishBy = timeout - 2500 - displacement;
+		timeoutVal = (int) (timeout - System.currentTimeMillis());
 		System.out.println("NumThreads: " + num_threads);
 	}
 
@@ -68,6 +73,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
 		finishBy = timeout - 2500;
+		timeoutVal = (int) (timeout - System.currentTimeMillis());
 		return MCTS();
 	}
 
@@ -96,6 +102,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		depthCharges = 0;
 		while (System.currentTimeMillis() < finishBy) {
+			long t = System.currentTimeMillis();
 			path = new ArrayList<Node>();
 			futures = new ArrayList<> ();
 			lock = new ReentrantLock();
@@ -103,6 +110,8 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			Select(root, path);
 			n = path.get(path.size() - 1);
 			Expand(n, path);
+			long t2 = System.currentTimeMillis();
+		        System.out.println("select expand time: " + (t2-t));	
 			// spawn off multiple threads
 			for(int i = 0; i < num_threads; ++i) {
 				RunMe r = new RunMe();
@@ -113,12 +122,16 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		        f.get(); //blocks until the runnable completes
 		    }
 		}
-		System.out.println("20 Depth Charges: " + depthCharges);
+		int cps = 1000 * depthCharges / timeoutVal;
+		dataLogger.logDataPoint(num_threads, cps);
+		System.out.println("Depth Charges: " + depthCharges + " rate: " + cps);
 	}
 
 	public class RunMe implements Runnable {
 		@Override
 		public void run() {
+		long t = System.currentTimeMillis();
+		
 	    	double val = 0;
 			try {
 				val = Playout(n);
@@ -126,9 +139,15 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		
+		long t2 = System.currentTimeMillis();
+		System.out.println("simulate time: " + (t2-t));	
+		t = System.currentTimeMillis();
 	    	lock.lock();
 	    	Backpropogate(val, path);
 	    	lock.unlock();
+		t2 = System.currentTimeMillis();
+		System.out.println("backprop time: " + (t2-t));	
 	    }
 	}
 
