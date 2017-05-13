@@ -51,7 +51,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		executor = Executors.newFixedThreadPool(num_threads);
 		machines = new ArrayList<StateMachine>();
 		for(int i = 0; i < num_threads; i++) {
-			machines.add(getStateMachine());
+			machines.add(getInitialStateMachine());
 		}
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
