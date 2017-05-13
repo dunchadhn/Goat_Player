@@ -50,10 +50,14 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
 		machines = new ArrayList<StateMachine>();
+		long curr_time = System.currentTimeMillis();
 		for(int i = 0; i < num_threads; i++) {
-			machines.add(getInitialStateMachine());
+			StateMachine stateMachine = getInitialStateMachine();
+			stateMachine.initialize(getMatch().getGame().getRules());
+			machines.add(stateMachine);
 		}
-		finishBy = timeout - 2500;
+		long displacement = System.currentTimeMillis() - curr_time;
+		finishBy = timeout - 2500 - displacement;
 		System.out.println("NumThreads: " + num_threads);
 	}
 
