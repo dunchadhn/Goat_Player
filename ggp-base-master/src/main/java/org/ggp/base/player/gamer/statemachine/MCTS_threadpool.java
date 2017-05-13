@@ -21,16 +21,18 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	private StateMachine machine;
 	private List<StateMachine> machines;
 	private List<Role> roles;
-	private int self_index, num_threads, depthCharges;
+	private int self_index, num_expand_threads, num_simulation_threads, depthCharges;
 	private long finishBy;
 	private Node root;
 	private List<Node> path;
 	private ExecutorService executor;
-	private List<Future<?>> futures;
-	private Node n;
-	private Lock lock;
+	private List<Future<?>> expandFutures;
+	private Lock backpropLock, expandLock, simulateLock;
 
 	private static final double C_CONST = 50;
+	private int timeoutVal;
+	//private static final DataLogger dataLogger = new DataLogger("/Users/robertchuchro/Logs/log.txt");
+
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
@@ -47,18 +49,23 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new Node(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
-		executor = Executors.newFixedThreadPool(num_threads);
+
+		num_simulation_threads = Runtime.getRuntime().availableProcessors() * 12;
+		num_expand_threads = 1;
+
+
+		executor = Executors.newFixedThreadPool(num_simulation_threads);
 		machines = new ArrayList<StateMachine>();
 		long curr_time = System.currentTimeMillis();
-		for(int i = 0; i < num_threads; i++) {
+		for(int i = 0; i < num_simulation_threads; i++) {
 			StateMachine stateMachine = getInitialStateMachine();
 			stateMachine.initialize(getMatch().getGame().getRules());
 			machines.add(stateMachine);
 		}
 		long displacement = System.currentTimeMillis() - curr_time;
 		finishBy = timeout - 2500 - displacement;
-		System.out.println("NumThreads: " + num_threads);
+		timeoutVal = (int) (timeout - System.currentTimeMillis());
+		System.out.println("NumThreads: " + num_simulation_threads);
 	}
 
 	@Override
@@ -68,6 +75,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
 		finishBy = timeout - 2500;
+		timeoutVal = (int) (timeout - System.currentTimeMillis());
 		return MCTS();
 	}
 
@@ -88,47 +96,130 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+
 		initializeMCTS();
 		runMCTS();
 		return bestMove(root);
 	}
 
 	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+		//maintain machine-specific data
+		for (StateMachine machine : machines) {
+			machine.doPerMoveWork();
+		}
+
+		path = new ArrayList<Node>();
+		path.add(root);
+
+
 		depthCharges = 0;
 		while (System.currentTimeMillis() < finishBy) {
-			path = new ArrayList<Node>();
-			futures = new ArrayList<> ();
-			lock = new ReentrantLock();
-			path.add(root);
-			Select(root, path);
-			n = path.get(path.size() - 1);
-			Expand(n, path);
-			// spawn off multiple threads
-			for(int i = 0; i < num_threads; ++i) {
-				RunMe r = new RunMe();
-				futures.add(executor.submit(r));
+			expandLock = new ReentrantLock();
+			backpropLock = new ReentrantLock();
+			simulateLock = new ReentrantLock();
+
+			expandFutures = new ArrayList<>();
+
+
+			for(int i=0; i < num_expand_threads; ++i) {
+				SelectExpandRunner selectExpandRunner = new SelectExpandRunner(new ArrayList<Node>(path));
+				expandFutures.add(executor.submit(selectExpandRunner));
 			}
-			depthCharges += futures.size();
-			for (Future<?> f : futures) {
-		        f.get(); //blocks until the runnable completes
+
+			for (Future<?> f : expandFutures) {
+				f.get();  //blocks until the runnable completes
 		    }
+			depthCharges += num_expand_threads * num_simulation_threads;
+
+
 		}
-		System.out.println("20 Depth Charges: " + depthCharges);
+		int cps = 1000 * depthCharges / timeoutVal;
+		//dataLogger.logDataPoint(num_simulation_threads, cps);
+		System.out.println("Depth Charges: " + depthCharges + " rate: " + cps + " num nodes: " + Node.nodeCount);
 	}
 
-	public class RunMe implements Runnable {
+	public class SelectExpandRunner implements Runnable {
+
+		private Node root;
+		private ArrayList<Node> path;
+
+		public SelectExpandRunner(ArrayList<Node> path) {
+			this.root = path.get(path.size()-1);
+			this.path = path;
+		}
+
 		@Override
 		public void run() {
+
+			List<Future<?>> simulateFutures = new ArrayList<>();
+			Node n = null;
+			//TODO: clean up these annoying try-catch blocks
+			try {
+				Select(root, path);
+				n = path.get(path.size() - 1);
+
+				expandLock.lock();
+				Expand(n, path);
+				expandLock.unlock();
+			} catch (MoveDefinitionException | TransitionDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			// spawn off multiple simulation threads
+			ArrayList<Double> simulateVals = new ArrayList<Double>();
+			for(int i = 0; i < num_simulation_threads; ++i) {
+				SimulationRunner r = new SimulationRunner(n, simulateVals);
+				simulateFutures.add(executor.submit(r));
+			}
+			for (Future<?> f : simulateFutures) {
+		        try {
+					f.get();
+				} catch (InterruptedException | ExecutionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} //blocks until the runnable completes
+		    }
+
+			//take the average of all the simulations
+			double sum = 0.;
+			for (Double val : simulateVals) {
+				sum += val;
+			}
+			double avgVal = sum / simulateVals.size();
+
+	    	backpropLock.lock();
+	    	Backpropogate(avgVal, path);
+	    	backpropLock.unlock();
+	    }
+	}
+
+	public class SimulationRunner implements Runnable {
+
+		private Node node;
+		private ArrayList<Double> simulateVals;
+
+		public SimulationRunner(Node node, ArrayList<Double> simulateVals) {
+			this.node = node;
+			this.simulateVals = simulateVals;
+		}
+
+		@Override
+		public void run() {
+
 	    	double val = 0;
 			try {
-				val = Playout(n);
+				val = Playout(node);
+
+				simulateLock.lock();
+				simulateVals.add(val);
+				simulateLock.unlock();
 			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	    	lock.lock();
-	    	Backpropogate(val, path);
-	    	lock.unlock();
+
+
 	    }
 	}
 
@@ -148,7 +239,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 					}
 				}
 			}
-			System.out.println("Move: " + move + " Value: " + (minValue == Double.POSITIVE_INFINITY ? "N/A" : String.valueOf(minValue)) + " Visits: " + visits);
+			//System.out.println("Move: " + move + " Value: " + (minValue == Double.POSITIVE_INFINITY ? "N/A" : String.valueOf(minValue)) + " Visits: " + visits);
 			if (minValue > maxValue && minValue != Double.POSITIVE_INFINITY) {
 				maxValue = minValue;
 				maxMove = move;
@@ -171,7 +262,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected double Playout(Node n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		int threadId = (int) (Thread.currentThread().getId() % num_threads);
+		int threadId = (int) (Thread.currentThread().getId() % num_simulation_threads);
 		StateMachine machine = machines.get(threadId);
 		MachineState state = n.state;
 		while(!machine.isTerminal(state)) {
@@ -234,7 +325,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			}
 			path.add(n.children.get(machine.getRandomJointMove(n.state)));
 		} else if (!machine.isTerminal(n.state)) {
-			System.out.println("ERROR. Tried to expand node that was previously expanded");
+			//System.out.println("ERROR2. Tried to expand node that was previously expanded");
 		}
 	}
 
@@ -257,6 +348,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	@Override
 	public void stateMachineStop() {
 		//executor.shutdownNow();
+		Node.nodeCount = 0;
 	}
 
 	@Override

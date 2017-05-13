@@ -7,6 +7,9 @@ import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 
 public class Node {
+
+	public static int nodeCount = 0;
+
 	Node(MachineState state) {
 		this.state = state;
 		this.isTerminal = false;
@@ -14,6 +17,7 @@ public class Node {
 		this.legalJointMoves = new HashMap<Move, List<List<Move>>>();
 		this.utility = 0;
 		this.visits = 0;
+		++nodeCount;
 	}
 	public MachineState state;
 	public double utility;
