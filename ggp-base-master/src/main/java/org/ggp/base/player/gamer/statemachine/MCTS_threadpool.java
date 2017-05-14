@@ -94,15 +94,20 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+
 		initializeMCTS();
 		runMCTS();
 		return bestMove(root);
 	}
 
 	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+		//maintain machine-specific data
+		for (StateMachine machine : machines) {
+			machine.doPerMoveWork();
+		}
+
 		depthCharges = 0;
 		while (System.currentTimeMillis() < finishBy) {
-			long t = System.currentTimeMillis();
 			path = new ArrayList<Node>();
 			futures = new ArrayList<> ();
 			lock = new ReentrantLock();
@@ -110,8 +115,6 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			Select(root, path);
 			n = path.get(path.size() - 1);
 			Expand(n, path);
-			long t2 = System.currentTimeMillis();
-		        System.out.println("select expand time: " + (t2-t));	
 			// spawn off multiple threads
 			for(int i = 0; i < num_threads; ++i) {
 				RunMe r = new RunMe();
@@ -130,8 +133,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	public class RunMe implements Runnable {
 		@Override
 		public void run() {
-		long t = System.currentTimeMillis();
-		
+
 	    	double val = 0;
 			try {
 				val = Playout(n);
@@ -139,15 +141,10 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		
-		long t2 = System.currentTimeMillis();
-		System.out.println("simulate time: " + (t2-t));	
-		t = System.currentTimeMillis();
+
 	    	lock.lock();
 	    	Backpropogate(val, path);
 	    	lock.unlock();
-		t2 = System.currentTimeMillis();
-		System.out.println("backprop time: " + (t2-t));	
 	    }
 	}
 
