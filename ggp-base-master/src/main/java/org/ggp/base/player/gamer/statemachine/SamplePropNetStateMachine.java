@@ -87,20 +87,6 @@ public class SamplePropNetStateMachine extends StateMachine {
     	Proposition init = propNet.getInitProposition();
         init.setValue(true);
         MachineState state = getStateFromBase();
-        /*LinkedList<Component> q = new LinkedList<Component>();
-        HashSet<Component> visited = new HashSet<Component>();
-        for (Component c: init.getOutputs()) {
-        	visited.add(c);
-        	q.add()
-        }
-
-        while(!q.isEmpty()) {
-
-        }
-        for (Component p: ordering) {
-        	boolean value = p.getSingleInput().getValue();
-        	((Proposition)p).setValue(value);
-        }*/
         init.setValue(false);
         propNet.renderToFile("ticPost.dot");
         return state;

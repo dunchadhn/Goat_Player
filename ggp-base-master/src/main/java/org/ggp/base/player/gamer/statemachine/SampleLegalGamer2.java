@@ -62,12 +62,12 @@ public final class SampleLegalGamer2 extends SampleGamer
 
 		List<Move> moves2 = machine2.getLegalMoves(getCurrentState(), getRole());
 		List<Move> moves = machine.getLegalMoves(getCurrentState(), getRole());
-		if (moves != moves2) {
+		if (!moves.equals(moves2)) {
 			System.out.println(getRole());
 			System.out.println("Correct: " + moves);
 			System.out.println("Wrong: " + moves2);
 		}
-		assert(moves == moves2);
+		assert(moves.equals(moves2));
 
 		// SampleLegalGamer is very simple : it picks the first legal move
 		Move selection = moves.get(0);
