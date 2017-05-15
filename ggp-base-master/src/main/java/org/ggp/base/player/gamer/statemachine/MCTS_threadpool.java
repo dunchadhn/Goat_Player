@@ -52,6 +52,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		machines = new ArrayList<StateMachine>();
 		for(int i = 0; i < num_threads; i++) {
 			machines.add(getInitialStateMachine());
+			machines.get(i).initialize(getMatch().getGame().getRules());
 		}
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
@@ -68,6 +69,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 	protected void initializeMCTS() throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
+		for (int i = 0; i < machines.size(); ++i) machines.get(i).doPerMoveWork();
 		MachineState currentState = getCurrentState();
 		if (root == null) System.out.println("NULL ROOT");
 		if (root.state == currentState) return;
