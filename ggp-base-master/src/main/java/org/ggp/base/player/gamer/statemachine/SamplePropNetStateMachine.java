@@ -58,11 +58,15 @@ public class SamplePropNetStateMachine extends StateMachine {
     /**
      * Computes if the state is terminal. Should return the value
      * of the terminal proposition for the state.
+     *
+     * function propterminalp (state,propnet)
+     * {markbases(state,propnet);
+  	 * return propmarkp(propnet.terminal)}
      */
     @Override
     public boolean isTerminal(MachineState state) {
-        // TODO: Compute whether the MachineState is terminal.
-        return false;
+        markBases(state.getContents());
+        return propMarkP(propNet.getTerminalProposition());
     }
 
     /**
@@ -71,12 +75,29 @@ public class SamplePropNetStateMachine extends StateMachine {
      * is true for that role. If there is not exactly one goal
      * proposition true for that role, then you should throw a
      * GoalDefinitionException because the goal is ill-defined.
+     *
+     * {markbases(state,propnet);
+  	 * var roles = propnet.roles;
+  	 * var rewards = seq();
+  	 * for (var i=0; i<roles.length; i++)
+     * 		{if (role==roles[i]) {rewards = propnet.rewards[i]; break}};
+  	 * for (var i=0; i<rewards.length; i++)
+     * 		{if (propmarkp(rewards[i])) {return rewards[i].name}};
+  	 * return 0}
      */
     @Override
     public int getGoal(MachineState state, Role role)
             throws GoalDefinitionException {
-        // TODO: Compute the goal for role in state.
-        return -1;
+    	markBases(state.getContents());
+        List<Role> roles = propNet.getRoles();
+        Set<Proposition> rewards = new HashSet<Proposition>();
+        rewards = propNet.getGoalPropositions().get(role);
+        for(Proposition reward: rewards) {
+        	if(propMarkP(reward)) {
+        		return getGoalValue(reward);
+        	}
+        }
+        return 0;
     }
 
     /**

@@ -89,6 +89,20 @@ public final class SampleLegalGamer2 extends SampleGamer
 			System.out.println("FAILURE");
 		}
 
+
+		if(machine.isTerminal(nextState) != machine2.isTerminal(nextState)) {
+			System.out.println("Move " + randomMove);
+			System.out.println("Correct isTerminal: " + machine.isTerminal(nextState));
+			System.out.println("Wrong isTerminal: " + machine2.isTerminal(nextState));
+			System.out.println("FAILURE");
+		}
+
+		if(machine.getGoal(getCurrentState(),getRole()) != machine2.getGoal(getCurrentState(), getRole())) {
+			System.out.println(getRole());
+			System.out.println("Correct goal: " + machine.getGoal(getCurrentState(),getRole()));
+			System.out.println("Wrong goal: " + machine2.getGoal(getCurrentState(), getRole()));
+			System.out.println("FAILURE");
+		}
 		// We get the end time
 		// It is mandatory that stop<timeout
 		long stop = System.currentTimeMillis();
