@@ -13,6 +13,9 @@ import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.PropNet;
+import org.ggp.base.util.propnet.architecture.components.And;
+import org.ggp.base.util.propnet.architecture.components.Not;
+import org.ggp.base.util.propnet.architecture.components.Or;
 import org.ggp.base.util.propnet.architecture.components.Proposition;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.MachineState;
@@ -98,36 +101,195 @@ public class SamplePropNetStateMachine extends StateMachine {
     @Override
     public List<Move> findActions(Role role)
             throws MoveDefinitionException {
-        // TODO: Compute legal moves.
-        return null;
+        Set<Proposition> actions = propNet.getLegalPropositions().get(role);
+        List<Move> moves = new ArrayList<>();
+        for(Proposition action : actions) {
+        	moves.add(getMoveFromProposition(action));
+        }
+        return moves;
     }
 
     /**
      * Computes the legal moves for role in state.
+     *
+     *  function proplegals (role,state,propnet)
+	 *	 {markbases(state,propnet);
+	 *	  var roles = propnet.roles;
+	 *	  var legals = seq();
+	 *	  for (var i=0; i<roles.length; i++)
+	 *	      {if (role==roles[i]) {legals = propnet.legals[i]; break}};
+	 *	  var actions = seq();
+	 *	  for (var i=0; i<legals.length; i++)
+	 *	      {if (propmarkp(legals[i]))
+	 *	          {actions[actions.length]=legals[i]}};
+	 *	  return actions}
      */
     @Override
     public List<Move> getLegalMoves(MachineState state, Role role)
             throws MoveDefinitionException {
-    	List<Move> moves = new ArrayList<Move>();
-    	for(Component p: propNet.getLegalPropositions().get(role)) {
-    		boolean value = p.getSingleInput().getValue();
-    		((Proposition)p).setValue(value);
-    		if(value) moves.add(new Move(((Proposition)p).getName().get(1)));//replace 1 with constant
+    	markBases(state.getContents());
+        Set<Proposition> actions = propNet.getLegalPropositions().get(role);
+        List<Move> moves = new ArrayList<>();
+        for(Proposition action : actions) {
+    		if (propMarkP(action)) {
+    			moves.add(getMoveFromProposition(action));
+    		}
     	}
         return moves;
     }
 
     /**
      * Computes the next state given state and the list of moves.
+     *
+     * function propnext (move,state,propnet)
+ 	 * {markactions(move,propnet);
+  	 *	markbases(state,propnet);
+	 *	var bases = propnet.bases;
+	 *	var nexts = seq();
+	 *	for (var i=0; i<bases.length; i++)
+	 *	  {nexts[i] = propmarkp(bases[i].source.source)};
+	 *	return nexts}
      */
     @Override
     public MachineState getNextState(MachineState state, List<Move> moves)
             throws TransitionDefinitionException {
-    	List<GdlSentence> sentences = toDoes(moves);
-    	for (int i = 0; i < sentences.size(); ++i) {
-    		System.out.println(sentences.get(i));
+    	List<GdlSentence> actions = toDoes(moves);
+    	markBases(state.getContents());
+    	markActions(actions);
+    	Map<GdlSentence, Proposition> bases = propNet.getBasePropositions();
+
+    	Set<GdlSentence> nextState = new HashSet<>();
+    	for (Proposition p : bases.values()) {
+    		boolean mark = propMarkP(p.getSingleInput().getSingleInput());
+    		if (mark) {
+    			nextState.add(p.getName());
+    		}
     	}
-        return null;
+        return new MachineState(nextState);
+    }
+
+    /**
+     * function markbases (vector,propnet)
+     *    {var props = propnet.bases;
+     *    for (var i=0; i<props.length; i++)
+     *      {props[i].mark = vector[i]};
+  	 *	 return true}
+     */
+    private boolean markBases(Set<GdlSentence> vector) {
+    	clearPropNet();
+    	Map<GdlSentence, Proposition> props = propNet.getBasePropositions();
+    	for(GdlSentence sentence : vector) {
+    		props.get(sentence).setValue(true);
+    	}
+    	return true;
+    }
+
+    /**
+	 *	function markactions (vector,propnet)
+	 *	  {var props = propnet.actions;
+	 * 	  for (var i=0; i<props.length; i++)
+	 *     	{props[i].mark = vector[i]};
+	 * 	  return true}
+     */
+    private boolean markActions(List<GdlSentence> moves) {
+    	for (Proposition p : propNet.getInputPropositions().values()) {
+    		if (p.getValue()) {
+    			System.out.println("Action already marked: " + p.getName());
+    		}
+    	}
+    	for (int i=0; i<moves.size(); ++i) {
+    		GdlSentence sentence = moves.get(i);
+    		Proposition p = propNet.getInputPropositions().get(sentence);
+			GdlSentence pSentence = p.getName();
+			if (sentence.equals(pSentence)) {
+				p.setValue(true);
+			}
+    	}
+    	return true;
+    }
+
+    /**
+	 *	function clearpropnet (propnet)
+	 *	  {var props = propnet.bases;
+	 * 	  for (var i=0; i<props.length; i++)
+	 *     	{props[i].mark = false};
+	 * 	  return true}
+     */
+    private boolean clearPropNet() {
+    	Map<GdlSentence, Proposition> props = propNet.getBasePropositions();
+    	for(Proposition p : props.values()) {
+    		p.setValue(false);
+    	}
+    	for (Proposition p : propNet.getInputPropositions().values()) {
+    		p.setValue(false);
+    	}
+    	return true;
+    }
+
+    /**
+	 *   function propmarkp (p)
+	 *   {if (p.type=='base') {return p.mark};
+	 *    if (p.type=='input') {return p.mark};
+	 *    if (p.type=='view') {return propmarkp(p.source)};
+	 *    if (p.type=='negation') {return propmarknegation(p)};
+	 *    if (p.type=='conjunction') {return propmarkconjunction(p)};
+	 *    if (p.type=='disjunction') {return propmarkdisjunction(p)};
+	 *    return false}
+     */
+    private boolean propMarkP(Component c) {
+		if (c instanceof Proposition) {
+			Proposition p = (Proposition) c;
+			if (propNet.getBasePropositions().get(p.getName()) != null) return c.getValue();
+			if (propNet.getInputPropositions().get(p.getName()) != null) return c.getValue();
+			if (propNet.getInitProposition().equals(p)) return c.getValue();
+			return propMarkP(c.getSingleInput());
+		}
+		if (c instanceof Not) return propMarkNegation(c);
+		if (c instanceof And) return propMarkConjunction(c);
+		if (c instanceof Or) return propMarkDisjunction(c);
+		return false;
+    }
+
+    /**
+    function propmarknegation (p)
+    {return !propmarkp(p.source)}
+    */
+    private boolean propMarkNegation(Component c) {
+    	return !propMarkP(c.getSingleInput());
+    }
+
+    /**
+	 *  function propmarkconjunction (p)
+	 *   {var sources = p.sources;
+	 *    for (var i=0; i<sources.length; i++)
+	 *        {if (!propmarkp(sources[i])) {return false}};
+	 *    return true}
+     */
+    private boolean propMarkConjunction(Component p) {
+    	Set<Component> sources = p.getInputs();
+    	for (Component source : sources) {
+    		if (!propMarkP(source)) {
+    			return false;
+    		}
+    	}
+    	return true;
+    }
+
+    /**
+	 *   function propmarkdisjunction (p)
+	 *    {var sources = p.sources;
+	 *     for (var i=0; i<sources.length; i++)
+	 *         {if (propmarkp(sources[i])) {return true}};
+	 *     return false}
+     */
+    private boolean propMarkDisjunction(Component p) {
+    	Set<Component> sources = p.getInputs();
+    	for (Component source : sources) {
+    		if (propMarkP(source)) {
+    			return true;
+    		}
+    	}
+    	return false;
     }
 
     /**

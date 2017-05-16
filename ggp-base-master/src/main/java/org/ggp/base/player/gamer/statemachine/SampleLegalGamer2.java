@@ -1,6 +1,8 @@
 package org.ggp.base.player.gamer.statemachine;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
 import org.ggp.base.util.statemachine.MachineState;
@@ -35,8 +37,8 @@ public final class SampleLegalGamer2 extends SampleGamer
 		machine2 = getStateMachine();
 		MachineState state2 = machine2.getInitialState();
 		if(!state.equals(state2)) {
-			System.out.println("Correct: " + state.getContents());
-			System.out.println("Wrong: " + state2.getContents());
+			System.out.println("Correct init: " + state.getContents());
+			System.out.println("Wrong init: " + state2.getContents());
 			System.out.println("FAILURE");
 		}
 	}
@@ -61,16 +63,31 @@ public final class SampleLegalGamer2 extends SampleGamer
 
 
 		List<Move> moves2 = machine2.getLegalMoves(getCurrentState(), getRole());
+		Set<Move> moves2Set = new HashSet<>(moves2);
 		List<Move> moves = machine.getLegalMoves(getCurrentState(), getRole());
-		if (!moves.equals(moves2)) {
+		Set<Move> movesSet = new HashSet<>(moves);
+		if (!movesSet.equals(moves2Set)) {
 			System.out.println(getRole());
-			System.out.println("Correct: " + moves);
-			System.out.println("Wrong: " + moves2);
+			System.out.println("Correct moves: " + moves);
+			System.out.println("Wrong moves: " + moves2);
 		}
 		assert(moves.equals(moves2));
 
 		// SampleLegalGamer is very simple : it picks the first legal move
-		Move selection = moves.get(0);
+		Move selection = moves2.get(0);
+
+
+		List<Move> randomMove = machine2.getRandomJointMove(getCurrentState());
+
+		MachineState nextState2 = machine2.getNextState(getCurrentState(), randomMove);
+		MachineState nextState = machine.getNextState(getCurrentState(), randomMove);
+
+		if(!nextState.equals(nextState2)) {
+			System.out.println("Move " + randomMove);
+			System.out.println("Correct next: " + nextState.getContents());
+			System.out.println("Wrong next: " + nextState2.getContents());
+			System.out.println("FAILURE");
+		}
 
 		// We get the end time
 		// It is mandatory that stop<timeout
