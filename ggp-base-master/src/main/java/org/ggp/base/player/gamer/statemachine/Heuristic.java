@@ -178,7 +178,7 @@ public class Heuristic extends the_men_who_stare_at_goats {
 				MachineState nextState = machine.getNextState(state, jointMove);
 				int result = alphabeta(nextState, alpha, minValue, depth - 1);
 				if (result < alpha) {
-					minValue = MIN_GOAL - 1;
+					minValue = alpha;
 					break;
 				} else if (result < minValue) {
 					if (result == MIN_GOAL) {
@@ -188,7 +188,7 @@ public class Heuristic extends the_men_who_stare_at_goats {
 					minValue = result;
 				}
 			}
-			if (minValue > beta) return MAX_GOAL + 1;
+			if (minValue > beta) return beta;
 			if (minValue > alpha) {
 				if (minValue == MAX_GOAL) return MAX_GOAL;
 				alpha = minValue;
