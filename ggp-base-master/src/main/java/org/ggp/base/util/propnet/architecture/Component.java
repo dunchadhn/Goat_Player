@@ -18,6 +18,8 @@ public abstract class Component implements Serializable
     private final Set<Component> inputs;
     /** The outputs of the component. */
     private final Set<Component> outputs;
+    private boolean currentValue;
+    private boolean lastPropagatedOutputValue;
 
     /**
      * Creates a new Component with no inputs or outputs.
@@ -26,6 +28,8 @@ public abstract class Component implements Serializable
     {
         this.inputs = new HashSet<Component>();
         this.outputs = new HashSet<Component>();
+        this.currentValue = false;
+        this.lastPropagatedOutputValue = false;
     }
 
     /**
@@ -112,6 +116,22 @@ public abstract class Component implements Serializable
     public Component getSingleOutput() {
         assert outputs.size() == 1;
         return outputs.iterator().next();
+    }
+
+    public boolean getCurrentValue() {
+    	return currentValue;
+    }
+
+    public boolean getLastPropagatedOutputValue() {
+    	return lastPropagatedOutputValue;
+    }
+
+    public void setCurrentValue(boolean value) {
+    	this.currentValue = value;
+    }
+
+    public void setLastPropagatedOutputValue(boolean value) {
+    	this.lastPropagatedOutputValue = value;
     }
 
     /**

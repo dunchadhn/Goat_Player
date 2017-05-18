@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
+import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.StateMachine;
@@ -60,9 +61,11 @@ public final class SampleLegalGamer2 extends SampleGamer
 		 * is to return one of these moves. The choice of which
 		 * Move to play is the goal of GGP.
 		 */
-
-
+		PropNet propNet = (PropNet) machine2.getPropNet();
+		propNet.renderToFile("ticLegalPre.dot");
 		List<Move> moves2 = machine2.getLegalMoves(getCurrentState(), getRole());
+		propNet = (PropNet) machine2.getPropNet();
+		propNet.renderToFile("ticLegalPost.dot");
 		Set<Move> moves2Set = new HashSet<>(moves2);
 		List<Move> moves = machine.getLegalMoves(getCurrentState(), getRole());
 		Set<Move> movesSet = new HashSet<>(moves);
@@ -76,7 +79,8 @@ public final class SampleLegalGamer2 extends SampleGamer
 		// SampleLegalGamer is very simple : it picks the first legal move
 		Move selection = moves2.get(0);
 
-
+		propNet.renderToFile("ticLegal.dot");
+		System.out.println("random");
 		List<Move> randomMove = machine2.getRandomJointMove(getCurrentState());
 
 		MachineState nextState2 = machine2.getNextState(getCurrentState(), randomMove);

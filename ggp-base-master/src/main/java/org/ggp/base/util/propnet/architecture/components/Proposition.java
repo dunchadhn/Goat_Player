@@ -69,6 +69,7 @@ public class Proposition extends Component
 	public void setValue(boolean value)
 	{
 		this.value = value;
+		this.setCurrentValue(value);
 	}
 
 	/**

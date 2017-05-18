@@ -38,6 +38,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
 		runMCTS();
+		System.out.println("Here");
 		bestMove(root);
 	}
 
@@ -119,7 +120,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			loops += 1;
 			average_time = total_time / loops;
 		}
-		System.out.println("20 Depth Charges: " + depthCharges);
+		System.out.println("Depth Charges: " + depthCharges);
 	}
 
 	public class RunMe implements Runnable {

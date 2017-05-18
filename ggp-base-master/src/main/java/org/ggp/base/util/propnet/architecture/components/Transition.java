@@ -25,6 +25,11 @@ public final class Transition extends Component
 	@Override
 	public String toString()
 	{
-		return toDot("box", "grey", "TRANSITION");
+		if(this.getCurrentValue()) {
+			return toDot("box", "red", "TRANSITION");
+		} else {
+			return toDot("box", "grey", "TRANSITION");
+		}
+
 	}
 }

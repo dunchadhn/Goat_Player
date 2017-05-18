@@ -22,7 +22,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		return new CachedStateMachine(new SamplePropNetStateMachine());
+		return new CachedStateMachine(new DifferentialPropNetStateMachine());
 	}
 
 	@Override
