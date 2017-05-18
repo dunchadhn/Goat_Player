@@ -93,7 +93,12 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 
 	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		depthCharges = 0;
-		while (System.currentTimeMillis() < finishBy) {
+		int loops = 0;
+		long total_time = 0;
+		long average_time = 0;
+		long time_elapsed = 0;
+		while (System.currentTimeMillis() + average_time < finishBy) {
+			time_elapsed = System.currentTimeMillis();
 			path = new ArrayList<Node>();
 			futures = new ArrayList<> ();
 			lock = new ReentrantLock();
@@ -110,6 +115,9 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			for (Future<?> f : futures) {
 		        f.get(); //blocks until the runnable completes
 		    }
+			total_time += (System.currentTimeMillis() - time_elapsed);
+			loops += 1;
+			average_time = total_time / loops;
 		}
 		System.out.println("20 Depth Charges: " + depthCharges);
 	}
