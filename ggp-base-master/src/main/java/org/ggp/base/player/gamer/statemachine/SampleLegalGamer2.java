@@ -1,11 +1,9 @@
 package org.ggp.base.player.gamer.statemachine;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Random;
 
 import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
-import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.StateMachine;
@@ -14,6 +12,7 @@ import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
+import org.ggp.base.util.statemachine.verifier.StateMachineVerifier;
 
 /**
  * SampleLegalGamer is a minimal gamer which always plays the first
@@ -29,20 +28,22 @@ public final class SampleLegalGamer2 extends SampleGamer
 
 
 	private StateMachine machine2, machine;
+	private MachineState refState;
 	@Override
 	public void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
 		machine = new CachedStateMachine(new ProverStateMachine());
 		machine.initialize(getMatch().getGame().getRules());
-		MachineState state = machine.getInitialState();
 		machine2 = getStateMachine();
-		MachineState state2 = machine2.getInitialState();
-		if(!state.equals(state2)) {
-			System.out.println("Correct init: " + state.getContents());
-			System.out.println("Wrong init: " + state2.getContents());
-			System.out.println("FAILURE");
+
+		if (!StateMachineVerifier.checkMachineConsistency(machine, machine2, timeout - System.currentTimeMillis() - 1000)) {
+			System.out.println("NOT CONSISTENT");
+			System.exit(0);
 		}
 	}
+
+
+
 	/**
 	 * This function is called at the start of each round
 	 * You are required to return the Move your player will play
@@ -52,35 +53,27 @@ public final class SampleLegalGamer2 extends SampleGamer
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
-		// We get the current start time
-		long start = System.currentTimeMillis();
 
-		/**
-		 * We put in memory the list of legal moves from the
-		 * current state. The goal of every stateMachineSelectMove()
-		 * is to return one of these moves. The choice of which
-		 * Move to play is the goal of GGP.
-		 */
-		PropNet propNet = (PropNet) machine2.getPropNet();
-		propNet.renderToFile("ticLegalPre.dot");
+		long start = System.currentTimeMillis();
 		List<Move> moves2 = machine2.getLegalMoves(getCurrentState(), getRole());
-		propNet = (PropNet) machine2.getPropNet();
-		propNet.renderToFile("ticLegalPost.dot");
-		Set<Move> moves2Set = new HashSet<>(moves2);
+		/*Set<Move> moves2Set = new HashSet<>(moves2);
 		List<Move> moves = machine.getLegalMoves(getCurrentState(), getRole());
 		Set<Move> movesSet = new HashSet<>(moves);
+
 		if (!movesSet.equals(moves2Set)) {
 			System.out.println(getRole());
 			System.out.println("Correct moves: " + moves);
 			System.out.println("Wrong moves: " + moves2);
+		} else {
+			//System.out.println("Legal Moves Correct");
 		}
-		assert(moves.equals(moves2));
+
+		assert(moves.equals(moves2));*/
 
 		// SampleLegalGamer is very simple : it picks the first legal move
-		Move selection = moves2.get(0);
-
-		propNet.renderToFile("ticLegal.dot");
-		System.out.println("random");
+		Move selection = moves2.get((new Random().nextInt(moves2.size())));
+		//System.out.println(selection);
+/*
 		List<Move> randomMove = machine2.getRandomJointMove(getCurrentState());
 
 		MachineState nextState2 = machine2.getNextState(getCurrentState(), randomMove);
@@ -106,7 +99,7 @@ public final class SampleLegalGamer2 extends SampleGamer
 			System.out.println("Correct goal: " + machine.getGoal(getCurrentState(),getRole()));
 			System.out.println("Wrong goal: " + machine2.getGoal(getCurrentState(), getRole()));
 			System.out.println("FAILURE");
-		}
+		}*/
 		// We get the end time
 		// It is mandatory that stop<timeout
 		long stop = System.currentTimeMillis();
@@ -117,7 +110,7 @@ public final class SampleLegalGamer2 extends SampleGamer
 		 * moves, selection, stop and start defined in the same way as
 		 * this example, and copy-paste these two lines in your player
 		 */
-		notifyObservers(new GamerSelectedMoveEvent(moves, selection, stop - start));
+		notifyObservers(new GamerSelectedMoveEvent(moves2, selection, stop - start));
 		return selection;
 	}
 }

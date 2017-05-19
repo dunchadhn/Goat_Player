@@ -72,6 +72,7 @@ public class Proposition extends Component
 		this.setCurrentValue(value);
 	}
 
+
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()
 	 */

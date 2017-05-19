@@ -18,11 +18,15 @@ public final class And extends Component
 	@Override
 	public boolean getValue()
 	{
-		if(T == N) {
+		for (Component c : this.getInputs())
+			if (!c.getCurrentValue()) return false;
+		return true;
+		/*if(T == N) {
 			return true;
 		}
-		return false;
+		return false;*/
 	}
+
 
 	public void edit_T(boolean val) {
 		if(val) {
@@ -33,6 +37,10 @@ public final class And extends Component
 		}
 	}
 
+	public void set(int val) {
+		T = val;
+	}
+
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()
 	 */
@@ -40,9 +48,9 @@ public final class And extends Component
 	public String toString()
 	{
 		if(this.getCurrentValue()) {
-			return toDot("invhouse", "red", "AND");
+			return toDot("invhouse", "red", "AND" + T);
 		} else {
-			return toDot("invhouse", "grey", "AND");
+			return toDot("invhouse", "grey", "AND" + T);
 		}
 	}
 

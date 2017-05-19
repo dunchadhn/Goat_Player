@@ -6,8 +6,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
@@ -16,7 +16,6 @@ import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.propnet.architecture.components.And;
-import org.ggp.base.util.propnet.architecture.components.Constant;
 import org.ggp.base.util.propnet.architecture.components.Not;
 import org.ggp.base.util.propnet.architecture.components.Or;
 import org.ggp.base.util.propnet.architecture.components.Proposition;
@@ -33,11 +32,12 @@ import org.ggp.base.util.statemachine.implementation.prover.query.ProverQueryBui
 
 
 @SuppressWarnings("unused")
-public class DifferentialPropNetStateMachine extends StateMachine {
+public class ForwardPropStateMachine extends StateMachine {
     /** The underlying proposition network  */
     private PropNet propNet;
     /** The topological ordering of the propositions */
-    private List<Proposition> ordering;
+    //private List<Proposition> ordering;
+    private Stack<Component> ordering;
     /** The player roles */
     private List<Role> roles;
     private MachineState currentState;
@@ -53,8 +53,8 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         	System.out.println("Initialized");
             propNet = OptimizingPropNetFactory.create(description);
             roles = propNet.getRoles();
-            ordering = getOrdering();
-            currentState = null;
+            ordering = getTopOrdering();
+            //ordering = getOrdering();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -71,88 +71,84 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     @Override
     public int getGoal(MachineState state, Role role)
             throws GoalDefinitionException {
-    	propNet.renderToFile("preGoal.dot");
     	setState(state, null);
-    	propNet.renderToFile("postGoal.dot");
         List<Role> roles = propNet.getRoles();
         Set<Proposition> rewards = propNet.getGoalPropositions().get(role);
         for(Proposition reward: rewards) {
         	if (reward.getValue())
         		return getGoalValue(reward);
         }
-        System.out.println("ERROR! Reward not defined in state " + state.toString());
-        System.exit(0);
         return 0;
     }
 
-
-    protected void setInit(boolean val, Queue<Component> queue) {
+    protected Stack<Component> getTopOrdering() {
+    	HashSet<Component> visited = new HashSet<Component>();
+    	Stack<Component> s = new Stack<Component>();
     	Proposition init = propNet.getInitProposition();
-    	if (init.getLastPropagatedOutputValue() == val) return;
-    	init.setValue(val);
-    	init.setLastPropagatedOutputValue(val);
-    	for(Component c: init.getOutputs()) {
-        	if (c instanceof And) {
-				And a = (And) c;
-				a.edit_T(val);
-			} else if (c instanceof Or) {
-				Or o = (Or) c;
-				o.edit_T(val);
-			}
-			queue.add(c);
-        }
-    }
-
-    protected void setConstants(Queue<Component> q) {
-    	for (Component c: propNet.getComponents()) {
-    		if (c instanceof Constant) {
-    			for (Component out : c.getOutputs()) {
-    				if (c instanceof And) {
-    					And a = (And) c;
-    	    			a.edit_T(c.getValue());
-    	    		} else if (c instanceof Or) {
-    	    			Or o = (Or) c;
-    	    			o.edit_T(c.getValue());
-    	    		}
-    				q.add(c);
-    			}
-    			c.setLastPropagatedOutputValue(c.getValue());
-    			c.setCurrentValue(c.getValue());
+    	topologicalSort(init, s, visited);
+    	for (Proposition p: propNet.getPropositions()) {
+    		if (!visited.contains(p)) {
+    			topologicalSort(p, s, visited);
     		}
     	}
+    	for (Component c: propNet.getComponents()) {
+    		if (!visited.contains(c)) {
+    			topologicalSort(c, s, visited);
+    		}
+    	}
+    	return s;
     }
 
+    protected void topologicalSort(Component c, Stack<Component> s, HashSet<Component> visited) {
+    	visited.add(c);
+    	for (Component out : c.getOutputs()) {
+    		if (!visited.contains(out)) {
+    			topologicalSort(out, s, visited);
+    		}
+    	}
+    	s.push(c);
+    }
+
+    protected void propStack() {
+    	Stack<Component> propOrdering = new Stack<Component>();
+    	propOrdering.addAll(ordering);
+    	while(!ordering.isEmpty()) {
+    		Component c = null;
+    		if (c instanceof Proposition) {
+    			Proposition p = (Proposition) c;
+    			p.setValue(c.getSingleInput().getCurrentValue());
+    		}
+    		else if (c instanceof Not) {
+    			c.setCurrentValue(!c.getSingleInput().getCurrentValue());
+    		}
+    		else if (c instanceof And) {
+    			And a = (And) c;
+    			c.setCurrentValue(a.getValue());
+    		}
+    		else if (c instanceof Or) {
+    			Or o = (Or) c;
+    			c.setCurrentValue(o.getValue());
+    		}
+    		else if (c instanceof Transition) {
+    			c.setCurrentValue(c.getSingleInput().getCurrentValue());
+    			continue;
+    		}
+
+    		for(Component out: c.getOutputs()) {
+				//queue.add(out);
+			}
+    	}
+    }
     @Override
     public MachineState getInitialState() {
-    	//System.out.println("InitialState");
-    	clearPropNet();
+    	setState(null, null);
     	Proposition init = propNet.getInitProposition();
         init.setValue(true);
-        init.setLastPropagatedOutputValue(true);
         propNet.renderToFile("init.dot");
-        Queue<Component> queue = new LinkedList<Component>();
-        setConstants(queue);//Constants don't change throughout the game, so we set them once here
-        for(Component c: init.getOutputs()) {
-        	if (c instanceof And) {
-				And a = (And) c;
-				a.edit_T(true);
-			} else if (c instanceof Or) {
-				Or o = (Or) c;
-				o.edit_T(true);
-			}
-			queue.add(c);
-        }
-        for(Proposition p: propNet.getBasePropositions().values()) {
-        	for (Component c : p.getOutputs())
-        		queue.add(c);
-        }
-        rawPropagate(queue);
-        propNet.renderToFile("initProp.dot");
+        propStack();
+        //propagate(queue);
         MachineState state = getStateFromBase();
-        queue = new LinkedList<Component>();
-        setInit(false, queue);
-        propagate(queue);
-        propNet.renderToFile("initState.dot");
+        init.setValue(false);
         return state;
     }
 
@@ -176,25 +172,20 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	return propNet;
     }
 
-    private int kLegal = 1;
+
     @Override
-    public List<Move> getLegalMoves(MachineState state, Role role)//Change such that we don't have to keep updating legal moves
-            throws MoveDefinitionException {
-    	System.out.println("legalMoves" + kLegal);
-    	propNet.renderToFile("initLegal" + kLegal + ".dot");
+    public List<Move> getLegalMoves(MachineState state, Role role)
+            throws MoveDefinitionException {//Check for disconnected components
     	setState(state, null);
         Set<Proposition> actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
         for(Proposition action : actions) {
-    		if (action.getValue()) {
+    		if (action.getSingleInput().getValue()) {
     			moves.add(getMoveFromProposition(action));
     		}
     	}
-        propNet.renderToFile("postLegal" + kLegal + ".dot");
-        ++kLegal;
         return moves;
     }
-
 
 
 	protected void setBases(MachineState state, Queue<Component> q) {
@@ -202,23 +193,9 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	Map<GdlSentence, Proposition> bases = propNet.getBasePropositions();
     	for (GdlSentence s: bases.keySet()) {
     		Proposition p = bases.get(s);
-
     		boolean val = state.getContents().contains(s);
-    		//System.out.println(p + " " + val + " " + p.getLastPropagatedOutputValue());
-    		if (val == p.getLastPropagatedOutputValue()) continue;
-    		//System.out.println("Updating!");
-
-    		p.setLastPropagatedOutputValue(val);
     		p.setValue(val);
-
     		for (Component c : p.getOutputs()) {
-    			if (c instanceof And) {
-					And a = (And) c;
-	    			a.edit_T(val);
-	    		} else if (c instanceof Or) {
-	    			Or o = (Or) c;
-	    			o.edit_T(val);
-	    		}
     			q.add(c);
     		}
     	}
@@ -231,54 +208,30 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	Map<GdlSentence, Proposition> inputs = propNet.getInputPropositions();
     	for (GdlSentence s : inputs.keySet()) {
     		Proposition p = inputs.get(s);
-
     		boolean val = actions.contains(s);
-    		if (val == p.getLastPropagatedOutputValue()) continue;
-
-    		p.setLastPropagatedOutputValue(val);
     		p.setValue(val);
-
     		for (Component c : p.getOutputs()) {
-    			if (c instanceof And) {
-					And a = (And) c;
-	    			a.edit_T(val);
-	    		} else if (c instanceof Or) {
-	    			Or o = (Or) c;
-	    			o.edit_T(val);
-	    		}
     			q.add(c);
     		}
     	}
     }
 
     protected void setState(MachineState state, List<Move> moves) {
+    	clearPropNet();
     	Queue<Component> q = new LinkedList<Component>();
-    	setInit(false, q);
     	setBases(state, q);
-    	propNet.renderToFile("postBases.dot");
     	setActions(moves, q);
-    	propNet.renderToFile("postActions.dot");
     	propagate(q);
-    	propNet.renderToFile("postProp.dot");
     }
 
-    private int kNext = 1;
     @Override
 	public MachineState getNextState(MachineState state, List<Move> moves) {
-    	System.out.println("getNextState" + kNext);
-    	propNet.renderToFile("preSet" + kNext + ".dot");
     	setState(state, moves);
-    	propNet.renderToFile("postNet" + kNext + ".dot");
-    	currentState = getStateFromBase();
-    	propNet.renderToFile("newState" + kNext + ".dot");
-    	++kNext;
-    	return currentState;
+    	return getStateFromBase();
     }
 
 
-    //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
-    //is only called during getInitialState()
-    protected void rawPropagate(Queue<Component> queue) {
+    public void propagate(Queue<Component> queue) {//Try using Stack
     	while(!queue.isEmpty()) {
     		Component c = queue.remove();
     		if (c instanceof Proposition) {
@@ -301,97 +254,17 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     			continue;
     		}
 
-    		boolean val = c.getCurrentValue();
-    		c.setLastPropagatedOutputValue(val);
     		for(Component out: c.getOutputs()) {
-    			if (out instanceof And) {
-					And a = (And) out;
-	    			a.edit_T(val);
-	    		} else if (out instanceof Or) {
-	    			Or o = (Or) out;
-	    			o.edit_T(val);
-	    		}
 				queue.add(out);
 			}
     	}
     }
 
-    //Differential Propagation
-    public void propagate(Queue<Component> queue) {
-    	//int i = 1;
-    	while(!queue.isEmpty()) {
-    		Component c = queue.remove();
-    		boolean val = (new Random()).nextBoolean();
-    		if (c instanceof Proposition) {
-    			Proposition p = (Proposition) c;
-    			val = c.getSingleInput().getCurrentValue();
-    			p.setValue(val);
-    		}
-    		else if (c instanceof Not) {
-    			val = !c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof And) {
-    			And a = (And) c;
-    			val = a.getValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			val = o.getValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof Transition) {
-    			val = c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
-    			//propNet.renderToFile("prop" + i + ".dot");
-    			//++i;
-    			assert c.getCurrentValue() == val;
-    			continue;
-    		}
-
-    		//assert c.getCurrentValue() == val;
-    		boolean lastVal = c.getLastPropagatedOutputValue();
-    		if (lastVal == val) continue;
-
-    		if (c instanceof Proposition) ((Proposition)c).setValue(val);
-    		else c.setCurrentValue(val);
-
-    		c.setLastPropagatedOutputValue(val);
-
-    		for(Component out: c.getOutputs()) {
-				if (out instanceof And) {
-					And a = (And) out;
-	    			a.edit_T(val);
-	    		} else if (out instanceof Or) {
-	    			Or o = (Or) out;
-	    			o.edit_T(val);
-	    		}
-				queue.add(out);
-			}
-    		//propNet.renderToFile("prop" + i + ".dot");
-    		//++i;
-    	}
-    }
-
-
-
-
-
-    private boolean clearPropNet() {
+    protected void clearPropNet() {
     	for (Component c: propNet.getComponents()) {
-    		if (c instanceof And) {
-				And a = (And) c;
-    			a.set(0);
-    		} else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			o.set(0);
-    		}
     		c.setCurrentValue(false);
-    		c.setLastPropagatedOutputValue(false);
     	}
     	for (Proposition p: propNet.getPropositions()) p.setValue(false);
-    	return true;
     }
 
 
@@ -425,7 +298,6 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         return order;
     }
 
-    /* Already implemented for you */
     @Override
     public List<Role> getRoles() {
         return roles;
@@ -500,3 +372,4 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         return new MachineState(contents);
     }
 }
+

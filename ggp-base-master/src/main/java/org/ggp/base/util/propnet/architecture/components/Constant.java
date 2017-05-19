@@ -33,12 +33,13 @@ public final class Constant extends Component
 		return value;
 	}
 
+
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()
 	 */
 	@Override
 	public String toString()
 	{
-		return toDot("doublecircle", "grey", Boolean.toString(value).toUpperCase());
+		return toDot("doublecircle", (this.getValue() ? "red" : "grey"), Boolean.toString(value).toUpperCase());
 	}
 }
