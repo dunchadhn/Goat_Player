@@ -118,6 +118,10 @@ public abstract class Component implements Serializable
         return outputs.iterator().next();
     }
 
+    public boolean edit_T(boolean val) {
+    	return false;
+    }
+
     public boolean getCurrentValue() {
     	return currentValue;
     }
@@ -132,6 +136,10 @@ public abstract class Component implements Serializable
 
     public void setLastPropagatedOutputValue(boolean value) {
     	this.lastPropagatedOutputValue = value;
+    }
+
+    public void setValFromSubClass(boolean val) {
+    	this.currentValue = val;
     }
 
     /**

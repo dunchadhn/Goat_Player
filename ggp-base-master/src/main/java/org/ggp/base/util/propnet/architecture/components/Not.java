@@ -19,6 +19,11 @@ public final class Not extends Component
 		return !getSingleInput().getValue();
 	}
 
+	@Override
+	public void setCurrentValue(boolean val) {
+		setValFromSubClass(getCurrentValue());
+	}
+
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()
 	 */
