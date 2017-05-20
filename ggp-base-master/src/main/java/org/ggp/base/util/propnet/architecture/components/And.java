@@ -17,7 +17,8 @@ public final class And extends Component
 	 */
 	@Override
 	public boolean getValue() {
-		return false;
+		return getCurrentValue();
+		//return false;
 	}
 	@Override
 	public boolean getCurrentValue()

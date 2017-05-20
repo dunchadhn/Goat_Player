@@ -57,7 +57,8 @@ public class Proposition extends Component
 	@Override
 	public boolean getValue()
 	{
-		return value;
+		return getCurrentValue();
+		//return value;
 	}
 
 	/**
@@ -79,6 +80,6 @@ public class Proposition extends Component
 	@Override
 	public String toString()
 	{
-		return toDot("circle", value ? "red" : "white", name.toString());
+		return toDot("circle", getCurrentValue() ? "red" : "white", name.toString());
 	}
 }
