@@ -10,11 +10,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.ggp.base.util.gdl.grammar.GdlConstant;
-import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlProposition;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
-import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.logging.GamerLogger;
 import org.ggp.base.util.propnet.architecture.components.And;
 import org.ggp.base.util.propnet.architecture.components.Not;
@@ -94,8 +92,6 @@ public final class BitPropNet
 	/** A reference to the single, unique, TerminalProposition. */
 	private final Proposition terminalProposition;
 
-	/** A helper mapping between input/legal propositions. */
-	private final Map<Proposition, Proposition> legalInputMap;
 
 	/** A helper list of all of the roles. */
 	private final List<Role> roles;
@@ -128,11 +124,11 @@ public final class BitPropNet
 
 		this.initProposition = recordInitProposition();
 		this.terminalProposition = recordTerminalProposition();
-		this.legalInputMap = makeLegalInputMap();
 
 		this.basePropositions = (Proposition[]) b.toArray(new Proposition[b.size()]);
 		this.inputPropositions = (Proposition[]) i.toArray(new Proposition[i.size()]);
 		this.legalPropositions = new HashMap<Role, Proposition[]>();
+		this.goalPropositions = new HashMap<Role, Proposition[]>();
 		for (Role r : l.keySet()) {
 			Set<Proposition> lval = l.get(r);
 			this.legalPropositions.put(r, lval.toArray(new Proposition[lval.size()]));
@@ -146,12 +142,8 @@ public final class BitPropNet
 	    return roles;
 	}
 
-	public Map<Proposition, Proposition> getLegalInputMap()
-	{
-		return legalInputMap;
-	}
 
-	private Map<Proposition, Proposition> makeLegalInputMap() {
+	/*private Map<Proposition, Proposition> makeLegalInputMap() {
 		Map<Proposition, Proposition> legalInputMap = new HashMap<Proposition, Proposition>();
 		// Create a mapping from Body->Input.
 		Map<List<GdlTerm>, Proposition> inputPropsByBody = new HashMap<List<GdlTerm>, Proposition>();
@@ -172,7 +164,7 @@ public final class BitPropNet
 			}
 		}
 		return legalInputMap;
-	}
+	}*/
 
 	/**
 	 * Getter method.
@@ -201,7 +193,7 @@ public final class BitPropNet
 	 * @return References to every GoalProposition in the PropNet, indexed by
 	 *         player name.
 	 */
-	public Map<Role, Set<Proposition>> getGoalPropositions()
+	public Map<Role, Proposition[]> getGoalPropositions()
 	{
 		return goalPropositions;
 	}
@@ -311,10 +303,10 @@ public final class BitPropNet
 		Map<GdlSentence, Proposition> basePropositions = new HashMap<GdlSentence, Proposition>();
 		for (Proposition proposition : propositions) {
 		    // Skip all propositions without exactly one input.
-		    if (proposition.getInputs().size() != 1)
+		    if (proposition.getInputs_set().size() != 1)
 		        continue;
 
-			Component component = proposition.getSingleInput();
+			Component component = proposition.getSingleInput_set();
 			if (component instanceof Transition) {
 				basePropositions.put(proposition.getName(), proposition);
 			}
@@ -501,7 +493,7 @@ public final class BitPropNet
 	public int getNumLinks() {
 		int linkCount = 0;
 		for(Component c : components) {
-			linkCount += c.getOutputs().size();
+			linkCount += c.getOutputs_set().size();
 		}
 		return linkCount;
 	}
@@ -515,7 +507,7 @@ public final class BitPropNet
 	 *
 	 * The INIT and terminal components cannot be removed.
 	 */
-	public void removeComponent(Component c) {
+	/*public void removeComponent(Component c) {
 
 
 		//Go through all the collections it could appear in
@@ -563,5 +555,5 @@ public final class BitPropNet
 		//These are actually unnecessary...
 		//c.removeAllInputs();
 		//c.removeAllOutputs();
-	}
+	}*/
 }
