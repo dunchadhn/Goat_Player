@@ -484,4 +484,6 @@ public abstract class BitStateMachine
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	public abstract MachineState toGdl(BitMachineState state);
 }

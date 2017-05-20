@@ -4,7 +4,7 @@ import org.ggp.base.apps.player.detail.DetailPanel;
 import org.ggp.base.apps.player.detail.SimpleDetailPanel;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
 import org.ggp.base.util.game.Game;
-import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
@@ -19,7 +19,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
  * add the last core function : public Move stateMachineSelectMove(long timeout)
  */
 
-public abstract class SampleGamer extends StateMachineGamer
+public abstract class SampleGamer extends BitStateMachineGamer
 {
 	@Override
 	public void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
@@ -40,8 +40,8 @@ public abstract class SampleGamer extends StateMachineGamer
 
 	// This is the default State Machine
 	@Override
-	public StateMachine getInitialStateMachine() {
-		return new DifferentialPropNetStateMachine();
+	public BitStateMachine getInitialStateMachine() {
+		return new BitDifferentialPropNetStateMachine();
 	}
 
 	// This is the defaul Sample Panel
