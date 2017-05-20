@@ -2,15 +2,18 @@ package org.ggp.base.player.gamer.statemachine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
+import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.propnet.architecture.BitPropNet;
 import org.ggp.base.util.propnet.architecture.Component;
@@ -20,6 +23,7 @@ import org.ggp.base.util.propnet.architecture.components.Proposition;
 import org.ggp.base.util.propnet.architecture.components.Transition;
 import org.ggp.base.util.propnet.factory.BitOptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.BitStateMachine;
+import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
@@ -370,13 +374,13 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     private OpenBitSet toDoes(List<Move> moves, int size, Proposition[] inputs)
     {
     	OpenBitSet doeses = new OpenBitSet(size);
-    	HashMap< Pair<GdlConstant, GdlTerm>, Integer> m = propNet.getInputMap();
+    	HashMap< Pair<GdlTerm, GdlTerm>, Integer> m = propNet.getInputMap();
     	for (int i = 0; i < moves.size(); ++i) {
     		GdlConstant r = roles.get(i).getName();
     		GdlTerm t = moves.get(i).getContents();
-    		int index = m.get(Pair.of(r, t));
+    		Pair<GdlConstant, GdlTerm> pair = Pair.of(r, t);
+    		int index = m.get(pair);
     		doeses.fastSet(index);
-
     	}
 
         return doeses;
@@ -428,4 +432,17 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
         }
         return new BitMachineState(contents);
     }
+
+    @Override
+	public MachineState toGdl(BitMachineState state) {
+    	Set<GdlSentence> bases = new HashSet<GdlSentence>();
+    	Proposition[] baseProps = propNet.getBasePropositions();
+    	for (int i = 0; i < baseProps.length; ++i) {
+    		Proposition p = baseProps[i];
+    		if (p.getCurrentValue()) bases.add(p.getName());
+    	}
+    	return new MachineState(bases);
+    }
+
+
 }

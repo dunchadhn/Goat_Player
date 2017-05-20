@@ -3,6 +3,7 @@ package org.ggp.base.util.propnet.architecture;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -93,11 +94,13 @@ public final class BitPropNet
 	/** A reference to the single, unique, TerminalProposition. */
 	private final Proposition terminalProposition;
 
-	private final HashMap< Pair<GdlConstant, GdlTerm>, Integer> inputMap;
-
+	private final HashMap< Pair<GdlTerm, GdlTerm>, Integer> inputMap;
 
 	/** A helper list of all of the roles. */
 	private final List<Role> roles;
+
+
+	Map<GdlSentence, Proposition> baseProps;
 
 	public void addComponent(Component c)
 	{
@@ -119,8 +122,9 @@ public final class BitPropNet
 		this.components = components;
 		this.propositions = recordPropositions();
 
-		List<Proposition> b = (List<Proposition>) recordBasePropositions().values();
-		List<Proposition> i = (List<Proposition>) recordInputPropositions().values();
+		baseProps = recordBasePropositions();
+		List<Proposition> b = new ArrayList<Proposition>(baseProps.values());
+		List<Proposition> i = new ArrayList<Proposition>(recordInputPropositions().values());
 		Map<Role, Set<Proposition>> l = recordLegalPropositions();
 		Map<Role, Set<Proposition>> g = recordGoalPropositions();
 
@@ -132,11 +136,11 @@ public final class BitPropNet
 		this.inputPropositions = (Proposition[]) i.toArray(new Proposition[i.size()]);
 		this.legalPropositions = new HashMap<Role, Proposition[]>();
 		this.goalPropositions = new HashMap<Role, Proposition[]>();
-		this.inputMap = new HashMap< Pair<GdlConstant, GdlTerm>, Integer>();
+		this.inputMap = new HashMap< Pair<GdlTerm, GdlTerm>, Integer>();
 
 		for (int index = 0; index < inputPropositions.length; ++index) {
 			Proposition p = inputPropositions[index];
-			Pair<GdlConstant, GdlTerm> pair = Pair.of(p.getName().getName(), p.getName().getBody().get(1));
+			Pair<GdlTerm, GdlTerm> pair = Pair.of(p.getName().getBody().get(0), p.getName().getBody().get(1));
 			inputMap.put(pair, index);
 		}
 
@@ -154,7 +158,7 @@ public final class BitPropNet
 	}
 
 
-	public HashMap< Pair<GdlConstant, GdlTerm>, Integer> getInputMap() {
+	public HashMap< Pair<GdlTerm, GdlTerm>, Integer> getInputMap() {
 		return inputMap;
 	}
 
@@ -168,6 +172,10 @@ public final class BitPropNet
 	public Proposition[] getBasePropositions()
 	{
 		return basePropositions;
+	}
+
+	public Map<GdlSentence, Proposition> getbasePropMap() {
+		return baseProps;
 	}
 
 	/**

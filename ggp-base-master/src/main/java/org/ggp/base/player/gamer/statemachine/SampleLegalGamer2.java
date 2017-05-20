@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
+import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.StateMachine;
@@ -12,7 +13,6 @@ import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
-import org.ggp.base.util.statemachine.verifier.StateMachineVerifier;
 
 /**
  * SampleLegalGamer is a minimal gamer which always plays the first
@@ -27,7 +27,8 @@ public final class SampleLegalGamer2 extends SampleGamer
 {
 
 
-	private StateMachine machine2, machine;
+	private BitStateMachine machine2;
+	private StateMachine machine;
 	private MachineState refState;
 	@Override
 	public void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
@@ -36,10 +37,10 @@ public final class SampleLegalGamer2 extends SampleGamer
 		machine.initialize(getMatch().getGame().getRules());
 		machine2 = getStateMachine();
 
-		if (!StateMachineVerifier.checkMachineConsistency(machine, machine2, timeout - System.currentTimeMillis() - 1000)) {
+		/*if (!StateMachineVerifier.checkMachineConsistency(machine, machine2, timeout - System.currentTimeMillis() - 1000)) {
 			System.out.println("NOT CONSISTENT");
 			System.exit(0);
-		}
+		}*/
 	}
 
 
