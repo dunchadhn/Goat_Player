@@ -9,22 +9,29 @@ import org.ggp.base.util.propnet.architecture.Component;
 public final class And extends Component
 {
 	int T = 0;
-	int N = getInputs().size();
+	int N = 0;
 	/**
 	 * Returns true if and only if every input to the and is true.
 	 *
 	 * @see org.ggp.base.util.propnet.architecture.Component#getValue()
 	 */
 	@Override
-	public boolean getValue()
+	public boolean getValue() {
+		return false;
+	}
+	@Override
+	public boolean getCurrentValue()
 	{
-		for (Component c : this.getInputs())
+		/*for (Component c : this.getInputs())
 			if (!c.getCurrentValue()) return false;
-		return true;
-		/*if(T == N) {
+		return true;*/
+		if(N == 0) {
+			N = getInputs().size();
+		}
+		if(T == N) {
 			return true;
 		}
-		return false;*/
+		return false;
 	}
 
 	@Override
@@ -53,10 +60,10 @@ public final class And extends Component
 	@Override
 	public String toString()
 	{
-		if(this.getCurrentValue()) {
-			return toDot("invhouse", "red", "AND" + T);
+		if(this.getValue()) {
+			return toDot("invhouse", "red", "AND" + T + ", " + N);
 		} else {
-			return toDot("invhouse", "grey", "AND" + T);
+			return toDot("invhouse", "grey", "AND" + T + ", " + N);
 		}
 	}
 
