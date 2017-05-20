@@ -20,5 +20,6 @@
 	<classpathentry kind="lib" path="lib/javassist/javassist.jar"/>
 	<classpathentry kind="lib" path="lib/reflections/reflections-0.9.9-RC1.jar"/>
 	<classpathentry kind="lib" path="lib/Htmlparser/htmlparser-1.4.jar"/>
+	<classpathentry kind="lib" path="/Users/Achilles/Documents/Stanford/Junior Year/Spring/CS 227B/workspace/Goat_Player/ggp-base-master/lib/apache-lucene.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
