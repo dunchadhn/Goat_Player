@@ -880,7 +880,7 @@ public class OptimizingPropNetFactory {
 
 		//Special case: An input is the true constant
 		for(Component in : inputs) {
-			if(in instanceof Constant && in.getValue()) {
+			if(in instanceof Constant && in.getCurrentValue()) {
 				//True constant: connect that to the component, done
 				in.addOutput(output);
 				output.addInput(in);
@@ -1271,7 +1271,7 @@ public class OptimizingPropNetFactory {
 	private static void andify(List<Component> inputs, Component output, Constant trueProp) {
 		//Special case: If the inputs include false, connect false to thisComponent
 		for(Component c : inputs) {
-			if(c instanceof Constant && !c.getValue()) {
+			if(c instanceof Constant && !c.getCurrentValue()) {
 				//Connect false (c) to the output
 				output.addInput(c);
 				c.addOutput(output);
@@ -1424,7 +1424,7 @@ public class OptimizingPropNetFactory {
 		for (Component c : pn.getComponents()) {
 			ConcurrencyUtils.checkForInterruption();
 			if (c instanceof Constant) {
-				if (c.getValue()) {
+				if (c.getCurrentValue()) {
 					toAdd.add(Pair.of(c, Type.TRUE));
 				} else {
 					toAdd.add(Pair.of(c, Type.FALSE));

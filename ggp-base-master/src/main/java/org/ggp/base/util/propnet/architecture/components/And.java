@@ -15,17 +15,10 @@ public final class And extends Component
 	 *
 	 * @see org.ggp.base.util.propnet.architecture.Component#getValue()
 	 */
-	@Override
-	public boolean getValue() {
-		return getCurrentValue();
-		//return false;
-	}
+
 	@Override
 	public boolean getCurrentValue()
 	{
-		/*for (Component c : this.getInputs())
-			if (!c.getCurrentValue()) return false;
-		return true;*/
 		if(N == 0) {
 			N = getInputs().size();
 		}
@@ -55,7 +48,7 @@ public final class And extends Component
 	@Override
 	public String toString()
 	{
-		if(this.getValue()) {
+		if(this.getCurrentValue()) {
 			return toDot("invhouse", "red", "AND" + T + ", " + N);
 		} else {
 			return toDot("invhouse", "grey", "AND" + T + ", " + N);

@@ -13,11 +13,6 @@ public final class Transition extends Component
 	 *
 	 * @see org.ggp.base.util.propnet.architecture.Component#getValue()
 	 */
-	@Override
-	public boolean getValue()
-	{
-		return getSingleInput().getValue();
-	}
 
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()

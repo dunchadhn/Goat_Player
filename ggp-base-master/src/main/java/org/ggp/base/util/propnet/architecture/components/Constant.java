@@ -27,9 +27,9 @@ public final class Constant extends Component
 	 *
 	 * @see org.ggp.base.util.propnet.architecture.Component#getValue()
 	 */
+
 	@Override
-	public boolean getValue()
-	{
+	public boolean getCurrentValue() {
 		return value;
 	}
 
@@ -40,6 +40,6 @@ public final class Constant extends Component
 	@Override
 	public String toString()
 	{
-		return toDot("doublecircle", (this.getValue() ? "red" : "grey"), Boolean.toString(value).toUpperCase());
+		return toDot("doublecircle", (this.getCurrentValue() ? "red" : "grey"), Boolean.toString(value).toUpperCase());
 	}
 }

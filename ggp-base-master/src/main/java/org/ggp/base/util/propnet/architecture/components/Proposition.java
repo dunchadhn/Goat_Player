@@ -54,24 +54,12 @@ public class Proposition extends Component
 	 *
 	 * @see org.ggp.base.util.propnet.architecture.Component#getValue()
 	 */
-	@Override
-	public boolean getValue()
-	{
-		return getCurrentValue();
-		//return value;
-	}
-
 	/**
 	 * Setter method.
 	 *
 	 * @param value
 	 *            The new value of the Proposition.
 	 */
-	public void setValue(boolean value)
-	{
-		this.value = value;
-		this.setCurrentValue(value);
-	}
 
 
 	/**

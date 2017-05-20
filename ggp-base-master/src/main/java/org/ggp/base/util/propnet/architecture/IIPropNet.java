@@ -113,9 +113,9 @@ public final class IIPropNet {
 	public void setIIValue(Proposition prop, double value) {
 		iivalues.put(prop, value);
 		if (value == 0) {
-			prop.setValue(false);
+			prop.setCurrentValue(false);
 		} else if (value == 1) {
-			prop.setValue(true);
+			prop.setCurrentValue(true);
 		}
 	}
 

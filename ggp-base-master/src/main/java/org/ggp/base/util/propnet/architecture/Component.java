@@ -135,13 +135,6 @@ public abstract class Component implements Serializable
     }
 
     /**
-     * Returns the value of the Component.
-     *
-     * @return The value of the Component.
-     */
-    public abstract boolean getValue();
-
-    /**
      * Returns a representation of the Component in .dot format.
      *
      * @see java.lang.Object#toString()

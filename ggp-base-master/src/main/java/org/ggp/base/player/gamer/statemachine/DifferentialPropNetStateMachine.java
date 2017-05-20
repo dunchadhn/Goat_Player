@@ -62,7 +62,6 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
     @Override
     public boolean isTerminal(MachineState state) {
-    	System.out.println("isTerminal");
     	setState(state, null);
     	return propNet.getTerminalProposition().getCurrentValue();
     }
@@ -71,7 +70,6 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     @Override
     public int getGoal(MachineState state, Role role)
             throws GoalDefinitionException {
-    	System.out.println("getGoal");
     	setState(state, null);
         List<Role> roles = propNet.getRoles();
         Set<Proposition> rewards = propNet.getGoalPropositions().get(role);
@@ -105,8 +103,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     protected void setConstants(Queue<Component> q) {
     	for (Component c: propNet.getComponents()) {
     		if (c instanceof Constant) {
-    			c.setLastPropagatedOutputValue(c.getValue());
-    			c.setCurrentValue(c.getValue());
+    			c.setLastPropagatedOutputValue(c.getCurrentValue());
     			if(c.getCurrentValue()) {
     				for (Component out : c.getOutputs()) {
     					if (c instanceof And) {
@@ -131,10 +128,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     private int kInit = 1;
     @Override
     public MachineState getInitialState() {
-    	System.out.println("initialState");
-    	propNet.renderToFile("start" + kInit + ".dot");
     	clearPropNet();
-    	propNet.renderToFile("clear" + kInit + ".dot");
     	Proposition init = propNet.getInitProposition();
         init.setCurrentValue(true);
         init.setLastPropagatedOutputValue(true);
@@ -158,14 +152,11 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         	for (Component c : p.getOutputs())
         		queue.add(c);
         }
-        propNet.renderToFile("init" + kInit + ".dot");
         rawPropagate(queue);
-        propNet.renderToFile("initRaw" + kInit + ".dot");
         MachineState state = getStateFromBase();
         queue = new LinkedList<Component>();
         setInit(false, queue);
         propagate(queue);
-        propNet.renderToFile("initPost" + kInit + ".dot");
         return state;
     }
 
@@ -189,14 +180,10 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	return propNet;
     }
 
-    private int kLegal = 1;
     @Override
     public List<Move> getLegalMoves(MachineState state, Role role)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
-    	System.out.println("legalMoves" + kLegal);
-    	propNet.renderToFile("preLegal" + kLegal + ".dot");
     	setState(state, null);
-    	propNet.renderToFile("postLegal" + kLegal + ".dot");
         Set<Proposition> actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
         for(Proposition action : actions) {
@@ -204,7 +191,6 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     			moves.add(getMoveFromProposition(action));
     		}
     	}
-        ++kLegal;
         return moves;
     }
 
@@ -217,9 +203,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		Proposition p = bases.get(s);
 
     		boolean val = state.getContents().contains(s);
-    		//System.out.println(p + " " + val + " " + p.getLastPropagatedOutputValue());
     		if (val == p.getLastPropagatedOutputValue()) continue;
-    		//System.out.println("Updating!");
 
     		p.setLastPropagatedOutputValue(val);
     		p.setCurrentValue(val);
@@ -272,15 +256,10 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	propagate(q);
     }
 
-    private int kNext = 1;
     @Override
 	public MachineState getNextState(MachineState state, List<Move> moves) {
-    	System.out.println("nextState" + kNext);
-    	propNet.renderToFile("preState" + kNext + ".dot");
     	setState(state, moves);
-    	propNet.renderToFile("postState" + kNext + ".dot");
     	currentState = getStateFromBase();
-    	++kNext;
     	return currentState;
     }
 
@@ -494,8 +473,8 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         Set<GdlSentence> contents = new HashSet<GdlSentence>();
         for (Proposition p : propNet.getBasePropositions().values())
         {
-            p.setValue(p.getSingleInput().getCurrentValue());
-            if (p.getValue())
+            p.setCurrentValue(p.getSingleInput().getCurrentValue());
+            if (p.getCurrentValue())
             {
                 contents.add(p.getName());
             }
