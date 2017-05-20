@@ -31,20 +31,14 @@ public final class Or extends Component
 		return false;
 	}
 
-	@Override
-	public void setCurrentValue(boolean val) {
-		setValFromSubClass(getCurrentValue());
-	}
 
-	@Override
-	public boolean edit_T(boolean val) {
+	public void edit_T(boolean val) {
 		if(val) {
 			T++;
 		}
 		else {
 			T--;
 		}
-		return true;
 	}
 
 	public void set(int val) {
