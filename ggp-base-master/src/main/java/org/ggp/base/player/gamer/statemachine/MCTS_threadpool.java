@@ -38,6 +38,7 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
 		runMCTS();
+		System.out.println("Here");
 		bestMove(root);
 	}
 
@@ -53,7 +54,6 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		for(int i = 0; i < num_threads; i++) {
 			machines.add(getInitialStateMachine());
 			machines.get(i).initialize(getMatch().getGame().getRules());
-			machines.get(i).getInitialState();
 		}
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
@@ -73,10 +73,10 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		for (int i = 0; i < machines.size(); ++i) machines.get(i).doPerMoveWork();
 		MachineState currentState = getCurrentState();
 		if (root == null) System.out.println("NULL ROOT");
-		if (root.state.equals(currentState)) return;
+		if (root.state == currentState) return;
 		for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
 			MachineState nextState = machine.getNextState(root.state, jointMove);
-			if (currentState.equals(nextState)) {
+			if (currentState == nextState) {
 				root = root.children.get(jointMove);
 				if (root == null) System.out.println("NOT IN MAP");
 				return;
