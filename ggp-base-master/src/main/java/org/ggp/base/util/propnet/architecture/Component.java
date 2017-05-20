@@ -99,6 +99,7 @@ public abstract class Component implements Serializable
      *
      * @return The single input to the component.
      */
+
     public Component getSingleInput() {
         assert inputs.size() == 1;
         return inputs.iterator().next();

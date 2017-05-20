@@ -45,6 +45,11 @@ public final class And extends Component
 		return true;
 	}
 
+	@Override
+	public Component getSingleInput() {
+        return this;
+    }
+
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()
 	 */

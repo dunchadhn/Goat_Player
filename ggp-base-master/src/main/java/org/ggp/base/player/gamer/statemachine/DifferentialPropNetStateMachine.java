@@ -14,10 +14,8 @@ import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.PropNet;
-import org.ggp.base.util.propnet.architecture.components.And;
 import org.ggp.base.util.propnet.architecture.components.Constant;
 import org.ggp.base.util.propnet.architecture.components.Not;
-import org.ggp.base.util.propnet.architecture.components.Or;
 import org.ggp.base.util.propnet.architecture.components.Proposition;
 import org.ggp.base.util.propnet.architecture.components.Transition;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
@@ -240,22 +238,13 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     protected void rawPropagate(Queue<Component> queue) {
     	while(!queue.isEmpty()) {
     		Component c = queue.remove();
-    		if (c instanceof Proposition) {
-    			c.setCurrentValue(c.getSingleInput().getCurrentValue());
-    		}
-    		else if (c instanceof Not) {
+    		if (c instanceof Not) {
     			c.setCurrentValue(!c.getSingleInput().getCurrentValue());
     		}
-    		else if (c instanceof And) {
-    			And a = (And) c;
-    			c.setCurrentValue(a.getCurrentValue());
-    		}
-    		else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			c.setCurrentValue(o.getCurrentValue());
-    		}
-    		else if (c instanceof Transition) {
+    		else {
     			c.setCurrentValue(c.getSingleInput().getCurrentValue());
+    		}
+    		if (c instanceof Transition) {
     			continue;
     		}
 
@@ -280,27 +269,15 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	while(!queue.isEmpty()) {
     		Component c = queue.remove();
     		boolean val = false;
-    		if (c instanceof Proposition) {
-    			val = c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
+    		if (c instanceof Not) {
+    			c.setCurrentValue(!c.getSingleInput().getCurrentValue());
+    			val = c.getCurrentValue();
     		}
-    		else if (c instanceof Not) {
-    			val = !c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
+    		else {
+    			c.setCurrentValue(c.getSingleInput().getCurrentValue());
+    			val = c.getCurrentValue();
     		}
-    		else if (c instanceof And) {
-    			And a = (And) c;
-    			val = a.getCurrentValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			val = o.getCurrentValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof Transition) {
-    			val = c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
+    		if (c instanceof Transition) {
     			c.setLastPropagatedOutputValue(val);
     			continue;
     		}

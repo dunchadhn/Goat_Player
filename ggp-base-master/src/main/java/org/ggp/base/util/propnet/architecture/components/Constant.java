@@ -22,6 +22,11 @@ public final class Constant extends Component
 		this.value = value;
 	}
 
+	@Override
+	public Component getSingleInput() {
+        return this;
+    }
+
 	/**
 	 * Returns the value that the constant was initialized to.
 	 *
