@@ -89,13 +89,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	init.setCurrentValue(val);
     	init.setLastPropagatedOutputValue(val);
     	for(Component c: init.getOutputs()) {
-        	if (c instanceof And) {
-				And a = (And) c;
-				a.edit_T(val);
-			} else if (c instanceof Or) {
-				Or o = (Or) c;
-				o.edit_T(val);
-			}
+    		c.edit_T(val);
 			queue.add(c);
         }
     }
@@ -103,16 +97,11 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     protected void setConstants(Queue<Component> q) {
     	for (Component c: propNet.getComponents()) {
     		if (c instanceof Constant) {
-    			c.setLastPropagatedOutputValue(c.getCurrentValue());
-    			if(c.getCurrentValue()) {
+    			boolean val = c.getCurrentValue();
+    			c.setLastPropagatedOutputValue(val);
+    			if(val) {
     				for (Component out : c.getOutputs()) {
-    					if (c instanceof And) {
-    						And a = (And) c;
-    						a.edit_T(c.getCurrentValue());
-    					} else if (c instanceof Or) {
-    						Or o = (Or) c;
-    						o.edit_T(c.getCurrentValue());
-    					}
+    					out.edit_T(val);
     					q.add(c);
     				}
     			}
@@ -135,13 +124,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         Queue<Component> queue = new LinkedList<Component>();
         setConstants(queue);//Constants don't change throughout the game, so we set them once here
         for(Component c: init.getOutputs()) {
-        	if (c instanceof And) {
-				And a = (And) c;
-				a.edit_T(true);
-			} else if (c instanceof Or) {
-				Or o = (Or) c;
-				o.edit_T(true);
-			}
+        	c.edit_T(true);
 			queue.add(c);
         }
         for(Proposition p: propNet.getBasePropositions().values()) {//Don't add redundant states
@@ -209,13 +192,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		p.setCurrentValue(val);
 
     		for (Component c : p.getOutputs()) {
-    			if (c instanceof And) {
-					And a = (And) c;
-	    			a.edit_T(val);
-	    		} else if (c instanceof Or) {
-	    			Or o = (Or) c;
-	    			o.edit_T(val);
-	    		}
+    			c.edit_T(val);
     			q.add(c);
     		}
     	}
@@ -236,13 +213,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		p.setCurrentValue(val);
 
     		for (Component c : p.getOutputs()) {
-    			if (c instanceof And) {
-					And a = (And) c;
-	    			a.edit_T(val);
-	    		} else if (c instanceof Or) {
-	    			Or o = (Or) c;
-	    			o.edit_T(val);
-	    		}
+    			c.edit_T(val);
     			q.add(c);
     		}
     	}
@@ -293,13 +264,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		c.setLastPropagatedOutputValue(val);
     		if(val != last_val) {
     			for(Component out: c.getOutputs()) {
-    					if (out instanceof And) {
-    						And a = (And) out;
-    						a.edit_T(val);
-    					} else if (out instanceof Or) {
-    						Or o = (Or) out;
-    						o.edit_T(val);
-    					}
+    					out.edit_T(val);
     					queue.add(out);
     			}
 			} else {
@@ -346,13 +311,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		c.setLastPropagatedOutputValue(val);
 
     		for(Component out: c.getOutputs()) {
-				if (out instanceof And) {
-					And a = (And) out;
-	    			a.edit_T(val);
-	    		} else if (out instanceof Or) {
-	    			Or o = (Or) out;
-	    			o.edit_T(val);
-	    		}
+				out.edit_T(val);
 				queue.add(out);
 			}
     	}
@@ -364,13 +323,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
     private boolean clearPropNet() {
     	for (Component c: propNet.getComponents()) {
-    		if (c instanceof And) {
-				And a = (And) c;
-    			a.set(0);
-    		} else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			o.set(0);
-    		}
+    		c.set(0);
     		c.setCurrentValue(false);
     		c.setLastPropagatedOutputValue(false);
     	}

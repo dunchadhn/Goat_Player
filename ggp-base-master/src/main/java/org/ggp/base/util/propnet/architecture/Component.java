@@ -32,6 +32,14 @@ public abstract class Component implements Serializable
         this.lastPropagatedOutputValue = false;
     }
 
+    public boolean edit_T(boolean val) {
+    	return false;
+    }
+
+    public boolean set(int val) {
+    	return false;
+    }
+
     /**
      * Adds a new input.
      *
