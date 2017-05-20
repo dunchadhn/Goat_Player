@@ -296,10 +296,10 @@ public final class PropNet
 		Map<GdlSentence, Proposition> basePropositions = new HashMap<GdlSentence, Proposition>();
 		for (Proposition proposition : propositions) {
 		    // Skip all propositions without exactly one input.
-		    if (proposition.getInputs().size() != 1)
+		    if (proposition.getInputs_set().size() != 1)
 		        continue;
 
-			Component component = proposition.getSingleInput();
+			Component component = proposition.getSingleInput_set();
 			if (component instanceof Transition) {
 				basePropositions.put(proposition.getName(), proposition);
 			}
@@ -486,7 +486,7 @@ public final class PropNet
 	public int getNumLinks() {
 		int linkCount = 0;
 		for(Component c : components) {
-			linkCount += c.getOutputs().size();
+			linkCount += c.getOutputs_set().size();
 		}
 		return linkCount;
 	}
@@ -541,9 +541,9 @@ public final class PropNet
 		components.remove(c);
 
 		//Remove all the local links to the component
-		for(Component parent : c.getInputs())
+		for(Component parent : c.getInputs_set())
 			parent.removeOutput(c);
-		for(Component child : c.getOutputs())
+		for(Component child : c.getOutputs_set())
 			child.removeInput(c);
 		//These are actually unnecessary...
 		//c.removeAllInputs();

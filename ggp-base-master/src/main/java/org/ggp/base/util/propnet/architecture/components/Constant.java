@@ -23,7 +23,12 @@ public final class Constant extends Component
 	}
 
 	@Override
-	public Component getSingleInput() {
+	public Component getSingleInput_arr() {
+        return this;
+    }
+
+	@Override
+	public Component getSingleInput_set() {
         return this;
     }
 

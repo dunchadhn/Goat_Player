@@ -20,7 +20,7 @@ public final class And extends Component
 	public boolean getCurrentValue()
 	{
 		if(N == 0) {
-			N = getInputs().size();
+			N = getInputsSize();
 		}
 		if(T == N) {
 			return true;
@@ -46,7 +46,12 @@ public final class And extends Component
 	}
 
 	@Override
-	public Component getSingleInput() {
+	public Component getSingleInput_arr() {
+        return this;
+    }
+
+	@Override
+	public Component getSingleInput_set() {
         return this;
     }
 
