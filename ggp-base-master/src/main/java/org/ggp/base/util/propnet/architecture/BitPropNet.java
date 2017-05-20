@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlProposition;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
+import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.logging.GamerLogger;
 import org.ggp.base.util.propnet.architecture.components.And;
 import org.ggp.base.util.propnet.architecture.components.Not;
@@ -69,7 +71,6 @@ public final class BitPropNet
 	/** References to every component in the PropNet. */
 	private final Set<Component> components;
 
-
 	/** References to every Proposition in the PropNet. */
 	private final Set<Proposition> propositions;
 
@@ -91,6 +92,8 @@ public final class BitPropNet
 
 	/** A reference to the single, unique, TerminalProposition. */
 	private final Proposition terminalProposition;
+
+	private final HashMap< Pair<GdlConstant, GdlTerm>, Integer> inputMap;
 
 
 	/** A helper list of all of the roles. */
@@ -129,6 +132,14 @@ public final class BitPropNet
 		this.inputPropositions = (Proposition[]) i.toArray(new Proposition[i.size()]);
 		this.legalPropositions = new HashMap<Role, Proposition[]>();
 		this.goalPropositions = new HashMap<Role, Proposition[]>();
+		this.inputMap = new HashMap< Pair<GdlConstant, GdlTerm>, Integer>();
+
+		for (int index = 0; index < inputPropositions.length; ++index) {
+			Proposition p = inputPropositions[index];
+			Pair<GdlConstant, GdlTerm> pair = Pair.of(p.getName().getName(), p.getName().getBody().get(1));
+			inputMap.put(pair, index);
+		}
+
 		for (Role r : l.keySet()) {
 			Set<Proposition> lval = l.get(r);
 			this.legalPropositions.put(r, lval.toArray(new Proposition[lval.size()]));
@@ -143,28 +154,10 @@ public final class BitPropNet
 	}
 
 
-	/*private Map<Proposition, Proposition> makeLegalInputMap() {
-		Map<Proposition, Proposition> legalInputMap = new HashMap<Proposition, Proposition>();
-		// Create a mapping from Body->Input.
-		Map<List<GdlTerm>, Proposition> inputPropsByBody = new HashMap<List<GdlTerm>, Proposition>();
-		for(Proposition inputProp : inputPropositions.values()) {
-			List<GdlTerm> inputPropBody = (inputProp.getName()).getBody();
-			inputPropsByBody.put(inputPropBody, inputProp);
-		}
-		// Use that mapping to map Input->Legal and Legal->Input
-		// based on having the same Body proposition.
-		for(Set<Proposition> legalProps : legalPropositions.values()) {
-			for(Proposition legalProp : legalProps) {
-				List<GdlTerm> legalPropBody = (legalProp.getName()).getBody();
-				if (inputPropsByBody.containsKey(legalPropBody)) {
-    				Proposition inputProp = inputPropsByBody.get(legalPropBody);
-    				legalInputMap.put(inputProp, legalProp);
-    				legalInputMap.put(legalProp, inputProp);
-				}
-			}
-		}
-		return legalInputMap;
-	}*/
+	public HashMap< Pair<GdlConstant, GdlTerm>, Integer> getInputMap() {
+		return inputMap;
+	}
+
 
 	/**
 	 * Getter method.

@@ -1,43 +1,39 @@
 package org.ggp.base.player.gamer.statemachine;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 
+import org.apache.lucene.util.OpenBitSet;
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
-import org.ggp.base.util.gdl.grammar.GdlSentence;
+import org.ggp.base.util.gdl.grammar.GdlTerm;
+import org.ggp.base.util.propnet.architecture.BitPropNet;
 import org.ggp.base.util.propnet.architecture.Component;
-import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.propnet.architecture.components.Constant;
 import org.ggp.base.util.propnet.architecture.components.Not;
 import org.ggp.base.util.propnet.architecture.components.Proposition;
 import org.ggp.base.util.propnet.architecture.components.Transition;
-import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
-import org.ggp.base.util.statemachine.MachineState;
+import org.ggp.base.util.propnet.factory.BitOptimizingPropNetFactory;
+import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
-import org.ggp.base.util.statemachine.StateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
-import org.ggp.base.util.statemachine.implementation.prover.query.ProverQueryBuilder;
 
 
 
 @SuppressWarnings("unused")
-public class DifferentialPropNetStateMachine extends StateMachine {
+public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     /** The underlying proposition network  */
-    private PropNet propNet;
-    /** The topological ordering of the propositions */
-    private List<Proposition> ordering;
+    private BitPropNet propNet;
     /** The player roles */
     private List<Role> roles;
-    private MachineState currentState;
+    private BitMachineState currentState;
 
     /**
      * Initializes the PropNetStateMachine. You should compute the topological
@@ -48,9 +44,8 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     public void initialize(List<Gdl> description) {
         try {
         	System.out.println("Initialized");
-            propNet = OptimizingPropNetFactory.create(description);
+            propNet = BitOptimizingPropNetFactory.create(description);
             roles = propNet.getRoles();
-            ordering = getOrdering();
             currentState = null;
             for(Component c: propNet.getComponents()) {
             	c.crystallize();
@@ -62,19 +57,21 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
 
     @Override
-    public boolean isTerminal(MachineState state) {
+    public boolean isTerminal(BitMachineState state) {
     	setState(state, null);
     	return propNet.getTerminalProposition().getCurrentValue();
     }
 
 
     @Override
-    public int getGoal(MachineState state, Role role)
+    public int getGoal(BitMachineState state, Role role)
             throws GoalDefinitionException {
     	setState(state, null);
         List<Role> roles = propNet.getRoles();
-        Set<Proposition> rewards = propNet.getGoalPropositions().get(role);
-        for(Proposition reward: rewards) {
+        Proposition[] rewards = propNet.getGoalPropositions().get(role);
+        int size = rewards.length;
+        for(int i = 0; i < size; ++i) {
+        	Proposition reward = rewards[i];
         	if (reward.getCurrentValue())
         		return getGoalValue(reward);
         }
@@ -91,7 +88,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	init.setLastPropagatedOutputValue(val);
     	Component[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
-    	for(int i = 0; i < size; i++) {
+    	for(int i = 0; i < size; ++i) {
     		outputs[i].edit_T(val);
 			queue.add(outputs[i]);
         }
@@ -105,13 +102,13 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     			Component[] outputs = c.getOutputs_arr();
 		    	int size = c.getOutputsSize();
     			if(val) {
-    		    	for(int i = 0; i < size; i++) {
+    		    	for(int i = 0; i < size; ++i) {
     		    		outputs[i].edit_T(val);
     					q.add(outputs[i]);
     		        }
     			}
     			else {
-    				for(int i = 0; i < size; i++) {
+    				for(int i = 0; i < size; ++i) {
     					q.add(outputs[i]);
     		        }
     			}
@@ -121,7 +118,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
     private int kInit = 1;
     @Override
-    public MachineState getInitialState() {
+    public BitMachineState getInitialState() {
     	clearPropNet();
     	Proposition init = propNet.getInitProposition();
         init.setCurrentValue(true);
@@ -130,28 +127,34 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         setConstants(queue);//Constants don't change throughout the game, so we set them once here
         Component[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
-    	for(int i = 0; i < size; i++) {
+    	for(int i = 0; i < size; ++i) {
     		outputs[i].edit_T(true);
 			queue.add(outputs[i]);
         }
 
-        for(Proposition p: propNet.getBasePropositions().values()) {//Don't add redundant states
+    	Proposition[] bases = propNet.getBasePropositions();
+    	size = bases.length;
+        for(int i = 0; i < size; ++i) {//Don't add redundant states
+        	Proposition p = bases[i];
         	outputs = p.getOutputs_arr();
-        	size = p.getOutputsSize();
-        	for(int i = 0; i < size; i++) {
-    			queue.add(outputs[i]);
+        	int size_2 = p.getOutputsSize();
+        	for(int j = 0; j < size_2; ++j) {
+    			queue.add(outputs[j]);
             }
         }
-        for(Proposition p: propNet.getInputPropositions().values()) {
-        	System.out.println(p.getName().getBody());
+
+        Proposition[] inputs = propNet.getInputPropositions();
+    	size = inputs.length;
+        for(int i = 0; i < size; ++i) {
+        	Proposition p = inputs[i];
         	outputs = p.getOutputs_arr();
-        	size = p.getOutputsSize();
-        	for(int i = 0; i < size; i++) {
-    			queue.add(outputs[i]);
+        	int size_2 = p.getOutputsSize();
+        	for(int j = 0; j < size_2; ++j) {
+    			queue.add(outputs[j]);
             }
         }
         rawPropagate(queue);
-        MachineState state = getStateFromBase();
+        BitMachineState state = getStateFromBase();
         queue = new LinkedList<Component>();
         setInit(false, queue);
         propagate(queue);
@@ -165,26 +168,32 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     @Override
     public List<Move> findActions(Role role)
             throws MoveDefinitionException {
-        Set<Proposition> actions = propNet.getLegalPropositions().get(role);
+        Proposition[] actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
-        for(Proposition action : actions) {
+
+    	int size = actions.length;
+        for(int i = 0; i < size; ++i) {
+        	Proposition action = actions[i];
         	moves.add(getMoveFromProposition(action));
         }
         return moves;
     }
 
     @Override
-    public PropNet getPropNet() {
+    public BitPropNet getPropNet() {
     	return propNet;
     }
 
     @Override
-    public List<Move> getLegalMoves(MachineState state, Role role)//Change such that we don't have to keep updating legal moves
+    public List<Move> getLegalMoves(BitMachineState state, Role role)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
     	setState(state, null);
-        Set<Proposition> actions = propNet.getLegalPropositions().get(role);
+    	Proposition[] actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
-        for(Proposition action : actions) {
+
+        int size = actions.length;
+        for(int i = 0; i < size; ++i) {
+        	Proposition action = actions[i];
     		if (action.getCurrentValue()) {
     			moves.add(getMoveFromProposition(action));
     		}
@@ -194,23 +203,26 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
 
 
-	protected void setBases(MachineState state, Queue<Component> q) {
+	protected void setBases(BitMachineState state, Queue<Component> q) {
     	if (state == null) return;
-    	Map<GdlSentence, Proposition> bases = propNet.getBasePropositions();
-    	for (GdlSentence s: bases.keySet()) {
-    		Proposition p = bases.get(s);
+    	Proposition[] bases = propNet.getBasePropositions();
+    	int size = bases.length;
+    	OpenBitSet bitSet = state.getContents();
 
-    		boolean val = state.getContents().contains(s);
+    	for (int i = 0; i < size; ++i) {
+    		Proposition p = bases[i];
+
+    		boolean val = bitSet.fastGet(i);
     		if (val == p.getLastPropagatedOutputValue()) continue;
 
     		p.setLastPropagatedOutputValue(val);
     		p.setCurrentValue(val);
 
     		Component[] outputs = p.getOutputs_arr();
-        	int size = p.getOutputsSize();
-        	for(int i = 0; i < size; i++) {
-        		outputs[i].edit_T(val);
-    			q.add(outputs[i]);
+        	int size_2 = p.getOutputsSize();
+        	for(int j = 0; j < size_2; ++j) {
+        		outputs[j].edit_T(val);
+    			q.add(outputs[j]);
             }
     	}
     }
@@ -218,27 +230,28 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
 	protected void setActions(List<Move> moves, Queue<Component> q) {
     	if(moves == null || moves.isEmpty()) return;
-    	List<GdlSentence> actions = toDoes(moves);
-    	Map<GdlSentence, Proposition> inputs = propNet.getInputPropositions();
-    	for (GdlSentence s : inputs.keySet()) {
-    		Proposition p = inputs.get(s);
+    	Proposition[] inputs = propNet.getInputPropositions();
+    	int size = inputs.length;
+    	OpenBitSet actions = toDoes(moves, size, inputs);
+    	for (int i = 0; i < size; ++i) {
+    		Proposition p = inputs[i];
 
-    		boolean val = actions.contains(s);
+    		boolean val = actions.fastGet(i);
     		if (val == p.getLastPropagatedOutputValue()) continue;
 
     		p.setLastPropagatedOutputValue(val);
     		p.setCurrentValue(val);
 
     		Component[] outputs = p.getOutputs_arr();
-        	int size = p.getOutputsSize();
-        	for(int i = 0; i < size; i++) {
-        		outputs[i].edit_T(val);
-    			q.add(outputs[i]);
+        	int size_2 = p.getOutputsSize();
+        	for(int j = 0; j < size_2; ++j) {
+        		outputs[j].edit_T(val);
+    			q.add(outputs[j]);
             }
     	}
     }
 
-    protected void setState(MachineState state, List<Move> moves) {
+    protected void setState(BitMachineState state, List<Move> moves) {
     	Queue<Component> q = new LinkedList<Component>();
     	setInit(false, q);
     	setBases(state, q);
@@ -247,7 +260,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     }
 
     @Override
-	public MachineState getNextState(MachineState state, List<Move> moves) {
+	public BitMachineState getNextState(BitMachineState state, List<Move> moves) {
     	setState(state, moves);
     	currentState = getStateFromBase();
     	return currentState;
@@ -335,37 +348,6 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	return true;
     }
 
-
-    /**
-     * This should compute the topological ordering of propositions.
-     * Each component is either a proposition, logical gate, or transition.
-     * Logical gates and transitions only have propositions as inputs.
-     *
-     * The base propositions and input propositions should always be exempt
-     * from this ordering.
-     *
-     * The base propositions values are set from the MachineState that
-     * operations are performed on and the input propositions are set from
-     * the Moves that operations are performed on as well (if any).
-     *
-     * @return The order in which the truth values of propositions need to be set.
-     */
-    public List<Proposition> getOrdering()
-    {
-        // List to contain the topological ordering.
-        List<Proposition> order = new LinkedList<Proposition>();
-
-        // All of the components in the PropNet
-        List<Component> components = new ArrayList<Component>(propNet.getComponents());
-
-        // All of the propositions in the PropNet.
-        List<Proposition> propositions = new ArrayList<Proposition>(propNet.getPropositions());
-
-        // TODO: Compute the topological ordering.
-
-        return order;
-    }
-
     /* Already implemented for you */
     @Override
     public List<Role> getRoles() {
@@ -385,16 +367,18 @@ public class DifferentialPropNetStateMachine extends StateMachine {
      * @param moves
      * @return
      */
-    private List<GdlSentence> toDoes(List<Move> moves)
+    private OpenBitSet toDoes(List<Move> moves, int size, Proposition[] inputs)
     {
-        List<GdlSentence> doeses = new ArrayList<GdlSentence>(moves.size());
-        Map<Role, Integer> roleIndices = getRoleIndices();
+    	OpenBitSet doeses = new OpenBitSet(size);
+    	HashMap< Pair<GdlConstant, GdlTerm>, Integer> m = propNet.getInputMap();
+    	for (int i = 0; i < moves.size(); ++i) {
+    		GdlConstant r = roles.get(i).getName();
+    		GdlTerm t = moves.get(i).getContents();
+    		int index = m.get(Pair.of(r, t));
+    		doeses.fastSet(index);
 
-        for (int i = 0; i < roles.size(); i++)
-        {
-            int index = roleIndices.get(roles.get(i));
-            doeses.add(ProverQueryBuilder.toDoes(roles.get(i), moves.get(index)));
-        }
+    	}
+
         return doeses;
     }
 
@@ -426,18 +410,22 @@ public class DifferentialPropNetStateMachine extends StateMachine {
      * You need not use this method!
      * @return PropNetMachineState
      */
-    public MachineState getStateFromBase()
+    public BitMachineState getStateFromBase()
     {
-        Set<GdlSentence> contents = new HashSet<GdlSentence>();
-        for (Proposition p : propNet.getBasePropositions().values())
+    	Proposition[] bases = propNet.getBasePropositions();
+        int size = bases.length;
+        OpenBitSet contents = new OpenBitSet(size);
+
+        for (int i = 0; i < size; ++i)
         {
+        	Proposition p = bases[i];
             p.setCurrentValue(p.getSingleInput_arr().getCurrentValue());
             if (p.getCurrentValue())
             {
-                contents.add(p.getName());
+                contents.fastSet(i);
             }
 
         }
-        return new MachineState(contents);
+        return new BitMachineState(contents);
     }
 }
