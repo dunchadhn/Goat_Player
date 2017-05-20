@@ -14,10 +14,8 @@ import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.PropNet;
-import org.ggp.base.util.propnet.architecture.components.And;
 import org.ggp.base.util.propnet.architecture.components.Constant;
 import org.ggp.base.util.propnet.architecture.components.Not;
-import org.ggp.base.util.propnet.architecture.components.Or;
 import org.ggp.base.util.propnet.architecture.components.Proposition;
 import org.ggp.base.util.propnet.architecture.components.Transition;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
@@ -54,6 +52,9 @@ public class DifferentialPropNetStateMachine extends StateMachine {
             roles = propNet.getRoles();
             ordering = getOrdering();
             currentState = null;
+            for(Component c: propNet.getComponents()) {
+            	c.crystallize();
+            }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -88,9 +89,11 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	if (init.getLastPropagatedOutputValue() == val) return;
     	init.setCurrentValue(val);
     	init.setLastPropagatedOutputValue(val);
-    	for(Component c: init.getOutputs()) {
-    		c.edit_T(val);
-			queue.add(c);
+    	Component[] outputs = init.getOutputs_arr();
+    	int size = init.getOutputsSize();
+    	for(int i = 0; i < size; i++) {
+    		outputs[i].edit_T(val);
+			queue.add(outputs[i]);
         }
     }
 
@@ -99,16 +102,18 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		if (c instanceof Constant) {
     			boolean val = c.getCurrentValue();
     			c.setLastPropagatedOutputValue(val);
+    			Component[] outputs = c.getOutputs_arr();
+		    	int size = c.getOutputsSize();
     			if(val) {
-    				for (Component out : c.getOutputs()) {
-    					out.edit_T(val);
-    					q.add(c);
-    				}
+    		    	for(int i = 0; i < size; i++) {
+    		    		outputs[i].edit_T(val);
+    					q.add(outputs[i]);
+    		        }
     			}
     			else {
-    				for (Component out : c.getOutputs()) {
-    					q.add(c);
-    				}
+    				for(int i = 0; i < size; i++) {
+    					q.add(outputs[i]);
+    		        }
     			}
     		}
     	}
@@ -123,17 +128,26 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         init.setLastPropagatedOutputValue(true);
         Queue<Component> queue = new LinkedList<Component>();
         setConstants(queue);//Constants don't change throughout the game, so we set them once here
-        for(Component c: init.getOutputs()) {
-        	c.edit_T(true);
-			queue.add(c);
+        Component[] outputs = init.getOutputs_arr();
+    	int size = init.getOutputsSize();
+    	for(int i = 0; i < size; i++) {
+    		outputs[i].edit_T(true);
+			queue.add(outputs[i]);
         }
+
         for(Proposition p: propNet.getBasePropositions().values()) {//Don't add redundant states
-        	for (Component c : p.getOutputs())
-        		queue.add(c);
+        	outputs = p.getOutputs_arr();
+        	size = p.getOutputsSize();
+        	for(int i = 0; i < size; i++) {
+    			queue.add(outputs[i]);
+            }
         }
         for(Proposition p: propNet.getInputPropositions().values()) {
-        	for (Component c : p.getOutputs())
-        		queue.add(c);
+        	outputs = p.getOutputs_arr();
+        	size = p.getOutputsSize();
+        	for(int i = 0; i < size; i++) {
+    			queue.add(outputs[i]);
+            }
         }
         rawPropagate(queue);
         MachineState state = getStateFromBase();
@@ -191,10 +205,12 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		p.setLastPropagatedOutputValue(val);
     		p.setCurrentValue(val);
 
-    		for (Component c : p.getOutputs()) {
-    			c.edit_T(val);
-    			q.add(c);
-    		}
+    		Component[] outputs = p.getOutputs_arr();
+        	int size = p.getOutputsSize();
+        	for(int i = 0; i < size; i++) {
+        		outputs[i].edit_T(val);
+    			q.add(outputs[i]);
+            }
     	}
     }
 
@@ -212,10 +228,12 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		p.setLastPropagatedOutputValue(val);
     		p.setCurrentValue(val);
 
-    		for (Component c : p.getOutputs()) {
-    			c.edit_T(val);
-    			q.add(c);
-    		}
+    		Component[] outputs = p.getOutputs_arr();
+        	int size = p.getOutputsSize();
+        	for(int i = 0; i < size; i++) {
+        		outputs[i].edit_T(val);
+    			q.add(outputs[i]);
+            }
     	}
     }
 
@@ -240,37 +258,32 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     protected void rawPropagate(Queue<Component> queue) {
     	while(!queue.isEmpty()) {
     		Component c = queue.remove();
-    		if (c instanceof Proposition) {
-    			c.setCurrentValue(c.getSingleInput().getCurrentValue());
+    		if (c instanceof Not) {
+    			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue());
     		}
-    		else if (c instanceof Not) {
-    			c.setCurrentValue(!c.getSingleInput().getCurrentValue());
+    		else {
+    			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue());
     		}
-    		else if (c instanceof And) {
-    			And a = (And) c;
-    			c.setCurrentValue(a.getCurrentValue());
-    		}
-    		else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			c.setCurrentValue(o.getCurrentValue());
-    		}
-    		else if (c instanceof Transition) {
-    			c.setCurrentValue(c.getSingleInput().getCurrentValue());
+    		if (c instanceof Transition) {
     			continue;
     		}
 
     		boolean val = c.getCurrentValue();
     		boolean last_val = c.getLastPropagatedOutputValue();
     		c.setLastPropagatedOutputValue(val);
+
+    		Component[] outputs = c.getOutputs_arr();
+        	int size = c.getOutputsSize();
+
     		if(val != last_val) {
-    			for(Component out: c.getOutputs()) {
-    					out.edit_T(val);
-    					queue.add(out);
-    			}
+            	for(int i = 0; i < size; i++) {
+            		outputs[i].edit_T(val);
+        			queue.add(outputs[i]);
+                }
 			} else {
-				for(Component out: c.getOutputs()) {
-					queue.add(out);
-				}
+				for(int i = 0; i < size; i++) {
+        			queue.add(outputs[i]);
+                }
 			}
     	}
     }
@@ -280,27 +293,15 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	while(!queue.isEmpty()) {
     		Component c = queue.remove();
     		boolean val = false;
-    		if (c instanceof Proposition) {
-    			val = c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
+    		if (c instanceof Not) {
+    			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue());
+    			val = c.getCurrentValue();
     		}
-    		else if (c instanceof Not) {
-    			val = !c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
+    		else {
+    			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue());
+    			val = c.getCurrentValue();
     		}
-    		else if (c instanceof And) {
-    			And a = (And) c;
-    			val = a.getCurrentValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof Or) {
-    			Or o = (Or) c;
-    			val = o.getCurrentValue();
-    			c.setCurrentValue(val);
-    		}
-    		else if (c instanceof Transition) {
-    			val = c.getSingleInput().getCurrentValue();
-    			c.setCurrentValue(val);
+    		if (c instanceof Transition) {
     			c.setLastPropagatedOutputValue(val);
     			continue;
     		}
@@ -310,10 +311,13 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
     		c.setLastPropagatedOutputValue(val);
 
-    		for(Component out: c.getOutputs()) {
-				out.edit_T(val);
-				queue.add(out);
-			}
+    		Component[] outputs = c.getOutputs_arr();
+        	int size = c.getOutputsSize();
+
+            for(int i = 0; i < size; i++) {
+            	outputs[i].edit_T(val);
+        		queue.add(outputs[i]);
+            }
     	}
     }
 
@@ -426,7 +430,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         Set<GdlSentence> contents = new HashSet<GdlSentence>();
         for (Proposition p : propNet.getBasePropositions().values())
         {
-            p.setCurrentValue(p.getSingleInput().getCurrentValue());
+            p.setCurrentValue(p.getSingleInput_arr().getCurrentValue());
             if (p.getCurrentValue())
             {
                 contents.add(p.getName());

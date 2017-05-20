@@ -11,8 +11,6 @@ public class Proposition extends Component
 {
 	/** The name of the Proposition. */
 	private GdlSentence name;
-	/** The value of the Proposition. */
-	private boolean value;
 
 	/**
 	 * Creates a new Proposition with name <tt>name</tt>.
@@ -23,7 +21,6 @@ public class Proposition extends Component
 	public Proposition(GdlSentence name)
 	{
 		this.name = name;
-		this.value = false;
 	}
 
 	/**

@@ -9,7 +9,6 @@ import org.ggp.base.util.propnet.architecture.Component;
 public final class Or extends Component
 {
 	int T = 0;
-	boolean value = false;
 	/**
 	 * Returns true if and only if at least one of the inputs to the or is true.
 	 *
@@ -40,6 +39,16 @@ public final class Or extends Component
 		T = val;
 		return true;
 	}
+
+	@Override
+	public Component getSingleInput_arr() {
+        return this;
+    }
+
+	@Override
+	public Component getSingleInput_set() {
+        return this;
+    }
 
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()

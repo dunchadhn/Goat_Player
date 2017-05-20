@@ -22,6 +22,16 @@ public final class Constant extends Component
 		this.value = value;
 	}
 
+	@Override
+	public Component getSingleInput_arr() {
+        return this;
+    }
+
+	@Override
+	public Component getSingleInput_set() {
+        return this;
+    }
+
 	/**
 	 * Returns the value that the constant was initialized to.
 	 *
