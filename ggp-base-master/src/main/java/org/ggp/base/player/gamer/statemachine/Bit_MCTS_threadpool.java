@@ -46,7 +46,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new BitNode(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
+		num_threads = 1;//Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
 		machines = new ArrayList<BitStateMachine>();
 		for(int i = 0; i < num_threads; i++) {
@@ -178,7 +178,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 
 	protected double Playout(BitNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		int threadId = (int) (Thread.currentThread().getId() % num_threads);
-		BitStateMachine machine = machines.get(threadId);
+		//BitStateMachine machine = machines.get(threadId);
 		BitMachineState state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
