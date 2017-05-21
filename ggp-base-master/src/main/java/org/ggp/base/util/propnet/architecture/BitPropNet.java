@@ -99,8 +99,8 @@ public final class BitPropNet
 	/** A helper list of all of the roles. */
 	private final List<Role> roles;
 
+	private final HashMap<GdlSentence, Integer> bases;
 
-	Map<GdlSentence, Proposition> baseProps;
 
 	public void addComponent(Component c)
 	{
@@ -122,8 +122,7 @@ public final class BitPropNet
 		this.components = components;
 		this.propositions = recordPropositions();
 
-		baseProps = recordBasePropositions();
-		List<Proposition> b = new ArrayList<Proposition>(baseProps.values());
+		List<Proposition> b = new ArrayList<Proposition>(recordBasePropositions().values());
 		List<Proposition> i = new ArrayList<Proposition>(recordInputPropositions().values());
 		Map<Role, Set<Proposition>> l = recordLegalPropositions();
 		Map<Role, Set<Proposition>> g = recordGoalPropositions();
@@ -150,8 +149,17 @@ public final class BitPropNet
 			Set<Proposition> gval = g.get(r);
 			this.goalPropositions.put(r, gval.toArray(new Proposition[gval.size()]));
 		}
+
+		bases = new HashMap<GdlSentence, Integer>();
+		for (int index = 0; index < basePropositions.length; ++index) {
+			Proposition p = basePropositions[index];
+			bases.put(p.getName(), index);
+		}
 	}
 
+	public HashMap<GdlSentence, Integer> getBasesMap() {
+		return bases;
+	}
 	public List<Role> getRoles()
 	{
 	    return roles;
@@ -174,9 +182,6 @@ public final class BitPropNet
 		return basePropositions;
 	}
 
-	public Map<GdlSentence, Proposition> getbasePropMap() {
-		return baseProps;
-	}
 
 	/**
 	 * Getter method.

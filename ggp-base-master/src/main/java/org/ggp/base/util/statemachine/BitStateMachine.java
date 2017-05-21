@@ -486,4 +486,5 @@ public abstract class BitStateMachine
 	}
 
 	public abstract MachineState toGdl(BitMachineState state);
+	public abstract BitMachineState toBit(MachineState state);
 }

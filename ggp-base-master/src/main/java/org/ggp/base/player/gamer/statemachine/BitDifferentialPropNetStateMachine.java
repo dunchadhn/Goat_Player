@@ -444,5 +444,16 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	return new MachineState(bases);
     }
 
+    @Override
+	public BitMachineState toBit(MachineState state) {
+    	Set<GdlSentence> bases = state.getContents();
+    	HashMap<GdlSentence, Integer> basesMap = propNet.getBasesMap();
+    	OpenBitSet bitSet = new OpenBitSet(basesMap.values().size());
+    	for (GdlSentence base : bases) {
+    		bitSet.fastSet(basesMap.get(base));
+    	}
+    	return new BitMachineState(bitSet);
+    }
+
 
 }

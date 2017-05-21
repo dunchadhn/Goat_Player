@@ -13,6 +13,7 @@ import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
+import org.ggp.base.util.statemachine.verifier.BitStateMachineVerifier;
 
 /**
  * SampleLegalGamer is a minimal gamer which always plays the first
@@ -37,10 +38,10 @@ public final class SampleLegalGamer2 extends SampleGamer
 		machine.initialize(getMatch().getGame().getRules());
 		machine2 = getStateMachine();
 
-		/*if (!StateMachineVerifier.checkMachineConsistency(machine, machine2, timeout - System.currentTimeMillis() - 1000)) {
+		if (!BitStateMachineVerifier.checkMachineConsistency(machine, machine2, timeout - System.currentTimeMillis() - 1000)) {
 			System.out.println("NOT CONSISTENT");
 			System.exit(0);
-		}*/
+		}
 	}
 
 
