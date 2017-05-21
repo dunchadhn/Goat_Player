@@ -18,7 +18,6 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	private BitStateMachine machine;
-	private List<BitStateMachine> machines;
 	private List<Role> roles;
 	private int self_index, num_threads, depthCharges;
 	private long finishBy;
@@ -46,14 +45,9 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new BitNode(machine.getInitialState());
 		Expand(root);
-		num_threads = 1;//Runtime.getRuntime().availableProcessors() * 12;
+		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
-		machines = new ArrayList<BitStateMachine>();
-		for(int i = 0; i < num_threads; i++) {
-			machines.add(getInitialStateMachine());
-			machines.get(i).initialize(getMatch().getGame().getRules());
-			machines.get(i).getInitialState();
-		}
+
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
 	}
@@ -69,7 +63,6 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	}
 
 	protected void initializeMCTS() throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		for (int i = 0; i < machines.size(); ++i) machines.get(i).doPerMoveWork();
 		BitMachineState currentState = getCurrentState();
 		if (root == null) System.out.println("NULL ROOT");
 		if (root.state.equals(currentState)) return;
@@ -177,8 +170,6 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	}
 
 	protected double Playout(BitNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		int threadId = (int) (Thread.currentThread().getId() % num_threads);
-		//BitStateMachine machine = machines.get(threadId);
 		BitMachineState state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);

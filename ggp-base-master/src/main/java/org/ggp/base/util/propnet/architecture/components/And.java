@@ -1,5 +1,7 @@
 package org.ggp.base.util.propnet.architecture.components;
 
+import java.util.Arrays;
+
 import org.ggp.base.util.propnet.architecture.Component;
 
 /**
@@ -8,8 +10,9 @@ import org.ggp.base.util.propnet.architecture.Component;
 @SuppressWarnings("serial")
 public final class And extends Component
 {
-	int T = 0;
-	int N = 0;
+	private int num_threads = 48;
+	private int T[] = new int[num_threads + 1];
+	private int N = 0;
 	/**
 	 * Returns true if and only if every input to the and is true.
 	 *
@@ -17,31 +20,52 @@ public final class And extends Component
 	 */
 
 	@Override
-	public boolean getCurrentValue()
+	public boolean getCurrentValue(int i)
 	{
 		if(N == 0) {
 			N = getInputsSize();
 		}
-		if(T == N) {
+		if(T[i] == N) {
 			return true;
 		}
 		return false;
 	}
 
 	@Override
-	public boolean edit_T(boolean val) {
+	public boolean edit_T(boolean val, int i) {
 		if(val) {
-			T++;
+			T[i]++;
 		}
 		else {
-			T--;
+			T[i]--;
 		}
 		return true;
 	}
 
 	@Override
-	public boolean set(int val) {
-		T = val;
+	public boolean edit_TAll(boolean val, int i) {
+		if(val) {
+			for(int j = 0; j < num_threads + 1; ++j) {
+				T[j]++;
+			}
+		}
+		else {
+			for(int j = 0; j < num_threads + 1; ++j) {
+				T[j]--;
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public boolean set(int val, int i) {
+		T[i] = val;
+		return true;
+	}
+
+	@Override
+	public boolean setAll(int val, int i) {
+		Arrays.fill(T, val);
 		return true;
 	}
 
@@ -61,7 +85,7 @@ public final class And extends Component
 	@Override
 	public String toString()
 	{
-		if(this.getCurrentValue()) {
+		if(this.getCurrentValue(0)) {
 			return toDot("invhouse", "red", "AND" + T + ", " + N);
 		} else {
 			return toDot("invhouse", "grey", "AND" + T + ", " + N);

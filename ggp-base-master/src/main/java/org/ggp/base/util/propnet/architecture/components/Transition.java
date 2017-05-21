@@ -20,7 +20,7 @@ public final class Transition extends Component
 	@Override
 	public String toString()
 	{
-		if(this.getCurrentValue()) {
+		if(this.getCurrentValue(0)) {
 			return toDot("box", "red", "TRANSITION");
 		} else {
 			return toDot("box", "grey", "TRANSITION");

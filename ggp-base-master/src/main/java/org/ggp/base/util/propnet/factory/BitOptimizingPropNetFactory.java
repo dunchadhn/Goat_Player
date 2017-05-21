@@ -881,7 +881,7 @@ public class BitOptimizingPropNetFactory {
 
 		//Special case: An input is the true constant
 		for(Component in : inputs) {
-			if(in instanceof Constant && in.getCurrentValue()) {
+			if(in instanceof Constant && in.getCurrentValue(0)) {
 				//True constant: connect that to the component, done
 				in.addOutput(output);
 				output.addInput(in);
@@ -1272,7 +1272,7 @@ public class BitOptimizingPropNetFactory {
 	private static void andify(List<Component> inputs, Component output, Constant trueProp) {
 		//Special case: If the inputs include false, connect false to thisComponent
 		for(Component c : inputs) {
-			if(c instanceof Constant && !c.getCurrentValue()) {
+			if(c instanceof Constant && !c.getCurrentValue(0)) {
 				//Connect false (c) to the output
 				output.addInput(c);
 				c.addOutput(output);
@@ -1425,7 +1425,7 @@ public class BitOptimizingPropNetFactory {
 		for (Component c : pn.getComponents()) {
 			ConcurrencyUtils.checkForInterruption();
 			if (c instanceof Constant) {
-				if (c.getCurrentValue()) {
+				if (c.getCurrentValue(0)) {
 					toAdd.add(Pair.of(c, Type.TRUE));
 				} else {
 					toAdd.add(Pair.of(c, Type.FALSE));

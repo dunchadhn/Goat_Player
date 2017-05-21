@@ -20,7 +20,7 @@ public final class Not extends Component
 	@Override
 	public String toString()
 	{
-		if(this.getCurrentValue()) {
+		if(this.getCurrentValue(0)) {
 			return toDot("invtriangle", "red", "NOT");
 		} else {
 			return toDot("invtriangle", "grey", "NOT");

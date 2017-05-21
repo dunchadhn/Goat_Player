@@ -64,7 +64,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     @Override
     public boolean isTerminal(MachineState state) {
     	setState(state, null);
-    	return propNet.getTerminalProposition().getCurrentValue();
+    	return propNet.getTerminalProposition().getCurrentValue(0);
     }
 
 
@@ -75,7 +75,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         List<Role> roles = propNet.getRoles();
         Set<Proposition> rewards = propNet.getGoalPropositions().get(role);
         for(Proposition reward: rewards) {
-        	if (reward.getCurrentValue())
+        	if (reward.getCurrentValue(0))
         		return getGoalValue(reward);
         }
         System.out.println("ERROR! Reward not defined in state " + state.toString());
@@ -86,13 +86,13 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
     protected void setInit(boolean val, Queue<Component> queue) {
     	Proposition init = propNet.getInitProposition();
-    	if (init.getLastPropagatedOutputValue() == val) return;
-    	init.setCurrentValue(val);
-    	init.setLastPropagatedOutputValue(val);
+    	if (init.getLastPropagatedOutputValue(0) == val) return;
+    	init.setCurrentValue(val,0);
+    	init.setLastPropagatedOutputValue(val,0);
     	Component[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
     	for(int i = 0; i < size; i++) {
-    		outputs[i].edit_T(val);
+    		outputs[i].edit_T(val,0);
 			queue.add(outputs[i]);
         }
     }
@@ -100,13 +100,13 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     protected void setConstants(Queue<Component> q) {
     	for (Component c: propNet.getComponents()) {
     		if (c instanceof Constant) {
-    			boolean val = c.getCurrentValue();
-    			c.setLastPropagatedOutputValue(val);
+    			boolean val = c.getCurrentValue(0);
+    			c.setLastPropagatedOutputValue(val,0);
     			Component[] outputs = c.getOutputs_arr();
 		    	int size = c.getOutputsSize();
     			if(val) {
     		    	for(int i = 0; i < size; i++) {
-    		    		outputs[i].edit_T(val);
+    		    		outputs[i].edit_T(val,0);
     					q.add(outputs[i]);
     		        }
     			}
@@ -124,14 +124,14 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     public MachineState getInitialState() {
     	clearPropNet();
     	Proposition init = propNet.getInitProposition();
-        init.setCurrentValue(true);
-        init.setLastPropagatedOutputValue(true);
+        init.setCurrentValue(true,0);
+        init.setLastPropagatedOutputValue(true,0);
         Queue<Component> queue = new LinkedList<Component>();
         setConstants(queue);//Constants don't change throughout the game, so we set them once here
         Component[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
     	for(int i = 0; i < size; i++) {
-    		outputs[i].edit_T(true);
+    		outputs[i].edit_T(true,0);
 			queue.add(outputs[i]);
         }
 
@@ -185,7 +185,7 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         Set<Proposition> actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
         for(Proposition action : actions) {
-    		if (action.getCurrentValue()) {
+    		if (action.getCurrentValue(0)) {
     			moves.add(getMoveFromProposition(action));
     		}
     	}
@@ -201,15 +201,15 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		Proposition p = bases.get(s);
 
     		boolean val = state.getContents().contains(s);
-    		if (val == p.getLastPropagatedOutputValue()) continue;
+    		if (val == p.getLastPropagatedOutputValue(0)) continue;
 
-    		p.setLastPropagatedOutputValue(val);
-    		p.setCurrentValue(val);
+    		p.setLastPropagatedOutputValue(val,0);
+    		p.setCurrentValue(val,0);
 
     		Component[] outputs = p.getOutputs_arr();
         	int size = p.getOutputsSize();
         	for(int i = 0; i < size; i++) {
-        		outputs[i].edit_T(val);
+        		outputs[i].edit_T(val,0);
     			q.add(outputs[i]);
             }
     	}
@@ -224,15 +224,15 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		Proposition p = inputs.get(s);
 
     		boolean val = actions.contains(s);
-    		if (val == p.getLastPropagatedOutputValue()) continue;
+    		if (val == p.getLastPropagatedOutputValue(0)) continue;
 
-    		p.setLastPropagatedOutputValue(val);
-    		p.setCurrentValue(val);
+    		p.setLastPropagatedOutputValue(val,0);
+    		p.setCurrentValue(val,0);
 
     		Component[] outputs = p.getOutputs_arr();
         	int size = p.getOutputsSize();
         	for(int i = 0; i < size; i++) {
-        		outputs[i].edit_T(val);
+        		outputs[i].edit_T(val,0);
     			q.add(outputs[i]);
             }
     	}
@@ -260,25 +260,25 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     	while(!queue.isEmpty()) {
     		Component c = queue.remove();
     		if (c instanceof Not) {
-    			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue());
+    			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue(0),0);
     		}
     		else {
-    			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue());
+    			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue(0),0);
     		}
     		if (c instanceof Transition) {
     			continue;
     		}
 
-    		boolean val = c.getCurrentValue();
-    		boolean last_val = c.getLastPropagatedOutputValue();
-    		c.setLastPropagatedOutputValue(val);
+    		boolean val = c.getCurrentValue(0);
+    		boolean last_val = c.getLastPropagatedOutputValue(0);
+    		c.setLastPropagatedOutputValue(val,0);
 
     		Component[] outputs = c.getOutputs_arr();
         	int size = c.getOutputsSize();
 
     		if(val != last_val) {
             	for(int i = 0; i < size; i++) {
-            		outputs[i].edit_T(val);
+            		outputs[i].edit_T(val,0);
         			queue.add(outputs[i]);
                 }
 			} else {
@@ -295,28 +295,28 @@ public class DifferentialPropNetStateMachine extends StateMachine {
     		Component c = queue.remove();
     		boolean val = false;
     		if (c instanceof Not) {
-    			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue());
-    			val = c.getCurrentValue();
+    			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue(0),0);
+    			val = c.getCurrentValue(0);
     		}
     		else {
-    			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue());
-    			val = c.getCurrentValue();
+    			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue(0),0);
+    			val = c.getCurrentValue(0);
     		}
     		if (c instanceof Transition) {
-    			c.setLastPropagatedOutputValue(val);
+    			c.setLastPropagatedOutputValue(val,0);
     			continue;
     		}
 
-    		boolean lastVal = c.getLastPropagatedOutputValue();
+    		boolean lastVal = c.getLastPropagatedOutputValue(0);
     		if (lastVal == val) continue;
 
-    		c.setLastPropagatedOutputValue(val);
+    		c.setLastPropagatedOutputValue(val,0);
 
     		Component[] outputs = c.getOutputs_arr();
         	int size = c.getOutputsSize();
 
             for(int i = 0; i < size; i++) {
-            	outputs[i].edit_T(val);
+            	outputs[i].edit_T(val,0);
         		queue.add(outputs[i]);
             }
     	}
@@ -328,9 +328,9 @@ public class DifferentialPropNetStateMachine extends StateMachine {
 
     private boolean clearPropNet() {
     	for (Component c: propNet.getComponents()) {
-    		c.set(0);
-    		c.setCurrentValue(false);
-    		c.setLastPropagatedOutputValue(false);
+    		c.set(0,0);
+    		c.setCurrentValue(false,0);
+    		c.setLastPropagatedOutputValue(false,0);
     	}
     	return true;
     }
@@ -431,8 +431,8 @@ public class DifferentialPropNetStateMachine extends StateMachine {
         Set<GdlSentence> contents = new HashSet<GdlSentence>();
         for (Proposition p : propNet.getBasePropositions().values())
         {
-            p.setCurrentValue(p.getSingleInput_arr().getCurrentValue());
-            if (p.getCurrentValue())
+            p.setCurrentValue(p.getSingleInput_arr().getCurrentValue(0),0);
+            if (p.getCurrentValue(0))
             {
                 contents.add(p.getName());
             }

@@ -1,6 +1,7 @@
 package org.ggp.base.util.propnet.architecture;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -25,8 +26,10 @@ public abstract class Component implements Serializable
     private int inputs_size;
     private int outputs_size;
 
-    private boolean currentValue;
-    private boolean lastPropagatedOutputValue;
+    private int num_threads = 48;
+
+    private boolean[] currentValue;
+    private boolean[] lastPropagatedOutputValue;
 
     /**
      * Creates a new Component with no inputs or outputs.
@@ -35,8 +38,8 @@ public abstract class Component implements Serializable
     {
         this.inputs_set = new HashSet<Component>();
         this.outputs_set = new HashSet<Component>();
-        this.currentValue = false;
-        this.lastPropagatedOutputValue = false;
+        this.currentValue = new boolean[num_threads + 1];
+        this.lastPropagatedOutputValue = new boolean[num_threads + 1];;
         inputs_size = 0;
         outputs_size = 0;
     }
@@ -49,11 +52,19 @@ public abstract class Component implements Serializable
 
     }
 
-    public boolean edit_T(boolean val) {
+    public boolean edit_T(boolean val, int i) {
     	return false;
     }
 
-    public boolean set(int val) {
+    public boolean edit_TAll(boolean val, int i) {
+    	return false;
+    }
+
+    public boolean set(int val, int i) {
+    	return false;
+    }
+
+    public boolean setAll(int val, int i) {
     	return false;
     }
 
@@ -170,20 +181,28 @@ public abstract class Component implements Serializable
         return outputs_arr[0];
     }
 
-    public boolean getCurrentValue() {
-    	return currentValue;
+    public boolean getCurrentValue(int i) {
+    	return currentValue[i];
     }
 
-    public boolean getLastPropagatedOutputValue() {
-    	return lastPropagatedOutputValue;
+    public boolean getLastPropagatedOutputValue(int i) {
+    	return lastPropagatedOutputValue[i];
     }
 
-    public void setCurrentValue(boolean value) {
-    	this.currentValue = value;
+    public void setCurrentValue(boolean value, int i) {
+    	this.currentValue[i] = value;
     }
 
-    public void setLastPropagatedOutputValue(boolean value) {
-    	this.lastPropagatedOutputValue = value;
+    public void setCurrentValueAll(boolean value, int i) {
+    	Arrays.fill(this.currentValue, value);
+    }
+
+    public void setLastPropagatedOutputValue(boolean value, int i) {
+    	this.lastPropagatedOutputValue[i] = value;
+    }
+
+    public void setLastPropagatedOutputValueAll(boolean value, int i) {
+    	Arrays.fill(this.lastPropagatedOutputValue, value);
     }
 
     /**
