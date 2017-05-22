@@ -1,13 +1,13 @@
 package org.ggp.base.util.propnet.architecture.components;
 
 import org.ggp.base.util.gdl.grammar.GdlSentence;
-import org.ggp.base.util.propnet.architecture.Component;
+import org.ggp.base.util.propnet.architecture.BitComponent;
 
 /**
  * The Proposition class is designed to represent named latches.
  */
 @SuppressWarnings("serial")
-public class Proposition extends Component
+public class BitProposition extends BitComponent
 {
 	/** The name of the Proposition. */
 	private GdlSentence name;
@@ -18,7 +18,7 @@ public class Proposition extends Component
 	 * @param name
 	 * The name of the Proposition.
 	 */
-	public Proposition(GdlSentence name)
+	public BitProposition(GdlSentence name)
 	{
 		this.name = name;
 	}
@@ -65,6 +65,6 @@ public class Proposition extends Component
 	@Override
 	public String toString()
 	{
-		return toDot("circle", getCurrentValue() ? "red" : "white", name.toString());
+		return toDot("circle", getCurrentValue(0) ? "red" : "white", name.toString());
 	}
 }

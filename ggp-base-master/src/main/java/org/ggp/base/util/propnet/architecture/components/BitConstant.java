@@ -1,12 +1,12 @@
 package org.ggp.base.util.propnet.architecture.components;
 
-import org.ggp.base.util.propnet.architecture.Component;
+import org.ggp.base.util.propnet.architecture.BitComponent;
 
 /**
  * The Constant class is designed to represent nodes with fixed logical values.
  */
 @SuppressWarnings("serial")
-public final class Constant extends Component
+public final class BitConstant extends BitComponent
 {
 	/** The value of the constant. */
 	private final boolean value;
@@ -17,18 +17,18 @@ public final class Constant extends Component
 	 * @param value
 	 *            The value of the Constant.
 	 */
-	public Constant(boolean value)
+	public BitConstant(boolean value)
 	{
 		this.value = value;
 	}
 
 	@Override
-	public Component getSingleInput_arr() {
+	public BitComponent getSingleInput_arr() {
         return this;
     }
 
 	@Override
-	public Component getSingleInput_set() {
+	public BitComponent getSingleInput_set() {
         return this;
     }
 
@@ -39,7 +39,7 @@ public final class Constant extends Component
 	 */
 
 	@Override
-	public boolean getCurrentValue() {
+	public boolean getCurrentValue(int i) {
 		return value;
 	}
 
@@ -50,6 +50,6 @@ public final class Constant extends Component
 	@Override
 	public String toString()
 	{
-		return toDot("doublecircle", (this.getCurrentValue() ? "red" : "grey"), Boolean.toString(value).toUpperCase());
+		return toDot("doublecircle", (this.getCurrentValue(0) ? "red" : "grey"), Boolean.toString(value).toUpperCase());
 	}
 }

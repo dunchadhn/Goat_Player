@@ -17,11 +17,11 @@ import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.logging.GamerLogger;
-import org.ggp.base.util.propnet.architecture.components.And;
-import org.ggp.base.util.propnet.architecture.components.Not;
-import org.ggp.base.util.propnet.architecture.components.Or;
-import org.ggp.base.util.propnet.architecture.components.Proposition;
-import org.ggp.base.util.propnet.architecture.components.Transition;
+import org.ggp.base.util.propnet.architecture.components.BitAnd;
+import org.ggp.base.util.propnet.architecture.components.BitNot;
+import org.ggp.base.util.propnet.architecture.components.BitOr;
+import org.ggp.base.util.propnet.architecture.components.BitProposition;
+import org.ggp.base.util.propnet.architecture.components.BitTransition;
 import org.ggp.base.util.statemachine.Role;
 
 
@@ -70,29 +70,29 @@ import org.ggp.base.util.statemachine.Role;
 public final class BitPropNet
 {
 	/** References to every component in the PropNet. */
-	private final Set<Component> components;
+	private final Set<BitComponent> components;
 
 	/** References to every Proposition in the PropNet. */
-	private final Set<Proposition> propositions;
+	private final Set<BitProposition> propositions;
 
 	/** References to every BaseProposition in the PropNet, indexed by name. */
 
-	private final Proposition[] basePropositions;
+	private final BitProposition[] basePropositions;
 
 	/** References to every InputProposition in the PropNet, indexed by name. */
-	private final Proposition[] inputPropositions;
+	private final BitProposition[] inputPropositions;
 
 	/** References to every LegalProposition in the PropNet, indexed by role. */
-	private final HashMap<Role, Proposition[]> legalPropositions;
+	private final HashMap<Role, BitProposition[]> legalPropositions;
 
 	/** References to every GoalProposition in the PropNet, indexed by role. */
-	private final Map<Role, Proposition[]> goalPropositions;
+	private final Map<Role, BitProposition[]> goalPropositions;
 
 	/** A reference to the single, unique, InitProposition. */
-	private final Proposition initProposition;
+	private final BitProposition initProposition;
 
 	/** A reference to the single, unique, TerminalProposition. */
-	private final Proposition terminalProposition;
+	private final BitProposition terminalProposition;
 
 	private final HashMap< Pair<GdlTerm, GdlTerm>, Integer> inputMap;
 
@@ -102,10 +102,10 @@ public final class BitPropNet
 	private final HashMap<GdlSentence, Integer> bases;
 
 
-	public void addComponent(Component c)
+	public void addComponent(BitComponent c)
 	{
 		components.add(c);
-		if (c instanceof Proposition) propositions.add((Proposition)c);
+		if (c instanceof BitProposition) propositions.add((BitProposition)c);
 	}
 
 	/**
@@ -115,44 +115,44 @@ public final class BitPropNet
 	 * @param components
 	 *            A list of Components.
 	 */
-	public BitPropNet(List<Role> roles, Set<Component> components)
+	public BitPropNet(List<Role> roles, Set<BitComponent> components)
 	{
 
 	    this.roles = roles;
 		this.components = components;
 		this.propositions = recordPropositions();
 
-		List<Proposition> b = new ArrayList<Proposition>(recordBasePropositions().values());
-		List<Proposition> i = new ArrayList<Proposition>(recordInputPropositions().values());
-		Map<Role, Set<Proposition>> l = recordLegalPropositions();
-		Map<Role, Set<Proposition>> g = recordGoalPropositions();
+		List<BitProposition> b = new ArrayList<BitProposition>(recordBasePropositions().values());
+		List<BitProposition> i = new ArrayList<BitProposition>(recordInputPropositions().values());
+		Map<Role, Set<BitProposition>> l = recordLegalPropositions();
+		Map<Role, Set<BitProposition>> g = recordGoalPropositions();
 
 
 		this.initProposition = recordInitProposition();
 		this.terminalProposition = recordTerminalProposition();
 
-		this.basePropositions = (Proposition[]) b.toArray(new Proposition[b.size()]);
-		this.inputPropositions = (Proposition[]) i.toArray(new Proposition[i.size()]);
-		this.legalPropositions = new HashMap<Role, Proposition[]>();
-		this.goalPropositions = new HashMap<Role, Proposition[]>();
+		this.basePropositions = (BitProposition[]) b.toArray(new BitProposition[b.size()]);
+		this.inputPropositions = (BitProposition[]) i.toArray(new BitProposition[i.size()]);
+		this.legalPropositions = new HashMap<Role, BitProposition[]>();
+		this.goalPropositions = new HashMap<Role, BitProposition[]>();
 		this.inputMap = new HashMap< Pair<GdlTerm, GdlTerm>, Integer>();
 
 		for (int index = 0; index < inputPropositions.length; ++index) {
-			Proposition p = inputPropositions[index];
+			BitProposition p = inputPropositions[index];
 			Pair<GdlTerm, GdlTerm> pair = Pair.of(p.getName().getBody().get(0), p.getName().getBody().get(1));
 			inputMap.put(pair, index);
 		}
 
 		for (Role r : l.keySet()) {
-			Set<Proposition> lval = l.get(r);
-			this.legalPropositions.put(r, lval.toArray(new Proposition[lval.size()]));
-			Set<Proposition> gval = g.get(r);
-			this.goalPropositions.put(r, gval.toArray(new Proposition[gval.size()]));
+			Set<BitProposition> lval = l.get(r);
+			this.legalPropositions.put(r, lval.toArray(new BitProposition[lval.size()]));
+			Set<BitProposition> gval = g.get(r);
+			this.goalPropositions.put(r, gval.toArray(new BitProposition[gval.size()]));
 		}
 
 		bases = new HashMap<GdlSentence, Integer>();
 		for (int index = 0; index < basePropositions.length; ++index) {
-			Proposition p = basePropositions[index];
+			BitProposition p = basePropositions[index];
 			bases.put(p.getName(), index);
 		}
 	}
@@ -177,7 +177,7 @@ public final class BitPropNet
 	 * @return References to every BaseProposition in the PropNet, indexed by
 	 *         name.
 	 */
-	public Proposition[] getBasePropositions()
+	public BitProposition[] getBasePropositions()
 	{
 		return basePropositions;
 	}
@@ -188,7 +188,7 @@ public final class BitPropNet
 	 *
 	 * @return References to every Component in the PropNet.
 	 */
-	public Set<Component> getComponents()
+	public Set<BitComponent> getComponents()
 	{
 		return components;
 	}
@@ -199,7 +199,7 @@ public final class BitPropNet
 	 * @return References to every GoalProposition in the PropNet, indexed by
 	 *         player name.
 	 */
-	public Map<Role, Proposition[]> getGoalPropositions()
+	public Map<Role, BitProposition[]> getGoalPropositions()
 	{
 		return goalPropositions;
 	}
@@ -209,7 +209,7 @@ public final class BitPropNet
 	 *
 	 * @return
 	 */
-	public Proposition getInitProposition()
+	public BitProposition getInitProposition()
 	{
 		return initProposition;
 	}
@@ -220,7 +220,7 @@ public final class BitPropNet
 	 * @return References to every InputProposition in the PropNet, indexed by
 	 *         name.
 	 */
-	public Proposition[] getInputPropositions()
+	public BitProposition[] getInputPropositions()
 	{
 		return inputPropositions;
 	}
@@ -231,7 +231,7 @@ public final class BitPropNet
 	 * @return References to every LegalProposition in the PropNet, indexed by
 	 *         player name.
 	 */
-	public Map<Role, Proposition[]> getLegalPropositions()
+	public Map<Role, BitProposition[]> getLegalPropositions()
 	{
 		return legalPropositions;
 	}
@@ -241,7 +241,7 @@ public final class BitPropNet
 	 *
 	 * @return References to every Proposition in the PropNet.
 	 */
-	public Set<Proposition> getPropositions()
+	public Set<BitProposition> getPropositions()
 	{
 		return propositions;
 	}
@@ -251,7 +251,7 @@ public final class BitPropNet
 	 *
 	 * @return A reference to the single, unique, TerminalProposition.
 	 */
-	public Proposition getTerminalProposition()
+	public BitProposition getTerminalProposition()
 	{
 		return terminalProposition;
 	}
@@ -267,7 +267,7 @@ public final class BitPropNet
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("digraph propNet\n{\n");
-		for ( Component component : components )
+		for ( BitComponent component : components )
 		{
 			sb.append("\t" + component.toString() + "\n");
 		}
@@ -304,16 +304,16 @@ public final class BitPropNet
 	 *
 	 * @return An index over the BasePropositions in the PropNet.
 	 */
-	private Map<GdlSentence, Proposition> recordBasePropositions()
+	private Map<GdlSentence, BitProposition> recordBasePropositions()
 	{
-		Map<GdlSentence, Proposition> basePropositions = new HashMap<GdlSentence, Proposition>();
-		for (Proposition proposition : propositions) {
+		Map<GdlSentence, BitProposition> basePropositions = new HashMap<GdlSentence, BitProposition>();
+		for (BitProposition proposition : propositions) {
 		    // Skip all propositions without exactly one input.
 		    if (proposition.getInputs_set().size() != 1)
 		        continue;
 
-			Component component = proposition.getSingleInput_set();
-			if (component instanceof Transition) {
+		    BitComponent component = proposition.getSingleInput_set();
+			if (component instanceof BitTransition) {
 				basePropositions.put(proposition.getName(), proposition);
 			}
 		}
@@ -331,10 +331,10 @@ public final class BitPropNet
 	 *
 	 * @return An index over the GoalPropositions in the PropNet.
 	 */
-	private Map<Role, Set<Proposition>> recordGoalPropositions()
+	private Map<Role, Set<BitProposition>> recordGoalPropositions()
 	{
-		Map<Role, Set<Proposition>> goalPropositions = new HashMap<Role, Set<Proposition>>();
-		for (Proposition proposition : propositions)
+		Map<Role, Set<BitProposition>> goalPropositions = new HashMap<Role, Set<BitProposition>>();
+		for (BitProposition proposition : propositions)
 		{
 		    // Skip all propositions that aren't GdlRelations.
 		    if (!(proposition.getName() instanceof GdlRelation))
@@ -346,7 +346,7 @@ public final class BitPropNet
 
 			Role theRole = new Role((GdlConstant) relation.get(0));
 			if (!goalPropositions.containsKey(theRole)) {
-				goalPropositions.put(theRole, new HashSet<Proposition>());
+				goalPropositions.put(theRole, new HashSet<BitProposition>());
 			}
 			goalPropositions.get(theRole).add(proposition);
 		}
@@ -359,9 +359,9 @@ public final class BitPropNet
 	 *
 	 * @return A reference to the single, unique, InitProposition.
 	 */
-	private Proposition recordInitProposition()
+	private BitProposition recordInitProposition()
 	{
-		for (Proposition proposition : propositions)
+		for (BitProposition proposition : propositions)
 		{
 		    // Skip all propositions that aren't GdlPropositions.
 			if (!(proposition.getName() instanceof GdlProposition))
@@ -380,10 +380,10 @@ public final class BitPropNet
 	 *
 	 * @return An index over the InputPropositions in the PropNet.
 	 */
-	private Map<GdlSentence, Proposition> recordInputPropositions()
+	private Map<GdlSentence, BitProposition> recordInputPropositions()
 	{
-		Map<GdlSentence, Proposition> inputPropositions = new HashMap<GdlSentence, Proposition>();
-		for (Proposition proposition : propositions)
+		Map<GdlSentence, BitProposition> inputPropositions = new HashMap<GdlSentence, BitProposition>();
+		for (BitProposition proposition : propositions)
 		{
 		    // Skip all propositions that aren't GdlFunctions.
 			if (!(proposition.getName() instanceof GdlRelation))
@@ -403,10 +403,10 @@ public final class BitPropNet
 	 *
 	 * @return An index over the LegalPropositions in the PropNet.
 	 */
-	private Map<Role, Set<Proposition>> recordLegalPropositions()
+	private Map<Role, Set<BitProposition>> recordLegalPropositions()
 	{
-		Map<Role, Set<Proposition>> legalPropositions = new HashMap<Role, Set<Proposition>>();
-		for (Proposition proposition : propositions)
+		Map<Role, Set<BitProposition>> legalPropositions = new HashMap<Role, Set<BitProposition>>();
+		for (BitProposition proposition : propositions)
 		{
 		    // Skip all propositions that aren't GdlRelations.
 			if (!(proposition.getName() instanceof GdlRelation))
@@ -417,7 +417,7 @@ public final class BitPropNet
 				GdlConstant name = (GdlConstant) relation.get(0);
 				Role r = new Role(name);
 				if (!legalPropositions.containsKey(r)) {
-					legalPropositions.put(r, new HashSet<Proposition>());
+					legalPropositions.put(r, new HashSet<BitProposition>());
 				}
 				legalPropositions.get(r).add(proposition);
 			}
@@ -431,13 +431,13 @@ public final class BitPropNet
 	 *
 	 * @return An index over Propositions in the PropNet.
 	 */
-	private Set<Proposition> recordPropositions()
+	private Set<BitProposition> recordPropositions()
 	{
-		Set<Proposition> propositions = new HashSet<Proposition>();
-		for (Component component : components)
+		Set<BitProposition> propositions = new HashSet<BitProposition>();
+		for (BitComponent component : components)
 		{
-			if (component instanceof Proposition) {
-				propositions.add((Proposition) component);
+			if (component instanceof BitProposition) {
+				propositions.add((BitProposition) component);
 			}
 		}
 		return propositions;
@@ -448,9 +448,9 @@ public final class BitPropNet
 	 *
 	 * @return A reference to the single, unqiue, TerminalProposition.
 	 */
-	private Proposition recordTerminalProposition()
+	private BitProposition recordTerminalProposition()
 	{
-		for ( Proposition proposition : propositions )
+		for ( BitProposition proposition : propositions )
 		{
 			if ( proposition.getName() instanceof GdlProposition )
 			{
@@ -471,8 +471,8 @@ public final class BitPropNet
 
 	public int getNumAnds() {
 		int andCount = 0;
-		for(Component c : components) {
-			if(c instanceof And)
+		for(BitComponent c : components) {
+			if(c instanceof BitAnd)
 				andCount++;
 		}
 		return andCount;
@@ -480,8 +480,8 @@ public final class BitPropNet
 
 	public int getNumOrs() {
 		int orCount = 0;
-		for(Component c : components) {
-			if(c instanceof Or)
+		for(BitComponent c : components) {
+			if(c instanceof BitOr)
 				orCount++;
 		}
 		return orCount;
@@ -489,8 +489,8 @@ public final class BitPropNet
 
 	public int getNumNots() {
 		int notCount = 0;
-		for(Component c : components) {
-			if(c instanceof Not)
+		for(BitComponent c : components) {
+			if(c instanceof BitNot)
 				notCount++;
 		}
 		return notCount;
@@ -498,7 +498,7 @@ public final class BitPropNet
 
 	public int getNumLinks() {
 		int linkCount = 0;
-		for(Component c : components) {
+		for(BitComponent c : components) {
 			linkCount += c.getOutputs_set().size();
 		}
 		return linkCount;

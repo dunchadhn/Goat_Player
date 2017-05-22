@@ -1,12 +1,12 @@
 package org.ggp.base.util.propnet.architecture.components;
 
-import org.ggp.base.util.propnet.architecture.Component;
+import org.ggp.base.util.propnet.architecture.BitComponent;
 
 /**
  * The Not class is designed to represent logical NOT gates.
  */
 @SuppressWarnings("serial")
-public final class Not extends Component
+public final class BitNot extends BitComponent
 {
 	/**
 	 * Returns the inverse of the input to the not.
@@ -20,7 +20,7 @@ public final class Not extends Component
 	@Override
 	public String toString()
 	{
-		if(this.getCurrentValue()) {
+		if(this.getCurrentValue(0)) {
 			return toDot("invtriangle", "red", "NOT");
 		} else {
 			return toDot("invtriangle", "grey", "NOT");

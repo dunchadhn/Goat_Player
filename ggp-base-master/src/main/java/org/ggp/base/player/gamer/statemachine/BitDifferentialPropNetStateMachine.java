@@ -15,12 +15,12 @@ import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
+import org.ggp.base.util.propnet.architecture.BitComponent;
 import org.ggp.base.util.propnet.architecture.BitPropNet;
-import org.ggp.base.util.propnet.architecture.Component;
-import org.ggp.base.util.propnet.architecture.components.Constant;
-import org.ggp.base.util.propnet.architecture.components.Not;
-import org.ggp.base.util.propnet.architecture.components.Proposition;
-import org.ggp.base.util.propnet.architecture.components.Transition;
+import org.ggp.base.util.propnet.architecture.components.BitConstant;
+import org.ggp.base.util.propnet.architecture.components.BitNot;
+import org.ggp.base.util.propnet.architecture.components.BitProposition;
+import org.ggp.base.util.propnet.architecture.components.BitTransition;
 import org.ggp.base.util.propnet.factory.BitOptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.MachineState;
@@ -54,7 +54,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
         	main_thread = Thread.currentThread().getId();
             propNet = BitOptimizingPropNetFactory.create(description);
             roles = propNet.getRoles();
-            for(Component c: propNet.getComponents()) {
+            for(BitComponent c: propNet.getComponents()) {
             	c.crystallize();
             }
         } catch (InterruptedException e) {
@@ -85,10 +85,10 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	}
     	setState(state, null, thread_id);
         List<Role> roles = propNet.getRoles();
-        Proposition[] rewards = propNet.getGoalPropositions().get(role);
+        BitProposition[] rewards = propNet.getGoalPropositions().get(role);
         int size = rewards.length;
         for(int i = 0; i < size; ++i) {
-        	Proposition reward = rewards[i];
+        	BitProposition reward = rewards[i];
         	if (reward.getCurrentValue(thread_id))
         		return getGoalValue(reward);
         }
@@ -98,12 +98,12 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     }
 
 
-    protected void setInit(boolean val, Queue<Component> queue, int thread_id) {
-    	Proposition init = propNet.getInitProposition();
+    protected void setInit(boolean val, Queue<BitComponent> queue, int thread_id) {
+    	BitProposition init = propNet.getInitProposition();
     	if (init.getLastPropagatedOutputValue(thread_id) == val) return;
     	init.setCurrentValue(val,thread_id);
     	init.setLastPropagatedOutputValue(val,thread_id);
-    	Component[] outputs = init.getOutputs_arr();
+    	BitComponent[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
     	for(int i = 0; i < size; ++i) {
     		outputs[i].edit_T(val,thread_id);
@@ -111,12 +111,12 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
         }
     }
 
-    protected void setInitAll(boolean val, Queue<Component> queue, int thread_id) {
-    	Proposition init = propNet.getInitProposition();
+    protected void setInitAll(boolean val, Queue<BitComponent> queue, int thread_id) {
+    	BitProposition init = propNet.getInitProposition();
     	if (init.getLastPropagatedOutputValue(thread_id) == val) return;
     	init.setCurrentValueAll(val,thread_id);
     	init.setLastPropagatedOutputValueAll(val,thread_id);
-    	Component[] outputs = init.getOutputs_arr();
+    	BitComponent[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
     	for(int i = 0; i < size; ++i) {
     		outputs[i].edit_TAll(val,thread_id);
@@ -124,12 +124,12 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
         }
     }
 
-    protected void setConstants(Queue<Component> q, int thread_id) {
-    	for (Component c: propNet.getComponents()) {
-    		if (c instanceof Constant) {
+    protected void setConstants(Queue<BitComponent> q, int thread_id) {
+    	for (BitComponent c: propNet.getComponents()) {
+    		if (c instanceof BitConstant) {
     			boolean val = c.getCurrentValue(thread_id);
     			c.setLastPropagatedOutputValue(val,thread_id);
-    			Component[] outputs = c.getOutputs_arr();
+    			BitComponent[] outputs = c.getOutputs_arr();
 		    	int size = c.getOutputsSize();
     			if(val) {
     		    	for(int i = 0; i < size; ++i) {
@@ -146,12 +146,12 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	}
     }
 
-    protected void setConstantsAll(Queue<Component> q, int thread_id) {
-    	for (Component c: propNet.getComponents()) {
-    		if (c instanceof Constant) {
+    protected void setConstantsAll(Queue<BitComponent> q, int thread_id) {
+    	for (BitComponent c: propNet.getComponents()) {
+    		if (c instanceof BitConstant) {
     			boolean val = c.getCurrentValue(thread_id);
     			c.setLastPropagatedOutputValueAll(val,thread_id);
-    			Component[] outputs = c.getOutputs_arr();
+    			BitComponent[] outputs = c.getOutputs_arr();
 		    	int size = c.getOutputsSize();
     			if(val) {
     		    	for(int i = 0; i < size; ++i) {
@@ -180,7 +180,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	} else {
     		clearPropNetAll(thread_id);
     	}
-    	Proposition init = propNet.getInitProposition();
+    	BitProposition init = propNet.getInitProposition();
     	if(initialized) {
     		init.setCurrentValue(true,thread_id);
     		init.setLastPropagatedOutputValue(true,thread_id);
@@ -189,14 +189,14 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		init.setLastPropagatedOutputValueAll(true,thread_id);
     	}
 
-        Queue<Component> queue = new LinkedList<Component>();
+        Queue<BitComponent> queue = new LinkedList<BitComponent>();
         if(initialized) {
         	setConstants(queue, thread_id);//Constants don't change throughout the game, so we set them once here
         } else {
         	setConstantsAll(queue, thread_id);
         }
 
-        Component[] outputs = init.getOutputs_arr();
+        BitComponent[] outputs = init.getOutputs_arr();
     	int size = init.getOutputsSize();
     	for(int i = 0; i < size; ++i) {
     		if(initialized) {
@@ -207,10 +207,10 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 			queue.add(outputs[i]);
         }
 
-    	Proposition[] bases = propNet.getBasePropositions();
+    	BitProposition[] bases = propNet.getBasePropositions();
     	size = bases.length;
         for(int i = 0; i < size; ++i) {//Don't add redundant states
-        	Proposition p = bases[i];
+        	BitProposition p = bases[i];
         	outputs = p.getOutputs_arr();
         	int size_2 = p.getOutputsSize();
         	for(int j = 0; j < size_2; ++j) {
@@ -218,10 +218,10 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
             }
         }
 
-        Proposition[] inputs = propNet.getInputPropositions();
+        BitProposition[] inputs = propNet.getInputPropositions();
     	size = inputs.length;
         for(int i = 0; i < size; ++i) {
-        	Proposition p = inputs[i];
+        	BitProposition p = inputs[i];
         	outputs = p.getOutputs_arr();
         	int size_2 = p.getOutputsSize();
         	for(int j = 0; j < size_2; ++j) {
@@ -236,7 +236,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
         	rawPropagateAll(queue, thread_id);
         	state = getStateFromBaseAll(thread_id);
         }
-        queue = new LinkedList<Component>();
+        queue = new LinkedList<BitComponent>();
         if(initialized) {
         	setInit(false, queue, thread_id);
         	propagate(queue, thread_id);
@@ -255,12 +255,12 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     @Override
     public List<Move> findActions(Role role)
             throws MoveDefinitionException {
-        Proposition[] actions = propNet.getLegalPropositions().get(role);
+    	BitProposition[] actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
 
     	int size = actions.length;
         for(int i = 0; i < size; ++i) {
-        	Proposition action = actions[i];
+        	BitProposition action = actions[i];
         	moves.add(getMoveFromProposition(action));
         }
         return moves;
@@ -280,12 +280,12 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		thread_id = (int) td % num_threads;
     	}
     	setState(state, null, thread_id);
-    	Proposition[] actions = propNet.getLegalPropositions().get(role);
+    	BitProposition[] actions = propNet.getLegalPropositions().get(role);
         List<Move> moves = new ArrayList<>();
 
         int size = actions.length;
         for(int i = 0; i < size; ++i) {
-        	Proposition action = actions[i];
+        	BitProposition action = actions[i];
     		if (action.getCurrentValue(thread_id)) {
     			moves.add(getMoveFromProposition(action));
     		}
@@ -295,14 +295,14 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
 
 
-	protected void setBases(BitMachineState state, Queue<Component> q, int thread_id) {
+	protected void setBases(BitMachineState state, Queue<BitComponent> q, int thread_id) {
     	if (state == null) return;
-    	Proposition[] bases = propNet.getBasePropositions();
+    	BitProposition[] bases = propNet.getBasePropositions();
     	int size = bases.length;
     	OpenBitSet bitSet = state.getContents();
 
     	for (int i = 0; i < size; ++i) {
-    		Proposition p = bases[i];
+    		BitProposition p = bases[i];
 
     		boolean val = bitSet.fastGet(i);
     		if (val == p.getLastPropagatedOutputValue(thread_id)) continue;
@@ -310,7 +310,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		p.setLastPropagatedOutputValue(val,thread_id);
     		p.setCurrentValue(val,thread_id);
 
-    		Component[] outputs = p.getOutputs_arr();
+    		BitComponent[] outputs = p.getOutputs_arr();
         	int size_2 = p.getOutputsSize();
         	for(int j = 0; j < size_2; ++j) {
         		outputs[j].edit_T(val,thread_id);
@@ -320,13 +320,13 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     }
 
 
-	protected void setActions(List<Move> moves, Queue<Component> q, int thread_id) {
+	protected void setActions(List<Move> moves, Queue<BitComponent> q, int thread_id) {
     	if(moves == null || moves.isEmpty()) return;
-    	Proposition[] inputs = propNet.getInputPropositions();
+    	BitProposition[] inputs = propNet.getInputPropositions();
     	int size = inputs.length;
     	OpenBitSet actions = toDoes(moves, size, inputs);
     	for (int i = 0; i < size; ++i) {
-    		Proposition p = inputs[i];
+    		BitProposition p = inputs[i];
 
     		boolean val = actions.fastGet(i);
     		if (val == p.getLastPropagatedOutputValue(thread_id)) continue;
@@ -334,7 +334,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		p.setLastPropagatedOutputValue(val,thread_id);
     		p.setCurrentValue(val,thread_id);
 
-    		Component[] outputs = p.getOutputs_arr();
+    		BitComponent[] outputs = p.getOutputs_arr();
         	int size_2 = p.getOutputsSize();
         	for(int j = 0; j < size_2; ++j) {
         		outputs[j].edit_T(val,thread_id);
@@ -344,7 +344,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     }
 
     protected void setState(BitMachineState state, List<Move> moves, int thread_id) {
-    	Queue<Component> q = new LinkedList<Component>();
+    	Queue<BitComponent> q = new LinkedList<BitComponent>();
     	setInit(false, q, thread_id);
     	setBases(state, q, thread_id);
     	setActions(moves, q, thread_id);
@@ -366,11 +366,11 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
     //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
-    protected void rawPropagate(Queue<Component> queue, int thread_id) {
+    protected void rawPropagate(Queue<BitComponent> queue, int thread_id) {
     	while(!queue.isEmpty()) {
-    		Component c = queue.remove();
+    		BitComponent c = queue.remove();
     		boolean val = false;
-    		if (c instanceof Not) {
+    		if (c instanceof BitNot) {
     			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
@@ -378,7 +378,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
-    		if (c instanceof Transition) {
+    		if (c instanceof BitTransition) {
     			c.setLastPropagatedOutputValue(val,thread_id);
     			continue;
     		}
@@ -386,7 +386,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		boolean last_val = c.getLastPropagatedOutputValue(thread_id);
     		c.setLastPropagatedOutputValue(val,thread_id);
 
-    		Component[] outputs = c.getOutputs_arr();
+    		BitComponent[] outputs = c.getOutputs_arr();
         	int size = c.getOutputsSize();
 
     		if(val != last_val) {
@@ -402,11 +402,11 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	}
     }
 
-    protected void rawPropagateAll(Queue<Component> queue, int thread_id) {
+    protected void rawPropagateAll(Queue<BitComponent> queue, int thread_id) {
     	while(!queue.isEmpty()) {
-    		Component c = queue.remove();
+    		BitComponent c = queue.remove();
     		boolean val = false;
-    		if (c instanceof Not) {
+    		if (c instanceof BitNot) {
     			c.setCurrentValueAll(!c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
@@ -414,7 +414,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     			c.setCurrentValueAll(c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
-    		if (c instanceof Transition) {
+    		if (c instanceof BitTransition) {
     			c.setLastPropagatedOutputValueAll(val,thread_id);
     			continue;
     		}
@@ -422,7 +422,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		boolean last_val = c.getLastPropagatedOutputValue(thread_id);
     		c.setLastPropagatedOutputValueAll(val,thread_id);
 
-    		Component[] outputs = c.getOutputs_arr();
+    		BitComponent[] outputs = c.getOutputs_arr();
         	int size = c.getOutputsSize();
 
     		if(val != last_val) {
@@ -440,11 +440,11 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
 
     //Differential Propagation
-    public void propagate(Queue<Component> queue, int thread_id) {
+    public void propagate(Queue<BitComponent> queue, int thread_id) {
     	while(!queue.isEmpty()) {
-    		Component c = queue.remove();
+    		BitComponent c = queue.remove();
     		boolean val = false;
-    		if (c instanceof Not) {
+    		if (c instanceof BitNot) {
     			c.setCurrentValue(!c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
@@ -452,7 +452,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     			c.setCurrentValue(c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
-    		if (c instanceof Transition) {
+    		if (c instanceof BitTransition) {
     			c.setLastPropagatedOutputValue(val,thread_id);
     			continue;
     		}
@@ -462,7 +462,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
     		c.setLastPropagatedOutputValue(val,thread_id);
 
-    		Component[] outputs = c.getOutputs_arr();
+    		BitComponent[] outputs = c.getOutputs_arr();
         	int size = c.getOutputsSize();
 
             for(int i = 0; i < size; i++) {
@@ -472,11 +472,11 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	}
     }
 
-    public void propagateAll(Queue<Component> queue, int thread_id) {
+    public void propagateAll(Queue<BitComponent> queue, int thread_id) {
     	while(!queue.isEmpty()) {
-    		Component c = queue.remove();
+    		BitComponent c = queue.remove();
     		boolean val = false;
-    		if (c instanceof Not) {
+    		if (c instanceof BitNot) {
     			c.setCurrentValueAll(!c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
@@ -484,7 +484,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     			c.setCurrentValueAll(c.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
     			val = c.getCurrentValue(thread_id);
     		}
-    		if (c instanceof Transition) {
+    		if (c instanceof BitTransition) {
     			c.setLastPropagatedOutputValueAll(val,thread_id);
     			continue;
     		}
@@ -494,7 +494,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
     		c.setLastPropagatedOutputValueAll(val,thread_id);
 
-    		Component[] outputs = c.getOutputs_arr();
+    		BitComponent[] outputs = c.getOutputs_arr();
         	int size = c.getOutputsSize();
 
             for(int i = 0; i < size; i++) {
@@ -505,7 +505,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     }
 
     private boolean clearPropNet(int thread_id) {
-    	for (Component c: propNet.getComponents()) {
+    	for (BitComponent c: propNet.getComponents()) {
     		c.set(0,thread_id);
     		c.setCurrentValue(false,thread_id);
     		c.setLastPropagatedOutputValue(false,thread_id);
@@ -516,7 +516,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
 
     private boolean clearPropNetAll(int thread_id) {
-    	for (Component c: propNet.getComponents()) {
+    	for (BitComponent c: propNet.getComponents()) {
     		c.setAll(0,thread_id);
     		c.setCurrentValueAll(false,thread_id);
     		c.setLastPropagatedOutputValueAll(false,thread_id);
@@ -543,7 +543,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
      * @param moves
      * @return
      */
-    private OpenBitSet toDoes(List<Move> moves, int size, Proposition[] inputs)
+    private OpenBitSet toDoes(List<Move> moves, int size, BitProposition[] inputs)
     {
     	OpenBitSet doeses = new OpenBitSet(size);
     	HashMap< Pair<GdlTerm, GdlTerm>, Integer> m = propNet.getInputMap();
@@ -563,7 +563,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
      * @param p
      * @return a PropNetMove
      */
-    public static Move getMoveFromProposition(Proposition p)
+    public static Move getMoveFromProposition(BitProposition p)
     {
         return new Move(p.getName().get(1));
     }
@@ -573,7 +573,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
      * @param goalProposition
      * @return the integer value of the goal proposition
      */
-    private int getGoalValue(Proposition goalProposition)
+    private int getGoalValue(BitProposition goalProposition)
     {
         GdlRelation relation = (GdlRelation) goalProposition.getName();
         GdlConstant constant = (GdlConstant) relation.get(1);
@@ -588,13 +588,13 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
      */
     public BitMachineState getStateFromBase(int thread_id)
     {
-    	Proposition[] bases = propNet.getBasePropositions();
+    	BitProposition[] bases = propNet.getBasePropositions();
         int size = bases.length;
         OpenBitSet contents = new OpenBitSet(size);
 
         for (int i = 0; i < size; ++i)
         {
-        	Proposition p = bases[i];
+        	BitProposition p = bases[i];
             p.setCurrentValue(p.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
             if (p.getCurrentValue(thread_id))
             {
@@ -607,13 +607,13 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
     public BitMachineState getStateFromBaseAll(int thread_id)
     {
-    	Proposition[] bases = propNet.getBasePropositions();
+    	BitProposition[] bases = propNet.getBasePropositions();
         int size = bases.length;
         OpenBitSet contents = new OpenBitSet(size);
 
         for (int i = 0; i < size; ++i)
         {
-        	Proposition p = bases[i];
+        	BitProposition p = bases[i];
             p.setCurrentValueAll(p.getSingleInput_arr().getCurrentValue(thread_id),thread_id);
             if (p.getCurrentValue(thread_id))
             {
@@ -632,9 +632,9 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		thread_id = (int) td % num_threads;
     	}
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
-    	Proposition[] baseProps = propNet.getBasePropositions();
+    	BitProposition[] baseProps = propNet.getBasePropositions();
     	for (int i = 0; i < baseProps.length; ++i) {
-    		Proposition p = baseProps[i];
+    		BitProposition p = baseProps[i];
     		if (p.getCurrentValue(thread_id)) bases.add(p.getName());
     	}
     	return new MachineState(bases);

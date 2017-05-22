@@ -46,15 +46,15 @@ import org.ggp.base.util.gdl.transforms.DeORer;
 import org.ggp.base.util.gdl.transforms.GdlCleaner;
 import org.ggp.base.util.gdl.transforms.Relationizer;
 import org.ggp.base.util.gdl.transforms.VariableConstrainer;
+import org.ggp.base.util.propnet.architecture.BitComponent;
 import org.ggp.base.util.propnet.architecture.BitPropNet;
-import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.PropNet;
-import org.ggp.base.util.propnet.architecture.components.And;
-import org.ggp.base.util.propnet.architecture.components.Constant;
-import org.ggp.base.util.propnet.architecture.components.Not;
-import org.ggp.base.util.propnet.architecture.components.Or;
-import org.ggp.base.util.propnet.architecture.components.Proposition;
-import org.ggp.base.util.propnet.architecture.components.Transition;
+import org.ggp.base.util.propnet.architecture.components.BitAnd;
+import org.ggp.base.util.propnet.architecture.components.BitConstant;
+import org.ggp.base.util.propnet.architecture.components.BitNot;
+import org.ggp.base.util.propnet.architecture.components.BitOr;
+import org.ggp.base.util.propnet.architecture.components.BitProposition;
+import org.ggp.base.util.propnet.architecture.components.BitTransition;
 import org.ggp.base.util.statemachine.Role;
 
 import com.google.common.collect.HashMultiset;
@@ -166,10 +166,10 @@ public class BitOptimizingPropNetFactory {
 			System.out.println("done");
 
 		List<Role> roles = Role.computeRoles(description);
-		Map<GdlSentence, Component> components = new HashMap<GdlSentence, Component>();
-		Map<GdlSentence, Component> negations = new HashMap<GdlSentence, Component>();
-		Constant trueComponent = new Constant(true);
-		Constant falseComponent = new Constant(false);
+		Map<GdlSentence, BitComponent> components = new HashMap<GdlSentence, BitComponent>();
+		Map<GdlSentence, BitComponent> negations = new HashMap<GdlSentence, BitComponent>();
+		BitConstant trueComponent = new BitConstant(true);
+		BitConstant falseComponent = new BitConstant(false);
 		Map<SentenceForm, FunctionInfo> functionInfoMap = new HashMap<SentenceForm, FunctionInfo>();
 		Map<SentenceForm, Collection<GdlSentence>> completedSentenceFormValues = new HashMap<SentenceForm, Collection<GdlSentence>>();
 		for(SentenceForm form : topologicalOrdering) {
@@ -188,7 +188,7 @@ public class BitOptimizingPropNetFactory {
 						|| form.getName().equals(INIT)) {
 					//Add it
 					for (GdlSentence trueSentence : constantChecker.getTrueSentences(form)) {
-						Proposition trueProp = new Proposition(trueSentence);
+						BitProposition trueProp = new BitProposition(trueSentence);
 						trueProp.addInput(trueComponent);
 						trueComponent.addOutput(trueProp);
 						components.put(trueSentence, trueComponent);
@@ -206,8 +206,8 @@ public class BitOptimizingPropNetFactory {
 				System.out.println();
 			//TODO: Adjust "recursive forms" appropriately
 			//Add a temporary sentence form thingy? ...
-			Map<GdlSentence, Component> temporaryComponents = new HashMap<GdlSentence, Component>();
-			Map<GdlSentence, Component> temporaryNegations = new HashMap<GdlSentence, Component>();
+			Map<GdlSentence, BitComponent> temporaryComponents = new HashMap<GdlSentence, BitComponent>();
+			Map<GdlSentence, BitComponent> temporaryNegations = new HashMap<GdlSentence, BitComponent>();
 			addSentenceForm(form, model, components, negations, trueComponent, falseComponent, usingBase, usingInput, Collections.singleton(form), temporaryComponents, temporaryNegations, functionInfoMap, constantChecker, completedSentenceFormValues);
 			//TODO: Pass these over groups of multiple sentence forms
 			if(verbose && !temporaryComponents.isEmpty())
@@ -230,7 +230,7 @@ public class BitOptimizingPropNetFactory {
 		removeUselessBasePropositions(components, negations, trueComponent, falseComponent);
 		if(verbose)
 			System.out.println("Creating component set...");
-		Set<Component> componentSet = new HashSet<Component>(components.values());
+		Set<BitComponent> componentSet = new HashSet<BitComponent>(components.values());
 		//Try saving some memory here...
 		components = null;
 		negations = null;
@@ -392,12 +392,12 @@ public class BitOptimizingPropNetFactory {
 
 
 	private static void removeUselessBasePropositions(
-			Map<GdlSentence, Component> components, Map<GdlSentence, Component> negations, Constant trueComponent,
-			Constant falseComponent) throws InterruptedException {
+			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, BitConstant trueComponent,
+			BitConstant falseComponent) throws InterruptedException {
 		boolean changedSomething = false;
-		for(Entry<GdlSentence, Component> entry : components.entrySet()) {
+		for(Entry<GdlSentence, BitComponent> entry : components.entrySet()) {
 			if(entry.getKey().getName() == TRUE) {
-				Component comp = entry.getValue();
+				BitComponent comp = entry.getValue();
 				if(comp.getInputs_set().size() == 0) {
 					comp.addInput(falseComponent);
 					falseComponent.addOutput(comp);
@@ -419,10 +419,10 @@ public class BitOptimizingPropNetFactory {
 	 *
 	 * @param componentSet
 	 */
-	private static void normalizePropositions(Set<Component> componentSet) {
-		for(Component component : componentSet) {
-			if(component instanceof Proposition) {
-				Proposition p = (Proposition) component;
+	private static void normalizePropositions(Set<BitComponent> componentSet) {
+		for(BitComponent component : componentSet) {
+			if(component instanceof BitProposition) {
+				BitProposition p = (BitProposition) component;
 				GdlSentence sentence = p.getName();
 				if(sentence instanceof GdlRelation) {
 					GdlRelation relation = (GdlRelation) sentence;
@@ -448,7 +448,7 @@ public class BitOptimizingPropNetFactory {
 	private static void addFormToCompletedValues(
 			SentenceForm form,
 			Map<SentenceForm, Collection<GdlSentence>> completedSentenceFormValues,
-			Map<GdlSentence, Component> components) throws InterruptedException {
+			Map<GdlSentence, BitComponent> components) throws InterruptedException {
 		//Kind of inefficient. Could do better by collecting these as we go,
 		//then adding them back into the CSFV map once the sentence forms are complete.
 		//completedSentenceFormValues.put(form, new ArrayList<GdlSentence>());
@@ -471,11 +471,11 @@ public class BitOptimizingPropNetFactory {
 
 
 	private static void processTemporaryComponents(
-			Map<GdlSentence, Component> temporaryComponents,
-			Map<GdlSentence, Component> temporaryNegations,
-			Map<GdlSentence, Component> components,
-			Map<GdlSentence, Component> negations, Component trueComponent,
-			Component falseComponent) throws InterruptedException {
+			Map<GdlSentence, BitComponent> temporaryComponents,
+			Map<GdlSentence, BitComponent> temporaryNegations,
+			Map<GdlSentence, BitComponent> components,
+			Map<GdlSentence, BitComponent> negations, BitComponent trueComponent,
+			BitComponent falseComponent) throws InterruptedException {
 		//For each component in temporary components, we want to "put it back"
 		//into the main components section.
 		//We also want to do optimization here...
@@ -487,12 +487,12 @@ public class BitOptimizingPropNetFactory {
 		//is necessarily FALSE and should be replaced by the false
 		//component.
 		for(GdlSentence sentence : temporaryComponents.keySet()) {
-			Component tempComp = temporaryComponents.get(sentence);
-			Component realComp = components.get(sentence);
+			BitComponent tempComp = temporaryComponents.get(sentence);
+			BitComponent realComp = components.get(sentence);
 			if(realComp == null) {
 				realComp = falseComponent;
 			}
-			for(Component output : tempComp.getOutputs_set()) {
+			for(BitComponent output : tempComp.getOutputs_set()) {
 				//Disconnect
 				output.removeInput(tempComp);
 				//tempComp.removeOutput(output); //do at end
@@ -522,7 +522,7 @@ public class BitOptimizingPropNetFactory {
 	 * component from the propnet entirely.
 	 * @throws InterruptedException
 	 */
-	private static void optimizeAwayTrueAndFalse(Map<GdlSentence, Component> components, Map<GdlSentence, Component> negations, Component trueComponent, Component falseComponent) throws InterruptedException {
+	private static void optimizeAwayTrueAndFalse(Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, BitComponent trueComponent, BitComponent falseComponent) throws InterruptedException {
 	    while(hasNonessentialChildren(trueComponent) || hasNonessentialChildren(falseComponent)) {
 	    	ConcurrencyUtils.checkForInterruption();
             optimizeAwayTrue(components, negations, null, trueComponent, falseComponent);
@@ -530,7 +530,7 @@ public class BitOptimizingPropNetFactory {
         }
 	}
 
-	private static void optimizeAwayTrueAndFalse(PropNet pn, Component trueComponent, Component falseComponent) {
+	private static void optimizeAwayTrueAndFalse(BitPropNet pn, BitComponent trueComponent, BitComponent falseComponent) {
 	    while(hasNonessentialChildren(trueComponent) || hasNonessentialChildren(falseComponent)) {
 	        optimizeAwayTrue(null, null, pn, trueComponent, falseComponent);
 	        optimizeAwayFalse(null, null, pn, trueComponent, falseComponent);
@@ -539,21 +539,21 @@ public class BitOptimizingPropNetFactory {
 
 	//TODO: Create a version with just a set of components that we can share with post-optimizations
 	private static void optimizeAwayFalse(
-			Map<GdlSentence, Component> components, Map<GdlSentence, Component> negations, PropNet pn, Component trueComponent,
-			Component falseComponent) {
+			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, BitPropNet pn, BitComponent trueComponent,
+			BitComponent falseComponent) {
         assert((components != null && negations != null) || pn != null);
         assert((components == null && negations == null) || pn == null);
-        for (Component output : Lists.newArrayList(falseComponent.getOutputs_set())) {
-        	if (isEssentialProposition(output) || output instanceof Transition) {
+        for (BitComponent output : Lists.newArrayList(falseComponent.getOutputs_set())) {
+        	if (isEssentialProposition(output) || output instanceof BitTransition) {
         		//Since this is the false constant, there are a few "essential" types
         		//we don't actually want to keep around.
         		if (!isLegalOrGoalProposition(output)) {
         			continue;
         		}
 	    	}
-			if(output instanceof Proposition) {
+			if(output instanceof BitProposition) {
 				//Move its outputs to be outputs of false
-				for(Component child : output.getOutputs_set()) {
+				for(BitComponent child : output.getOutputs_set()) {
 					//Disconnect
 					child.removeInput(output);
 					//output.removeOutput(child); //do at end
@@ -564,7 +564,7 @@ public class BitOptimizingPropNetFactory {
 				output.removeAllOutputs();
 
 				if(!isEssentialProposition(output)) {
-					Proposition prop = (Proposition) output;
+					BitProposition prop = (BitProposition) output;
 					//Remove the proposition entirely
 					falseComponent.removeOutput(output);
 					output.removeInput(falseComponent);
@@ -576,32 +576,32 @@ public class BitOptimizingPropNetFactory {
 					    pn.removeComponent(output);
 					}
 				}
-			} else if(output instanceof And) {
-				And and = (And) output;
+			} else if(output instanceof BitAnd) {
+				BitAnd and = (BitAnd) output;
 				//Attach children of and to falseComponent
-				for(Component child : and.getOutputs_set()) {
+				for(BitComponent child : and.getOutputs_set()) {
 					child.addInput(falseComponent);
 					falseComponent.addOutput(child);
 					child.removeInput(and);
 				}
 				//Disconnect and completely
 				and.removeAllOutputs();
-				for(Component parent : and.getInputs_set())
+				for(BitComponent parent : and.getInputs_set())
 					parent.removeOutput(and);
 				and.removeAllInputs();
 				if(pn != null)
 				    pn.removeComponent(and);
-			} else if(output instanceof Or) {
-				Or or = (Or) output;
+			} else if(output instanceof BitOr) {
+				BitOr or = (BitOr) output;
 				//Remove as input from or
 				or.removeInput(falseComponent);
 				falseComponent.removeOutput(or);
 				//If or has only one input, remove it
 				if(or.getInputs_set().size() == 1) {
-					Component in = or.getSingleInput_set();
+					BitComponent in = or.getSingleInput_set();
 					or.removeInput(in);
 					in.removeOutput(or);
-					for(Component out : or.getOutputs_set()) {
+					for(BitComponent out : or.getOutputs_set()) {
 						//Disconnect from and
 						out.removeInput(or);
 						//or.removeOutput(out); //do at end
@@ -618,13 +618,13 @@ public class BitOptimizingPropNetFactory {
 						pn.removeComponent(or);
 					}
 				}
-			} else if(output instanceof Not) {
-				Not not = (Not) output;
+			} else if(output instanceof BitNot) {
+				BitNot not = (BitNot) output;
 				//Disconnect from falseComponent
 				not.removeInput(falseComponent);
 				falseComponent.removeOutput(not);
 				//Connect all children of the not to trueComponent
-				for(Component child : not.getOutputs_set()) {
+				for(BitComponent child : not.getOutputs_set()) {
 					//Disconnect
 					child.removeInput(not);
 					//not.removeOutput(child); //Do at end
@@ -635,7 +635,7 @@ public class BitOptimizingPropNetFactory {
 				not.removeAllOutputs();
 				if(pn != null)
 				    pn.removeComponent(not);
-			} else if(output instanceof Transition) {
+			} else if(output instanceof BitTransition) {
 				//???
 				System.err.println("Fix optimizeAwayFalse's case for Transitions");
 			}
@@ -643,27 +643,27 @@ public class BitOptimizingPropNetFactory {
 	}
 
 
-	private static boolean isLegalOrGoalProposition(Component comp) {
-		if (!(comp instanceof Proposition)) {
+	private static boolean isLegalOrGoalProposition(BitComponent comp) {
+		if (!(comp instanceof BitProposition)) {
 			return false;
 		}
 
-		Proposition prop = (Proposition) comp;
+		BitProposition prop = (BitProposition) comp;
 		GdlSentence name = prop.getName();
 		return name.getName() == GdlPool.LEGAL || name.getName() == GdlPool.GOAL;
 	}
 
 	private static void optimizeAwayTrue(
-			Map<GdlSentence, Component> components, Map<GdlSentence, Component> negations, PropNet pn, Component trueComponent,
-			Component falseComponent) {
+			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, BitPropNet pn, BitComponent trueComponent,
+			BitComponent falseComponent) {
 	    assert((components != null && negations != null) || pn != null);
-	    for (Component output : Lists.newArrayList(trueComponent.getOutputs_set())) {
-	    	if (isEssentialProposition(output) || output instanceof Transition) {
+	    for (BitComponent output : Lists.newArrayList(trueComponent.getOutputs_set())) {
+	    	if (isEssentialProposition(output) || output instanceof BitTransition) {
 	    		continue;
 	    	}
-			if(output instanceof Proposition) {
+			if(output instanceof BitProposition) {
 				//Move its outputs to be outputs of true
-				for(Component child : output.getOutputs_set()) {
+				for(BitComponent child : output.getOutputs_set()) {
 					//Disconnect
 					child.removeInput(output);
 					//output.removeOutput(child); //do at end
@@ -674,7 +674,7 @@ public class BitOptimizingPropNetFactory {
 				output.removeAllOutputs();
 
 				if(!isEssentialProposition(output)) {
-					Proposition prop = (Proposition) output;
+					BitProposition prop = (BitProposition) output;
 					//Remove the proposition entirely
 					trueComponent.removeOutput(output);
 					output.removeInput(trueComponent);
@@ -686,32 +686,32 @@ public class BitOptimizingPropNetFactory {
 					    pn.removeComponent(output);
 					}
 				}
-			} else if(output instanceof Or) {
-				Or or = (Or) output;
+			} else if(output instanceof BitOr) {
+				BitOr or = (BitOr) output;
 				//Attach children of or to trueComponent
-				for(Component child : or.getOutputs_set()) {
+				for(BitComponent child : or.getOutputs_set()) {
 					child.addInput(trueComponent);
 					trueComponent.addOutput(child);
 					child.removeInput(or);
 				}
 				//Disconnect or completely
 				or.removeAllOutputs();
-				for(Component parent : or.getInputs_set())
+				for(BitComponent parent : or.getInputs_set())
 					parent.removeOutput(or);
 				or.removeAllInputs();
 				if(pn != null)
 				    pn.removeComponent(or);
-			} else if(output instanceof And) {
-				And and = (And) output;
+			} else if(output instanceof BitAnd) {
+				BitAnd and = (BitAnd) output;
 				//Remove as input from and
 				and.removeInput(trueComponent);
 				trueComponent.removeOutput(and);
 				//If and has only one input, remove it
 				if(and.getInputs_set().size() == 1) {
-					Component in = and.getSingleInput_set();
+					BitComponent in = and.getSingleInput_set();
 					and.removeInput(in);
 					in.removeOutput(and);
-					for(Component out : and.getOutputs_set()) {
+					for(BitComponent out : and.getOutputs_set()) {
 						//Disconnect from and
 						out.removeInput(and);
 						//and.removeOutput(out); //do at end
@@ -728,13 +728,13 @@ public class BitOptimizingPropNetFactory {
 						pn.removeComponent(and);
 					}
 				}
-			} else if(output instanceof Not) {
-				Not not = (Not) output;
+			} else if(output instanceof BitNot) {
+				BitNot not = (BitNot) output;
 				//Disconnect from trueComponent
 				not.removeInput(trueComponent);
 				trueComponent.removeOutput(not);
 				//Connect all children of the not to falseComponent
-				for(Component child : not.getOutputs_set()) {
+				for(BitComponent child : not.getOutputs_set()) {
 					//Disconnect
 					child.removeInput(not);
 					//not.removeOutput(child); //Do at end
@@ -745,7 +745,7 @@ public class BitOptimizingPropNetFactory {
 				not.removeAllOutputs();
 				if(pn != null)
 				    pn.removeComponent(not);
-			} else if(output instanceof Transition) {
+			} else if(output instanceof BitTransition) {
 				//???
 				System.err.println("Fix optimizeAwayTrue's case for Transitions");
 			}
@@ -753,9 +753,9 @@ public class BitOptimizingPropNetFactory {
 	}
 
 
-	private static boolean hasNonessentialChildren(Component trueComponent) {
-		for(Component child : trueComponent.getOutputs_set()) {
-			if(child instanceof Transition)
+	private static boolean hasNonessentialChildren(BitComponent trueComponent) {
+		for(BitComponent child : trueComponent.getOutputs_set()) {
+			if(child instanceof BitTransition)
 				continue;
 			if(!isEssentialProposition(child))
 				return true;
@@ -767,14 +767,14 @@ public class BitOptimizingPropNetFactory {
 	}
 
 
-	private static boolean isEssentialProposition(Component component) {
-		if(!(component instanceof Proposition))
+	private static boolean isEssentialProposition(BitComponent component) {
+		if(!(component instanceof BitProposition))
 			return false;
 
 		//We're looking for things that would be outputs of "true" or "false",
 		//but we would still want to keep as propositions to be read by the
 		//state machine
-		Proposition prop = (Proposition) component;
+		BitProposition prop = (BitProposition) component;
 		GdlConstant name = prop.getName().getName();
 
 		return name.equals(LEGAL) /*|| name.equals(NEXT)*/ || name.equals(GOAL)
@@ -782,43 +782,43 @@ public class BitOptimizingPropNetFactory {
 	}
 
 
-	private static void completeComponentSet(Set<Component> componentSet) {
-		Set<Component> newComponents = new HashSet<Component>();
-		Set<Component> componentsToTry = new HashSet<Component>(componentSet);
+	private static void completeComponentSet(Set<BitComponent> componentSet) {
+		Set<BitComponent> newComponents = new HashSet<BitComponent>();
+		Set<BitComponent> componentsToTry = new HashSet<BitComponent>(componentSet);
 		while(!componentsToTry.isEmpty()) {
-			for(Component c : componentsToTry) {
-				for(Component out : c.getOutputs_set()) {
+			for(BitComponent c : componentsToTry) {
+				for(BitComponent out : c.getOutputs_set()) {
 					if(!componentSet.contains(out))
 						newComponents.add(out);
 				}
-				for(Component in : c.getInputs_set()) {
+				for(BitComponent in : c.getInputs_set()) {
 					if(!componentSet.contains(in))
 						newComponents.add(in);
 				}
 			}
 			componentSet.addAll(newComponents);
 			componentsToTry = newComponents;
-			newComponents = new HashSet<Component>();
+			newComponents = new HashSet<BitComponent>();
 		}
 	}
 
 
-	private static void addTransitions(Map<GdlSentence, Component> components) {
-		for(Entry<GdlSentence, Component> entry : components.entrySet()) {
+	private static void addTransitions(Map<GdlSentence, BitComponent> components) {
+		for(Entry<GdlSentence, BitComponent> entry : components.entrySet()) {
 			GdlSentence sentence = entry.getKey();
 
 			if(sentence.getName().equals(NEXT)) {
 				//connect to true
 				GdlSentence trueSentence = GdlPool.getRelation(TRUE, sentence.getBody());
-				Component nextComponent = entry.getValue();
-				Component trueComponent = components.get(trueSentence);
+				BitComponent nextComponent = entry.getValue();
+				BitComponent trueComponent = components.get(trueSentence);
 				//There might be no true component (for example, because the bases
 				//told us so). If that's the case, don't have a transition.
 				if(trueComponent == null) {
 				    // Skipping transition to supposedly impossible 'trueSentence'
 				    continue;
 				}
-				Transition transition = new Transition();
+				BitTransition transition = new BitTransition();
 				transition.addInput(nextComponent);
 				nextComponent.addOutput(transition);
 				transition.addOutput(trueComponent);
@@ -830,21 +830,21 @@ public class BitOptimizingPropNetFactory {
 	//TODO: Replace with version using constantChecker only
 	//TODO: This can give problematic results if interpreted in
 	//the standard way (see test_case_3d)
-	private static void setUpInit(Map<GdlSentence, Component> components,
-			Constant trueComponent, Constant falseComponent) {
-		Proposition initProposition = new Proposition(GdlPool.getProposition(INIT_CAPS));
-		for(Entry<GdlSentence, Component> entry : components.entrySet()) {
+	private static void setUpInit(Map<GdlSentence, BitComponent> components,
+			BitConstant trueComponent, BitConstant falseComponent) {
+		BitProposition initProposition = new BitProposition(GdlPool.getProposition(INIT_CAPS));
+		for(Entry<GdlSentence, BitComponent> entry : components.entrySet()) {
 			//Is this something that will be true?
 			if(entry.getValue() == trueComponent) {
 				if(entry.getKey().getName().equals(INIT)) {
 					//Find the corresponding true sentence
 					GdlSentence trueSentence = GdlPool.getRelation(TRUE, entry.getKey().getBody());
 					//System.out.println("True sentence from init: " + trueSentence);
-					Component trueSentenceComponent = components.get(trueSentence);
+					BitComponent trueSentenceComponent = components.get(trueSentence);
 					if(trueSentenceComponent.getInputs_set().isEmpty()) {
 						//Case where there is no transition input
 						//Add the transition input, connect to init, continue loop
-						Transition transition = new Transition();
+						BitTransition transition = new BitTransition();
 						//init goes into transition
 						transition.addInput(initProposition);
 						initProposition.addOutput(transition);
@@ -853,15 +853,15 @@ public class BitOptimizingPropNetFactory {
 						transition.addOutput(trueSentenceComponent);
 					} else {
 						//The transition already exists
-						Component transition = trueSentenceComponent.getSingleInput_set();
+						BitComponent transition = trueSentenceComponent.getSingleInput_set();
 
 						//We want to add init as a thing that precedes the transition
 						//Disconnect existing input
-						Component input = transition.getSingleInput_set();
+						BitComponent input = transition.getSingleInput_set();
 						//input and init go into or, or goes into transition
 						input.removeOutput(transition);
 						transition.removeInput(input);
-						List<Component> orInputs = new ArrayList<Component>(2);
+						List<BitComponent> orInputs = new ArrayList<BitComponent>(2);
 						orInputs.add(input);
 						orInputs.add(initProposition);
 						orify(orInputs, transition, falseComponent);
@@ -875,13 +875,13 @@ public class BitOptimizingPropNetFactory {
 	 * Adds an or gate connecting the inputs to produce the output.
 	 * Handles special optimization cases like a true/false input.
 	 */
-	private static void orify(Collection<Component> inputs, Component output, Constant falseProp) {
+	private static void orify(Collection<BitComponent> inputs, BitComponent output, BitConstant falseProp) {
 		//TODO: Look for already-existing ors with the same inputs?
 		//Or can this be handled with a GDL transformation?
 
 		//Special case: An input is the true constant
-		for(Component in : inputs) {
-			if(in instanceof Constant && in.getCurrentValue(0)) {
+		for(BitComponent in : inputs) {
+			if(in instanceof BitConstant && in.getCurrentValue(0)) {
 				//True constant: connect that to the component, done
 				in.addOutput(output);
 				output.addInput(in);
@@ -894,9 +894,9 @@ public class BitOptimizingPropNetFactory {
 		//What if that "or" gate has multiple outputs? Could that happen?
 
 		//For reals... just skip over any false constants
-		Or or = new Or();
-		for(Component in : inputs) {
-			if(!(in instanceof Constant)) {
+		BitOr or = new BitOr();
+		for(BitComponent in : inputs) {
+			if(!(in instanceof BitConstant)) {
 				in.addOutput(or);
 				or.addInput(in);
 			}
@@ -910,7 +910,7 @@ public class BitOptimizingPropNetFactory {
 		}
 		//If there's just one, on the other hand, don't use the or gate
 		if(or.getInputs_set().size() == 1) {
-			Component in = or.getSingleInput_set();
+			BitComponent in = or.getSingleInput_set();
 			in.removeOutput(or);
 			or.removeInput(in);
 			in.addOutput(output);
@@ -970,12 +970,12 @@ public class BitOptimizingPropNetFactory {
 	}
 
 	private static void addSentenceForm(SentenceForm form, SentenceDomainModel model,
-			Map<GdlSentence, Component> components,
-			Map<GdlSentence, Component> negations,
-			Constant trueComponent, Constant falseComponent,
+			Map<GdlSentence, BitComponent> components,
+			Map<GdlSentence, BitComponent> negations,
+			BitConstant trueComponent, BitConstant falseComponent,
 			boolean usingBase, boolean usingInput,
 			Set<SentenceForm> recursionForms,
-			Map<GdlSentence, Component> temporaryComponents, Map<GdlSentence, Component> temporaryNegations,
+			Map<GdlSentence, BitComponent> temporaryComponents, Map<GdlSentence, BitComponent> temporaryNegations,
 			Map<SentenceForm, FunctionInfo> functionInfoMap, ConstantChecker constantChecker,
 			Map<SentenceForm, Collection<GdlSentence>> completedSentenceFormValues) throws InterruptedException {
 		//This is the meat of it (along with the entire Assignments class).
@@ -993,7 +993,7 @@ public class BitOptimizingPropNetFactory {
 			if(alwaysTrueSentence.getName().equals(LEGAL)
 					|| alwaysTrueSentence.getName().equals(NEXT)
 					|| alwaysTrueSentence.getName().equals(GOAL)) {
-				Proposition prop = new Proposition(alwaysTrueSentence);
+				BitProposition prop = new BitProposition(alwaysTrueSentence);
 				//Attach to true
 				trueComponent.addOutput(prop);
 				prop.addInput(trueComponent);
@@ -1012,7 +1012,7 @@ public class BitOptimizingPropNetFactory {
 			SentenceForm inputForm = form.withName(INPUT);
 			for (GdlSentence inputSentence : constantChecker.getTrueSentences(inputForm)) {
 				GdlSentence doesSentence = GdlPool.getRelation(DOES, inputSentence.getBody());
-				Proposition prop = new Proposition(doesSentence);
+				BitProposition prop = new BitProposition(doesSentence);
 				components.put(doesSentence, prop);
 			}
 			return;
@@ -1021,13 +1021,13 @@ public class BitOptimizingPropNetFactory {
 			SentenceForm baseForm = form.withName(BASE);
 			for (GdlSentence baseSentence : constantChecker.getTrueSentences(baseForm)) {
 				GdlSentence trueSentence = GdlPool.getRelation(TRUE, baseSentence.getBody());
-				Proposition prop = new Proposition(trueSentence);
+				BitProposition prop = new BitProposition(trueSentence);
 				components.put(trueSentence, prop);
 			}
 			return;
 		}
 
-		Map<GdlSentence, Set<Component>> inputsToOr = new HashMap<GdlSentence, Set<Component>>();
+		Map<GdlSentence, Set<BitComponent>> inputsToOr = new HashMap<GdlSentence, Set<BitComponent>>();
 		for(GdlRule rule : rules) {
 			Assignments assignments = AssignmentsFactory.getAssignmentsForRule(rule, model, functionInfoMap, completedSentenceFormValues);
 
@@ -1048,7 +1048,7 @@ public class BitOptimizingPropNetFactory {
 				GdlSentence sentence = CommonTransforms.replaceVariables(rule.getHead(), assignment);
 
 				//Now we go through the conjuncts as before, but we wait to hook them up.
-				List<Component> componentsToConnect = new ArrayList<Component>(rule.arity());
+				List<BitComponent> componentsToConnect = new ArrayList<BitComponent>(rule.arity());
 				for(GdlLiteral literal : rule.getBody()) {
 					if(literal instanceof GdlSentence) {
 						//Get the sentence post-substitutions
@@ -1065,7 +1065,7 @@ public class BitOptimizingPropNetFactory {
 							continue;
 						}
 
-						Component conj = components.get(transformed);
+						BitComponent conj = components.get(transformed);
 						//If conj is null and this is a sentence form we're still handling,
 						//hook up to a temporary sentence form
 						if(conj == null) {
@@ -1073,7 +1073,7 @@ public class BitOptimizingPropNetFactory {
 						}
 						if(conj == null && SentenceModelUtils.inSentenceFormGroup(transformed, recursionForms)) {
 							//Set up a temporary component
-							Proposition tempProp = new Proposition(transformed);
+							BitProposition tempProp = new BitProposition(transformed);
 							temporaryComponents.put(transformed, tempProp);
 							conj = tempProp;
 						}
@@ -1105,7 +1105,7 @@ public class BitOptimizingPropNetFactory {
 							continue;
 						}
 
-						Component conj = negations.get(transformed);
+						BitComponent conj = negations.get(transformed);
 						if(isThisConstant(conj, falseComponent)) {
 							//We need to change one of the variables inside
 							List<GdlVariable> varsInConjunct = getVarsInConjunct(internal);
@@ -1119,20 +1119,20 @@ public class BitOptimizingPropNetFactory {
 						}
 						//Check for the recursive case:
 						if(conj == null && SentenceModelUtils.inSentenceFormGroup(transformed, recursionForms)) {
-							Component positive = components.get(transformed);
+							BitComponent positive = components.get(transformed);
 							if(positive == null) {
 								positive = temporaryComponents.get(transformed);
 							}
 							if(positive == null) {
 								//Make the temporary proposition
-								Proposition tempProp = new Proposition(transformed);
+								BitProposition tempProp = new BitProposition(transformed);
 								temporaryComponents.put(transformed, tempProp);
 								positive = tempProp;
 							}
 							//Positive is now set and in temporaryComponents
 							//Evidently, wasn't in temporaryNegations
 							//So we add the "not" gate and set it in temporaryNegations
-							Not not = new Not();
+							BitNot not = new BitNot();
 							//Add positive as input
 							not.addInput(positive);
 							positive.addOutput(not);
@@ -1140,7 +1140,7 @@ public class BitOptimizingPropNetFactory {
 							conj = not;
 						}
 						if(conj == null) {
-							Component positive = components.get(transformed);
+							BitComponent positive = components.get(transformed);
 							//No, because then that will be attached to "negations", which could be bad
 
 							if(positive == null) {
@@ -1153,14 +1153,14 @@ public class BitOptimizingPropNetFactory {
 
 							//Check if we're sharing a component with another sentence with a negation
 							//(i.e. look for "nots" in our outputs and use those instead)
-							Not existingNotOutput = getNotOutput(positive);
+							BitNot existingNotOutput = getNotOutput(positive);
 							if(existingNotOutput != null) {
 								componentsToConnect.add(existingNotOutput);
 								negations.put(transformed, existingNotOutput);
 								continue; //to the next conjunct
 							}
 
-							Not not = new Not();
+							BitNot not = new BitNot();
 							not.addInput(positive);
 							positive.addOutput(not);
 							negations.put(transformed, not);
@@ -1175,12 +1175,12 @@ public class BitOptimizingPropNetFactory {
 				}
 				if(!componentsToConnect.contains(null)) {
 					//Connect all the components
-					Proposition andComponent = new Proposition(TEMP);
+					BitProposition andComponent = new BitProposition(TEMP);
 
 					andify(componentsToConnect, andComponent, trueComponent);
 					if(!isThisConstant(andComponent, falseComponent)) {
 						if(!inputsToOr.containsKey(sentence))
-							inputsToOr.put(sentence, new HashSet<Component>());
+							inputsToOr.put(sentence, new HashSet<BitComponent>());
 						inputsToOr.get(sentence).add(andComponent);
 						//We'll want to make sure at least one of the non-constant
 						//components is changing
@@ -1193,14 +1193,14 @@ public class BitOptimizingPropNetFactory {
 		}
 
 		//At the end, we hook up the conjuncts
-		for(Entry<GdlSentence, Set<Component>> entry : inputsToOr.entrySet()) {
+		for(Entry<GdlSentence, Set<BitComponent>> entry : inputsToOr.entrySet()) {
 			ConcurrencyUtils.checkForInterruption();
 
 			GdlSentence sentence = entry.getKey();
-			Set<Component> inputs = entry.getValue();
-			Set<Component> realInputs = new HashSet<Component>();
-			for(Component input : inputs) {
-				if(input instanceof Constant || input.getInputs_set().size() == 0) {
+			Set<BitComponent> inputs = entry.getValue();
+			Set<BitComponent> realInputs = new HashSet<BitComponent>();
+			for(BitComponent input : inputs) {
+				if(input instanceof BitConstant || input.getInputs_set().size() == 0) {
 					realInputs.add(input);
 				} else {
 					realInputs.add(input.getSingleInput_set());
@@ -1209,7 +1209,7 @@ public class BitOptimizingPropNetFactory {
 				}
 			}
 
-			Proposition prop = new Proposition(sentence);
+			BitProposition prop = new BitProposition(sentence);
 			orify(realInputs, prop, falseComponent);
 			components.put(sentence, prop);
 		}
@@ -1222,7 +1222,7 @@ public class BitOptimizingPropNetFactory {
 			for(GdlSentence sentence : model.getDomain(form)) {
 				ConcurrencyUtils.checkForInterruption();
 
-				Proposition prop = new Proposition(sentence);
+				BitProposition prop = new BitProposition(sentence);
 				components.put(sentence, prop);
 			}
 		}
@@ -1247,17 +1247,17 @@ public class BitOptimizingPropNetFactory {
 		return result;
 	}
 
-	private static boolean isThisConstant(Component conj, Constant constantComponent) {
+	private static boolean isThisConstant(BitComponent conj, BitConstant constantComponent) {
 		if(conj == constantComponent)
 			return true;
-		return (conj instanceof Proposition && conj.getInputs_set().size() == 1 && conj.getSingleInput_set() == constantComponent);
+		return (conj instanceof BitProposition && conj.getInputs_set().size() == 1 && conj.getSingleInput_set() == constantComponent);
 	}
 
 
-	private static Not getNotOutput(Component positive) {
-		for(Component c : positive.getOutputs_set()) {
-			if(c instanceof Not) {
-				return (Not) c;
+	private static BitNot getNotOutput(BitComponent positive) {
+		for(BitComponent c : positive.getOutputs_set()) {
+			if(c instanceof BitNot) {
+				return (BitNot) c;
 			}
 		}
 		return null;
@@ -1269,10 +1269,10 @@ public class BitOptimizingPropNetFactory {
 	}
 
 
-	private static void andify(List<Component> inputs, Component output, Constant trueProp) {
+	private static void andify(List<BitComponent> inputs, BitComponent output, BitConstant trueProp) {
 		//Special case: If the inputs include false, connect false to thisComponent
-		for(Component c : inputs) {
-			if(c instanceof Constant && !c.getCurrentValue(0)) {
+		for(BitComponent c : inputs) {
+			if(c instanceof BitConstant && !c.getCurrentValue(0)) {
 				//Connect false (c) to the output
 				output.addInput(c);
 				c.addOutput(output);
@@ -1281,9 +1281,9 @@ public class BitOptimizingPropNetFactory {
 		}
 
 		//For reals... just skip over any true constants
-		And and = new And();
-		for(Component in : inputs) {
-			if(!(in instanceof Constant)) {
+		BitAnd and = new BitAnd();
+		for(BitComponent in : inputs) {
+			if(!(in instanceof BitConstant)) {
 				in.addOutput(and);
 				and.addInput(in);
 			}
@@ -1297,7 +1297,7 @@ public class BitOptimizingPropNetFactory {
 		}
 		//If there's just one, on the other hand, don't use the and gate
 		if(and.getInputs_set().size() == 1) {
-			Component in = and.getSingleInput_set();
+			BitComponent in = and.getSingleInput_set();
 			in.removeOutput(and);
 			and.removeInput(in);
 			in.addOutput(output);
@@ -1403,28 +1403,28 @@ public class BitOptimizingPropNetFactory {
 	 * @param basesTrueByInit The set of base propositions that are true on the
 	 * first turn of the game.
 	 */
-	public static void removeUnreachableBasesAndInputs(PropNet pn, Set<Proposition> basesTrueByInit) throws InterruptedException {
+	public static void removeUnreachableBasesAndInputs(BitPropNet pn, Set<BitProposition> basesTrueByInit) throws InterruptedException {
 		//If this doesn't contain a component, that's the equivalent of Type.NEITHER
-		Map<Component, Type> reachability = Maps.newHashMap();
+		Map<BitComponent, Type> reachability = Maps.newHashMap();
 		//Keep track of the number of true inputs to AND gates and false inputs to
 		//OR gates.
-		Multiset<Component> numTrueInputs = HashMultiset.create();
-		Multiset<Component> numFalseInputs = HashMultiset.create();
-		Stack<Pair<Component, Type>> toAdd = new Stack<Pair<Component, Type>>();
+		Multiset<BitComponent> numTrueInputs = HashMultiset.create();
+		Multiset<BitComponent> numFalseInputs = HashMultiset.create();
+		Stack<Pair<BitComponent, Type>> toAdd = new Stack<Pair<BitComponent, Type>>();
 
 		//It's easier here if we get just the one-way version of the map
-		Map<Proposition, Proposition> legalsToInputs = Maps.newHashMap();
-		for (Proposition legalProp : Iterables.concat(pn.getLegalPropositions().values())) {
-			Proposition inputProp = pn.getLegalInputMap().get(legalProp);
+		Map<BitProposition, BitProposition> legalsToInputs = Maps.newHashMap();
+		for (BitProposition legalProp : Iterables.concat(pn.getLegalPropositions().values())) {
+			BitProposition inputProp = pn.getLegalInputMap().get(legalProp);
 			if (inputProp != null) {
 				legalsToInputs.put(legalProp, inputProp);
 			}
 		}
 
 		//All constants have their values
-		for (Component c : pn.getComponents()) {
+		for (BitComponent c : pn.getComponents()) {
 			ConcurrencyUtils.checkForInterruption();
-			if (c instanceof Constant) {
+			if (c instanceof BitConstant) {
 				if (c.getCurrentValue(0)) {
 					toAdd.add(Pair.of(c, Type.TRUE));
 				} else {
@@ -1434,25 +1434,25 @@ public class BitOptimizingPropNetFactory {
 		}
 
 		//Every input can be false (we assume that no player will have just one move allowed all game)
-        for(Proposition p : pn.getInputPropositions().values()) {
-        	toAdd.add(Pair.of((Component) p, Type.FALSE));
+        for(BitProposition p : pn.getInputPropositions().values()) {
+        	toAdd.add(Pair.of((BitComponent) p, Type.FALSE));
         }
 	    //Every base with "init" can be true, every base without "init" can be false
-	    for(Proposition baseProp : pn.getBasePropositions().values()) {
+	    for(BitProposition baseProp : pn.getBasePropositions().values()) {
             if (basesTrueByInit.contains(baseProp)) {
-            	toAdd.add(Pair.of((Component) baseProp, Type.TRUE));
+            	toAdd.add(Pair.of((BitComponent) baseProp, Type.TRUE));
             } else {
-            	toAdd.add(Pair.of((Component) baseProp, Type.FALSE));
+            	toAdd.add(Pair.of((BitComponent) baseProp, Type.FALSE));
             }
 	    }
 	    //Keep INIT, for those who use it
-	    Proposition initProposition = pn.getInitProposition();
-    	toAdd.add(Pair.of((Component) initProposition, Type.BOTH));
+	    BitProposition initProposition = pn.getInitProposition();
+    	toAdd.add(Pair.of((BitComponent) initProposition, Type.BOTH));
 
     	while (!toAdd.isEmpty()) {
 			ConcurrencyUtils.checkForInterruption();
-    		Pair<Component, Type> curEntry = toAdd.pop();
-    		Component curComp = curEntry.left;
+    		Pair<BitComponent, Type> curEntry = toAdd.pop();
+    		BitComponent curComp = curEntry.left;
     		Type newInputType = curEntry.right;
     		Type oldType = reachability.get(curComp);
     		if (oldType == null) {
@@ -1465,15 +1465,15 @@ public class BitOptimizingPropNetFactory {
     		//Make sure we don't double-apply a type.
 
     		Type typeToAdd = Type.NEITHER; // Any new values that we discover we can have this iteration.
-    		if (curComp instanceof Proposition) {
+    		if (curComp instanceof BitProposition) {
     			typeToAdd = newInputType;
-    		} else if (curComp instanceof Transition) {
+    		} else if (curComp instanceof BitTransition) {
     			typeToAdd = newInputType;
-    		} else if (curComp instanceof Constant) {
+    		} else if (curComp instanceof BitConstant) {
     			typeToAdd = newInputType;
-    		} else if (curComp instanceof Not) {
+    		} else if (curComp instanceof BitNot) {
     			typeToAdd = newInputType.opposite();
-    		} else if (curComp instanceof And) {
+    		} else if (curComp instanceof BitAnd) {
     			if (newInputType.hasTrue) {
     				numTrueInputs.add(curComp);
     				if (numTrueInputs.count(curComp) == curComp.getInputs_set().size()) {
@@ -1483,7 +1483,7 @@ public class BitOptimizingPropNetFactory {
     			if (newInputType.hasFalse) {
     				typeToAdd = typeToAdd.with(Type.FALSE);
     			}
-    		} else if (curComp instanceof Or) {
+    		} else if (curComp instanceof BitOr) {
     			if (newInputType.hasFalse) {
     				numFalseInputs.add(curComp);
     				if (numFalseInputs.count(curComp) == curComp.getInputs_set().size()) {
@@ -1508,37 +1508,37 @@ public class BitOptimizingPropNetFactory {
     		}
 
     		//Add all our children to the stack
-    		for (Component output : curComp.getOutputs_set()) {
+    		for (BitComponent output : curComp.getOutputs_set()) {
     			toAdd.add(Pair.of(output, typeToAdd));
     		}
 			if (legalsToInputs.containsKey(curComp)) {
-				Proposition inputProp = legalsToInputs.get(curComp);
+				BitProposition inputProp = legalsToInputs.get(curComp);
 				if (inputProp == null) {
 					throw new IllegalStateException();
 				}
-				toAdd.add(Pair.of((Component) inputProp, typeToAdd));
+				toAdd.add(Pair.of((BitComponent) inputProp, typeToAdd));
 			}
     	}
 
-	    Constant trueConst = new Constant(true);
-	    Constant falseConst = new Constant(false);
+    	BitConstant trueConst = new BitConstant(true);
+    	BitConstant falseConst = new BitConstant(false);
 	    pn.addComponent(trueConst);
 	    pn.addComponent(falseConst);
 	    //Make them the input of all false/true components
-	    for(Entry<Component, Type> entry : reachability.entrySet()) {
+	    for(Entry<BitComponent, Type> entry : reachability.entrySet()) {
 	        Type type = entry.getValue();
 	        if(type == Type.TRUE || type == Type.FALSE) {
-	            Component c = entry.getKey();
-	            if (c instanceof Constant) {
+	        	BitComponent c = entry.getKey();
+	            if (c instanceof BitConstant) {
 	            	//Don't bother trying to remove this
 	            	continue;
 	            }
 	            //Disconnect from inputs
-	            for(Component input : c.getInputs_set()) {
+	            for(BitComponent input : c.getInputs_set()) {
 	                input.removeOutput(c);
 	            }
 	            c.removeAllInputs();
-	            if(type == Type.TRUE ^ (c instanceof Not)) {
+	            if(type == Type.TRUE ^ (c instanceof BitNot)) {
 	                c.addInput(trueConst);
 	                trueConst.addOutput(c);
 	            } else {
@@ -1559,20 +1559,20 @@ public class BitOptimizingPropNetFactory {
 	 * TODO: Currently fails on propnets with cycles.
 	 * @param pn
 	 */
-	public static void lopUselessLeaves(PropNet pn) {
+	public static void lopUselessLeaves(BitPropNet pn) {
 		//Approach: Collect useful propositions based on a backwards
 		//search from goal/legal/terminal (passing through transitions)
-		Set<Component> usefulComponents = new HashSet<Component>();
+		Set<BitComponent> usefulComponents = new HashSet<BitComponent>();
 		//TODO: Also try with queue?
-		Stack<Component> toAdd = new Stack<Component>();
+		Stack<BitComponent> toAdd = new Stack<BitComponent>();
 		toAdd.add(pn.getTerminalProposition());
 		usefulComponents.add(pn.getInitProposition()); //Can't remove it...
-		for(Set<Proposition> goalProps : pn.getGoalPropositions().values())
+		for(Set<BitProposition> goalProps : pn.getGoalPropositions().values())
 			toAdd.addAll(goalProps);
-		for(Set<Proposition> legalProps : pn.getLegalPropositions().values())
+		for(Set<BitProposition> legalProps : pn.getLegalPropositions().values())
 			toAdd.addAll(legalProps);
 		while(!toAdd.isEmpty()) {
-			Component curComp = toAdd.pop();
+			BitComponent curComp = toAdd.pop();
 			if(usefulComponents.contains(curComp))
 				//We've already added it
 				continue;
@@ -1581,8 +1581,8 @@ public class BitOptimizingPropNetFactory {
 		}
 
 		//Remove the components not marked as useful
-		List<Component> allComponents = new ArrayList<Component>(pn.getComponents());
-		for(Component c : allComponents) {
+		List<BitComponent> allComponents = new ArrayList<BitComponent>(pn.getComponents());
+		for(BitComponent c : allComponents) {
 			if(!usefulComponents.contains(c))
 				pn.removeComponent(c);
 		}
@@ -1593,9 +1593,9 @@ public class BitOptimizingPropNetFactory {
 	 * of the form (init ?x). Does NOT remove the proposition "INIT".
 	 * @param pn
 	 */
-	public static void removeInits(PropNet pn) {
-		List<Proposition> toRemove = new ArrayList<Proposition>();
-		for(Proposition p : pn.getPropositions()) {
+	public static void removeInits(BitPropNet pn) {
+		List<BitProposition> toRemove = new ArrayList<BitProposition>();
+		for(BitProposition p : pn.getPropositions()) {
 			if(p.getName() instanceof GdlRelation) {
 				GdlRelation relation = (GdlRelation) p.getName();
 				if(relation.getName() == INIT) {
@@ -1604,7 +1604,7 @@ public class BitOptimizingPropNetFactory {
 			}
 		}
 
-		for(Proposition p : toRemove) {
+		for(BitProposition p : toRemove) {
 			pn.removeComponent(p);
 		}
 	}
@@ -1618,12 +1618,12 @@ public class BitOptimizingPropNetFactory {
 	 *
 	 * @param pn
 	 */
-	public static void removeAnonymousPropositions(PropNet pn) {
-		List<Proposition> toSplice = new ArrayList<Proposition>();
-		List<Proposition> toReplaceWithFalse = new ArrayList<Proposition>();
-		for(Proposition p : pn.getPropositions()) {
+	public static void removeAnonymousPropositions(BitPropNet pn) {
+		List<BitProposition> toSplice = new ArrayList<BitProposition>();
+		List<BitProposition> toReplaceWithFalse = new ArrayList<BitProposition>();
+		for(BitProposition p : pn.getPropositions()) {
 			//If it's important, continue to the next proposition
-			if(p.getInputs_set().size() == 1 && p.getSingleInput_set() instanceof Transition)
+			if(p.getInputs_set().size() == 1 && p.getSingleInput_set() instanceof BitTransition)
 				//It's a base proposition
 				continue;
 			GdlSentence sentence = p.getName();
@@ -1650,23 +1650,23 @@ public class BitOptimizingPropNetFactory {
 			//System.out.println("Removing " + p);
 			toSplice.add(p);
 		}
-		for(Proposition p : toSplice) {
+		for(BitProposition p : toSplice) {
 			//Get the inputs and outputs...
-			Set<Component> inputs = p.getInputs_set();
-			Set<Component> outputs = p.getOutputs_set();
+			Set<BitComponent> inputs = p.getInputs_set();
+			Set<BitComponent> outputs = p.getOutputs_set();
 			//Remove the proposition...
 			pn.removeComponent(p);
 			//And splice the inputs and outputs back together
 			if(inputs.size() > 1)
 				System.err.println("Programmer made a bad assumption here... might lead to trouble?");
-			for(Component input : inputs) {
-				for(Component output : outputs) {
+			for(BitComponent input : inputs) {
+				for(BitComponent output : outputs) {
 					input.addOutput(output);
 					output.addInput(input);
 				}
 			}
 		}
-		for(Proposition p : toReplaceWithFalse) {
+		for(BitProposition p : toReplaceWithFalse) {
 			System.out.println("Should be replacing " + p + " with false, but should do that in the OPNF, really; better equipped to do that there");
 		}
 	}

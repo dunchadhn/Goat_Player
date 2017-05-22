@@ -1,6 +1,7 @@
 package org.ggp.base.util.propnet.architecture;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -10,33 +11,35 @@ import java.util.Set;
  * all methods.
  */
 
-public abstract class Component implements Serializable
+public abstract class BitComponent implements Serializable
 {
 
 	private static final long serialVersionUID = 352524175700224447L;
     /** The inputs to the component. */
-    private final Set<Component> inputs_set;
+    private final Set<BitComponent> inputs_set;
     /** The outputs of the component. */
-    private final Set<Component> outputs_set;
+    private final Set<BitComponent> outputs_set;
 
-    private Component[] inputs_arr;
-    private Component[] outputs_arr;
+    private BitComponent[] inputs_arr;
+    private BitComponent[] outputs_arr;
 
     private int inputs_size;
     private int outputs_size;
 
-    private boolean currentValue;
-    private boolean lastPropagatedOutputValue;
+    private int num_threads = 48;
+
+    private boolean[] currentValue;
+    private boolean[] lastPropagatedOutputValue;
 
     /**
      * Creates a new Component with no inputs or outputs.
      */
-    public Component()
+    public BitComponent()
     {
-        this.inputs_set = new HashSet<Component>();
-        this.outputs_set = new HashSet<Component>();
-        this.currentValue = false;
-        this.lastPropagatedOutputValue = false;
+        this.inputs_set = new HashSet<BitComponent>();
+        this.outputs_set = new HashSet<BitComponent>();
+        this.currentValue = new boolean[num_threads + 1];
+        this.lastPropagatedOutputValue = new boolean[num_threads + 1];;
         inputs_size = 0;
         outputs_size = 0;
     }
@@ -44,16 +47,24 @@ public abstract class Component implements Serializable
     public void crystallize() {
     	inputs_size = inputs_set.size();
     	outputs_size = outputs_set.size();
-    	this.inputs_arr = inputs_set.toArray(new Component[inputs_size]);
-    	this.outputs_arr = outputs_set.toArray(new Component[outputs_size]);
+    	this.inputs_arr = inputs_set.toArray(new BitComponent[inputs_size]);
+    	this.outputs_arr = outputs_set.toArray(new BitComponent[outputs_size]);
 
     }
 
-    public boolean edit_T(boolean val) {
+    public boolean edit_T(boolean val, int i) {
     	return false;
     }
 
-    public boolean set(int val) {
+    public boolean edit_TAll(boolean val, int i) {
+    	return false;
+    }
+
+    public boolean set(int val, int i) {
+    	return false;
+    }
+
+    public boolean setAll(int val, int i) {
     	return false;
     }
 
@@ -63,17 +74,17 @@ public abstract class Component implements Serializable
      * @param input
      *            A new input.
      */
-    public void addInput(Component input)
+    public void addInput(BitComponent input)
     {
         inputs_set.add(input);
     }
 
-    public void removeInput(Component input)
+    public void removeInput(BitComponent input)
     {
     	inputs_set.remove(input);
     }
 
-    public void removeOutput(Component output)
+    public void removeOutput(BitComponent output)
     {
     	outputs_set.remove(output);
     }
@@ -94,7 +105,7 @@ public abstract class Component implements Serializable
      * @param output
      *            A new output.
      */
-    public void addOutput(Component output)
+    public void addOutput(BitComponent output)
     {
         outputs_set.add(output);
     }
@@ -104,16 +115,16 @@ public abstract class Component implements Serializable
      *
      * @return The inputs to the component.
      */
-    public Set<Component> getInputs_set()
+    public Set<BitComponent> getInputs_set()
     {
         return inputs_set;
     }
 
-    public Component[] getInputs_arr() {
+    public BitComponent[] getInputs_arr() {
     	return inputs_arr;
     }
 
-    public Component[] getOutputs_arr() {
+    public BitComponent[] getOutputs_arr() {
     	return outputs_arr;
     }
 
@@ -133,12 +144,12 @@ public abstract class Component implements Serializable
      * @return The single input to the component.
      */
 
-    public Component getSingleInput_set() {
+    public BitComponent getSingleInput_set() {
         assert inputs_set.size() == 1;
         return inputs_set.iterator().next();
     }
 
-    public Component getSingleInput_arr() {
+    public BitComponent getSingleInput_arr() {
         assert inputs_size == 1;
         return inputs_arr[0];
     }
@@ -148,7 +159,7 @@ public abstract class Component implements Serializable
      *
      * @return The outputs of the component.
      */
-    public Set<Component> getOutputs_set()
+    public Set<BitComponent> getOutputs_set()
     {
         return outputs_set;
     }
@@ -160,30 +171,38 @@ public abstract class Component implements Serializable
      *
      * @return The single output to the component.
      */
-    public Component getSingleOutput_set() {
+    public BitComponent getSingleOutput_set() {
         assert outputs_set.size() == 1;
         return outputs_set.iterator().next();
     }
 
-    public Component getSingleOutput_arr() {
+    public BitComponent getSingleOutput_arr() {
         assert outputs_size == 1;
         return outputs_arr[0];
     }
 
-    public boolean getCurrentValue() {
-    	return currentValue;
+    public boolean getCurrentValue(int i) {
+    	return currentValue[i];
     }
 
-    public boolean getLastPropagatedOutputValue() {
-    	return lastPropagatedOutputValue;
+    public boolean getLastPropagatedOutputValue(int i) {
+    	return lastPropagatedOutputValue[i];
     }
 
-    public void setCurrentValue(boolean value) {
-    	this.currentValue = value;
+    public void setCurrentValue(boolean value, int i) {
+    	this.currentValue[i] = value;
     }
 
-    public void setLastPropagatedOutputValue(boolean value) {
-    	this.lastPropagatedOutputValue = value;
+    public void setCurrentValueAll(boolean value, int i) {
+    	Arrays.fill(this.currentValue, value);
+    }
+
+    public void setLastPropagatedOutputValue(boolean value, int i) {
+    	this.lastPropagatedOutputValue[i] = value;
+    }
+
+    public void setLastPropagatedOutputValueAll(boolean value, int i) {
+    	Arrays.fill(this.lastPropagatedOutputValue, value);
     }
 
     /**
@@ -210,7 +229,7 @@ public abstract class Component implements Serializable
         StringBuilder sb = new StringBuilder();
 
         sb.append("\"@" + Integer.toHexString(hashCode()) + "\"[shape=" + shape + ", style= filled, fillcolor=" + fillcolor + ", label=\"" + label + "\"]; ");
-        for ( Component component : getOutputs_set() )
+        for ( BitComponent component : getOutputs_set() )
         {
             sb.append("\"@" + Integer.toHexString(hashCode()) + "\"->" + "\"@" + Integer.toHexString(component.hashCode()) + "\"; ");
         }

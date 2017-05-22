@@ -293,7 +293,7 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 		List<Proposition> falseSees = new ArrayList<Proposition>();
 		for (Proposition prop : iipropNet.getSeesPropositionsByName().values()) {
 			seesPropagationProps.add(prop);
-			if (prop.getCurrentValue(0)) trueSees.add(prop);
+			if (prop.getCurrentValue()) trueSees.add(prop);
 			else falseSees.add(prop);
 		}
 		// propagate true values
@@ -397,7 +397,7 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 			return propValue;
 		}
 		else if (c instanceof Constant){
-			if(c.getCurrentValue(0)) return 1;
+			if(c.getCurrentValue()) return 1;
 			else return 0;
 		}
 		else if (c instanceof Not){
@@ -421,7 +421,7 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 			}
 			// base or input proposition
 			else{
-				return c.getCurrentValue(0);
+				return c.getCurrentValue();
 			}
 		}
 		else if (c instanceof And){
@@ -437,7 +437,7 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 			return false;
 		}
 		else if (c instanceof Constant){
-			return c.getCurrentValue(0);
+			return c.getCurrentValue();
 		}
 		else if (c instanceof Not){
 			return !normalStatePropMark(c.getSingleInput_set());
