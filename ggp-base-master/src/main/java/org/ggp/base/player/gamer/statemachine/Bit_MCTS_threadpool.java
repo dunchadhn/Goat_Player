@@ -154,8 +154,10 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 
 	protected Move bestMove(BitNode n) throws MoveDefinitionException {
 		double maxValue = Double.NEGATIVE_INFINITY;
-		Move maxMove = n.legalMoves.get(0);
-		for(Move move: n.legalMoves) {
+		Move maxMove = n.legalMoves[0];
+		int size = n.legalMoves.length;
+		for(int i = 0; i < size; ++i) {
+			Move move = n.legalMoves[i];
 			double minValue = Double.POSITIVE_INFINITY;
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
@@ -203,7 +205,9 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
 		BitNode maxChild = null;
-		for(Move move: n.legalMoves) {
+		int size = n.legalMoves.length;
+		for(int i = 0; i < size; ++i) {
+			Move move = n.legalMoves[i];
 			double minValue = Double.NEGATIVE_INFINITY;
 			BitNode minChild = null;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
@@ -241,8 +245,11 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 
 	protected void Expand(BitNode n, List<BitNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
-			for (Move move: n.legalMoves) {
+			List<Move> moves = machine.getLegalMoves(n.state, roles.get(self_index));
+			int size = moves.size();
+			n.legalMoves = moves.toArray(new Move[size]);
+			for (int i = 0; i < size; ++i) {
+				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
@@ -258,8 +265,11 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 
 	protected void Expand(BitNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
-			for (Move move: n.legalMoves) {
+			List<Move> moves = machine.getLegalMoves(n.state, roles.get(self_index));
+			int size = moves.size();
+			n.legalMoves = moves.toArray(new Move[size]);
+			for (int i = 0; i < size; ++i) {
+				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {

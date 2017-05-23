@@ -21,7 +21,7 @@ public class BitNode {
 	public BitMachineState state;
 	public double utility;
 	public double visits;
-	public List<Move> legalMoves;
+	public Move[] legalMoves;
 	public HashMap<List<Move>, BitNode> children;
 	public HashMap<Move, List<List<Move>>> legalJointMoves;
 	public boolean isTerminal;
