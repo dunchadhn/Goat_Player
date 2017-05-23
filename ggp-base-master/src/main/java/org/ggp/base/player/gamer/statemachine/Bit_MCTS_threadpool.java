@@ -1,12 +1,13 @@
 package org.ggp.base.player.gamer.statemachine;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.Move;
@@ -19,14 +20,14 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	private BitStateMachine machine;
 	private List<Role> roles;
-	private int self_index, num_threads, depthCharges;
+	private int self_index, num_threads, depthCharges, last_depthCharges;
 	private long finishBy;
 	private BitNode root;
 	private List<BitNode> path;
 	private ExecutorService executor;
-	private List<Future<?>> futures;
+	private Thread thread;
+	private Set<Future<Double>> futures;
 	private BitNode n;
-	private Lock lock;
 
 	private static final double C_CONST = 50;
 
@@ -35,7 +36,9 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
-		runMCTS();
+		Thread.sleep(finishBy - System.currentTimeMillis());
+		System.out.println("Depth Charges: " + depthCharges);
+		last_depthCharges = 0;
 		bestMove(root);
 	}
 
@@ -47,6 +50,10 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		Expand(root);
 		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
+		thread = new Thread(new runMCTS());
+		depthCharges = 0;
+		last_depthCharges = 0;
+		thread.start();
 
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
@@ -58,6 +65,8 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
+		depthCharges = 0;
+		System.out.println("Background Depth Charges: " + last_depthCharges);
 		finishBy = timeout - 2500;
 		return MCTS();
 	}
@@ -80,49 +89,58 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS();
-		runMCTS();
+		Thread.sleep(finishBy - System.currentTimeMillis());
+		System.out.println("Depth Charges: " + depthCharges);
+		last_depthCharges = 0;
 		return bestMove(root);
 	}
 
-	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
-		depthCharges = 0;
-		int loops = 0;
-		long total_time = 0;
-		long average_time = 0;
-		long time_elapsed = 0;
-		long longest_time = 0;
-		while (System.currentTimeMillis() + longest_time < finishBy) {
-			time_elapsed = System.currentTimeMillis();
-			path = new ArrayList<BitNode>();
-			futures = new ArrayList<> ();
-			lock = new ReentrantLock();
-			path.add(root);
-			Select(root, path);
-			n = path.get(path.size() - 1);
-			Expand(n, path);
-			// spawn off multiple threads
-			for(int i = 0; i < num_threads; ++i) {
-				RunMe r = new RunMe();
-				futures.add(executor.submit(r));
-			}
-			depthCharges += futures.size();
-			for (Future<?> f : futures) {
-		        f.get(); //blocks until the runnable completes
-		    }
-			time_elapsed = System.currentTimeMillis() - time_elapsed;
-			total_time += time_elapsed;
-			loops += 1;
-			average_time = total_time / loops;
-			if(time_elapsed > longest_time) {
-				longest_time = time_elapsed;
-			}
-		}
-		System.out.println("Depth Charges: " + depthCharges);
-	}
-
-	public class RunMe implements Runnable {
+	public class runMCTS implements Runnable {
 		@Override
 		public void run() {
+			BitNode root_thread;
+			while (true) {
+				root_thread = root;
+				path = new ArrayList<BitNode>();
+				futures = new HashSet<Future<Double>>();
+				path.add(root_thread);
+				try {
+					Select(root_thread, path);
+				} catch (MoveDefinitionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				n = path.get(path.size() - 1);
+				try {
+					Expand(n, path);
+				} catch (MoveDefinitionException | TransitionDefinitionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				// spawn off multiple threads
+				for(int i = 0; i < num_threads; ++i) {
+					Callable<Double> r = new RunMe();
+					futures.add(executor.submit(r));
+				}
+				depthCharges += num_threads;
+				last_depthCharges += num_threads;
+				double sum = 0;
+				for (Future<Double> f : futures) {
+			        try {
+						sum += f.get();
+					} catch (InterruptedException | ExecutionException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} //blocks until the runnable completes
+			    }
+				Backpropogate(sum,path);
+			}
+		}
+	}
+
+	public class RunMe implements Callable<Double> {
+		@Override
+		public Double call() {
 	    	double val = 0;
 			try {
 				val = Playout(n);
@@ -130,9 +148,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	    	lock.lock();
-	    	Backpropogate(val, path);
-	    	lock.unlock();
+			return val;
 	    }
 	}
 
@@ -170,7 +186,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		for (int i = path.size() - 1; i >= 0; --i) {
 			nod = path.get(i);
 			nod.utility += val;
-			++nod.visits;
+			nod.visits += num_threads;
 		}
 	}
 
@@ -256,15 +272,17 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void stateMachineStop() {
-		//executor.shutdownNow();
+		thread.stop();
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void stateMachineAbort() {
 		// TODO Auto-generated method stub
-		//executor.shutdownNow();
+		thread.stop();
 	}
 
 
