@@ -90,7 +90,8 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		long total_time = 0;
 		long average_time = 0;
 		long time_elapsed = 0;
-		while (System.currentTimeMillis() + average_time < finishBy) {
+		long longest_time = 0;
+		while (System.currentTimeMillis() + longest_time < finishBy) {
 			time_elapsed = System.currentTimeMillis();
 			path = new ArrayList<BitNode>();
 			futures = new ArrayList<> ();
@@ -108,9 +109,13 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 			for (Future<?> f : futures) {
 		        f.get(); //blocks until the runnable completes
 		    }
-			total_time += (System.currentTimeMillis() - time_elapsed);
+			time_elapsed = System.currentTimeMillis() - time_elapsed;
+			total_time += time_elapsed;
 			loops += 1;
 			average_time = total_time / loops;
+			if(time_elapsed > longest_time) {
+				longest_time = time_elapsed;
+			}
 		}
 		System.out.println("Depth Charges: " + depthCharges);
 	}

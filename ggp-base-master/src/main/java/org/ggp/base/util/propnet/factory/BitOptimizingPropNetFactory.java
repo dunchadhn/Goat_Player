@@ -48,6 +48,7 @@ import org.ggp.base.util.gdl.transforms.Relationizer;
 import org.ggp.base.util.gdl.transforms.VariableConstrainer;
 import org.ggp.base.util.propnet.architecture.BitComponent;
 import org.ggp.base.util.propnet.architecture.BitPropNet;
+import org.ggp.base.util.propnet.architecture.MidPropNet;
 import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.propnet.architecture.components.BitAnd;
 import org.ggp.base.util.propnet.architecture.components.BitConstant;
@@ -530,7 +531,7 @@ public class BitOptimizingPropNetFactory {
         }
 	}
 
-	private static void optimizeAwayTrueAndFalse(BitPropNet pn, BitComponent trueComponent, BitComponent falseComponent) {
+	private static void optimizeAwayTrueAndFalse(MidPropNet pn, BitComponent trueComponent, BitComponent falseComponent) {
 	    while(hasNonessentialChildren(trueComponent) || hasNonessentialChildren(falseComponent)) {
 	        optimizeAwayTrue(null, null, pn, trueComponent, falseComponent);
 	        optimizeAwayFalse(null, null, pn, trueComponent, falseComponent);
@@ -539,7 +540,7 @@ public class BitOptimizingPropNetFactory {
 
 	//TODO: Create a version with just a set of components that we can share with post-optimizations
 	private static void optimizeAwayFalse(
-			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, BitPropNet pn, BitComponent trueComponent,
+			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, MidPropNet pn, BitComponent trueComponent,
 			BitComponent falseComponent) {
         assert((components != null && negations != null) || pn != null);
         assert((components == null && negations == null) || pn == null);
@@ -654,7 +655,7 @@ public class BitOptimizingPropNetFactory {
 	}
 
 	private static void optimizeAwayTrue(
-			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, BitPropNet pn, BitComponent trueComponent,
+			Map<GdlSentence, BitComponent> components, Map<GdlSentence, BitComponent> negations, MidPropNet pn, BitComponent trueComponent,
 			BitComponent falseComponent) {
 	    assert((components != null && negations != null) || pn != null);
 	    for (BitComponent output : Lists.newArrayList(trueComponent.getOutputs_set())) {
@@ -1403,7 +1404,7 @@ public class BitOptimizingPropNetFactory {
 	 * @param basesTrueByInit The set of base propositions that are true on the
 	 * first turn of the game.
 	 */
-	public static void removeUnreachableBasesAndInputs(BitPropNet pn, Set<BitProposition> basesTrueByInit) throws InterruptedException {
+	public static void removeUnreachableBasesAndInputs(MidPropNet pn, Set<BitProposition> basesTrueByInit) throws InterruptedException {
 		//If this doesn't contain a component, that's the equivalent of Type.NEITHER
 		Map<BitComponent, Type> reachability = Maps.newHashMap();
 		//Keep track of the number of true inputs to AND gates and false inputs to
@@ -1559,7 +1560,7 @@ public class BitOptimizingPropNetFactory {
 	 * TODO: Currently fails on propnets with cycles.
 	 * @param pn
 	 */
-	public static void lopUselessLeaves(BitPropNet pn) {
+	public static void lopUselessLeaves(MidPropNet pn) {
 		//Approach: Collect useful propositions based on a backwards
 		//search from goal/legal/terminal (passing through transitions)
 		Set<BitComponent> usefulComponents = new HashSet<BitComponent>();
@@ -1593,7 +1594,7 @@ public class BitOptimizingPropNetFactory {
 	 * of the form (init ?x). Does NOT remove the proposition "INIT".
 	 * @param pn
 	 */
-	public static void removeInits(BitPropNet pn) {
+	public static void removeInits(MidPropNet pn) {
 		List<BitProposition> toRemove = new ArrayList<BitProposition>();
 		for(BitProposition p : pn.getPropositions()) {
 			if(p.getName() instanceof GdlRelation) {
@@ -1618,7 +1619,7 @@ public class BitOptimizingPropNetFactory {
 	 *
 	 * @param pn
 	 */
-	public static void removeAnonymousPropositions(BitPropNet pn) {
+	public static void removeAnonymousPropositions(MidPropNet pn) {
 		List<BitProposition> toSplice = new ArrayList<BitProposition>();
 		List<BitProposition> toReplaceWithFalse = new ArrayList<BitProposition>();
 		for(BitProposition p : pn.getPropositions()) {

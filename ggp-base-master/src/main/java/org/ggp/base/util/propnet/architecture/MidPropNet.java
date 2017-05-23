@@ -3,15 +3,14 @@ package org.ggp.base.util.propnet.architecture;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
+import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlProposition;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
@@ -67,7 +66,7 @@ import org.ggp.base.util.statemachine.Role;
  * @author Sam Schreiber
  */
 
-public final class BitPropNet
+public final class MidPropNet
 {
 	/** References to every component in the PropNet. */
 	private final Set<BitComponent> components;
@@ -76,17 +75,16 @@ public final class BitPropNet
 	private final Set<BitProposition> propositions;
 
 	/** References to every BaseProposition in the PropNet, indexed by name. */
-
-	private final BitProposition[] basePropositions;
+	private final Map<GdlSentence, BitProposition> basePropositions;
 
 	/** References to every InputProposition in the PropNet, indexed by name. */
-	private final BitProposition[] inputPropositions;
+	private final Map<GdlSentence, BitProposition> inputPropositions;
 
 	/** References to every LegalProposition in the PropNet, indexed by role. */
-	private final HashMap<Role, BitProposition[]> legalPropositions;
+	private final Map<Role, Set<BitProposition>> legalPropositions;
 
 	/** References to every GoalProposition in the PropNet, indexed by role. */
-	private final Map<Role, BitProposition[]> goalPropositions;
+	private final Map<Role, Set<BitProposition>> goalPropositions;
 
 	/** A reference to the single, unique, InitProposition. */
 	private final BitProposition initProposition;
@@ -94,15 +92,11 @@ public final class BitPropNet
 	/** A reference to the single, unique, TerminalProposition. */
 	private final BitProposition terminalProposition;
 
-	private final HashMap< Pair<GdlTerm, GdlTerm>, Integer> inputMap;
+	/** A helper mapping between input/legal propositions. */
+	private final Map<BitProposition, BitProposition> legalInputMap;
 
 	/** A helper list of all of the roles. */
 	private final List<Role> roles;
-
-	private final HashMap<GdlSentence, Integer> bases;
-
-	private final Map<BitProposition, BitProposition> legalInputMap;
-
 
 	public void addComponent(BitComponent c)
 	{
@@ -117,47 +111,24 @@ public final class BitPropNet
 	 * @param components
 	 *            A list of Components.
 	 */
-	public BitPropNet(List<Role> roles, Set<BitComponent> components)
+	public MidPropNet(List<Role> roles, Set<BitComponent> components)
 	{
 
 	    this.roles = roles;
 		this.components = components;
 		this.propositions = recordPropositions();
-
-		List<BitProposition> b = new ArrayList<BitProposition>(recordBasePropositions().values());
-		List<BitProposition> i = new ArrayList<BitProposition>(recordInputPropositions().values());
-		Map<Role, Set<BitProposition>> l = recordLegalPropositions();
-		Map<Role, Set<BitProposition>> g = recordGoalPropositions();
-
-
+		this.basePropositions = recordBasePropositions();
+		this.inputPropositions = recordInputPropositions();
+		this.legalPropositions = recordLegalPropositions();
+		this.goalPropositions = recordGoalPropositions();
 		this.initProposition = recordInitProposition();
 		this.terminalProposition = recordTerminalProposition();
-
-		this.basePropositions = (BitProposition[]) b.toArray(new BitProposition[b.size()]);
-		this.inputPropositions = (BitProposition[]) i.toArray(new BitProposition[i.size()]);
-		this.legalPropositions = new HashMap<Role, BitProposition[]>();
-		this.goalPropositions = new HashMap<Role, BitProposition[]>();
-		this.inputMap = new HashMap< Pair<GdlTerm, GdlTerm>, Integer>();
 		this.legalInputMap = makeLegalInputMap();
+	}
 
-		for (int index = 0; index < inputPropositions.length; ++index) {
-			BitProposition p = inputPropositions[index];
-			Pair<GdlTerm, GdlTerm> pair = Pair.of(p.getName().getBody().get(0), p.getName().getBody().get(1));
-			inputMap.put(pair, index);
-		}
-
-		for (Role r : l.keySet()) {
-			Set<BitProposition> lval = l.get(r);
-			this.legalPropositions.put(r, lval.toArray(new BitProposition[lval.size()]));
-			Set<BitProposition> gval = g.get(r);
-			this.goalPropositions.put(r, gval.toArray(new BitProposition[gval.size()]));
-		}
-
-		bases = new HashMap<GdlSentence, Integer>();
-		for (int index = 0; index < basePropositions.length; ++index) {
-			BitProposition p = basePropositions[index];
-			bases.put(p.getName(), index);
-		}
+	public List<Role> getRoles()
+	{
+	    return roles;
 	}
 
 	public Map<BitProposition, BitProposition> getLegalInputMap()
@@ -169,18 +140,14 @@ public final class BitPropNet
 		Map<BitProposition, BitProposition> legalInputMap = new HashMap<BitProposition, BitProposition>();
 		// Create a mapping from Body->Input.
 		Map<List<GdlTerm>, BitProposition> inputPropsByBody = new HashMap<List<GdlTerm>, BitProposition>();
-		int size = inputPropositions.length;
-		for(int i = 0; i < size; ++i) {
-			BitProposition inputProp = inputPropositions[i];
+		for(BitProposition inputProp : inputPropositions.values()) {
 			List<GdlTerm> inputPropBody = (inputProp.getName()).getBody();
 			inputPropsByBody.put(inputPropBody, inputProp);
 		}
 		// Use that mapping to map Input->Legal and Legal->Input
 		// based on having the same Body proposition.
-		for(BitProposition[] legalProps : legalPropositions.values()) {
-			size = legalProps.length;
-			for(int i = 0; i < size; ++i) {
-				BitProposition legalProp = legalProps[i];
+		for(Set<BitProposition> legalProps : legalPropositions.values()) {
+			for(BitProposition legalProp : legalProps) {
 				List<GdlTerm> legalPropBody = (legalProp.getName()).getBody();
 				if (inputPropsByBody.containsKey(legalPropBody)) {
     				BitProposition inputProp = inputPropsByBody.get(legalPropBody);
@@ -192,31 +159,16 @@ public final class BitPropNet
 		return legalInputMap;
 	}
 
-	public HashMap<GdlSentence, Integer> getBasesMap() {
-		return bases;
-	}
-	public List<Role> getRoles()
-	{
-	    return roles;
-	}
-
-
-	public HashMap< Pair<GdlTerm, GdlTerm>, Integer> getInputMap() {
-		return inputMap;
-	}
-
-
 	/**
 	 * Getter method.
 	 *
 	 * @return References to every BaseProposition in the PropNet, indexed by
 	 *         name.
 	 */
-	public BitProposition[] getBasePropositions()
+	public Map<GdlSentence, BitProposition> getBasePropositions()
 	{
 		return basePropositions;
 	}
-
 
 	/**
 	 * Getter method.
@@ -234,7 +186,7 @@ public final class BitPropNet
 	 * @return References to every GoalProposition in the PropNet, indexed by
 	 *         player name.
 	 */
-	public Map<Role, BitProposition[]> getGoalPropositions()
+	public Map<Role, Set<BitProposition>> getGoalPropositions()
 	{
 		return goalPropositions;
 	}
@@ -255,7 +207,7 @@ public final class BitPropNet
 	 * @return References to every InputProposition in the PropNet, indexed by
 	 *         name.
 	 */
-	public BitProposition[] getInputPropositions()
+	public Map<GdlSentence, BitProposition> getInputPropositions()
 	{
 		return inputPropositions;
 	}
@@ -266,7 +218,7 @@ public final class BitPropNet
 	 * @return References to every LegalProposition in the PropNet, indexed by
 	 *         player name.
 	 */
-	public Map<Role, BitProposition[]> getLegalPropositions()
+	public Map<Role, Set<BitProposition>> getLegalPropositions()
 	{
 		return legalPropositions;
 	}
@@ -548,19 +500,19 @@ public final class BitPropNet
 	 *
 	 * The INIT and terminal components cannot be removed.
 	 */
-	/*public void removeComponent(Component c) {
+	public void removeComponent(BitComponent c) {
 
 
 		//Go through all the collections it could appear in
-		if(c instanceof Proposition) {
-			Proposition p = (Proposition) c;
+		if(c instanceof BitProposition) {
+			BitProposition p = (BitProposition) c;
 			GdlSentence name = p.getName();
 			if(basePropositions.containsKey(name)) {
 				basePropositions.remove(name);
 			} else if(inputPropositions.containsKey(name)) {
 				inputPropositions.remove(name);
 				//The map goes both ways...
-				Proposition partner = legalInputMap.get(p);
+				BitProposition partner = legalInputMap.get(p);
 				if(partner != null) {
 					legalInputMap.remove(partner);
 					legalInputMap.remove(p);
@@ -570,17 +522,17 @@ public final class BitPropNet
 			} else if(name == GdlPool.getProposition(GdlPool.getConstant("terminal"))) {
 				throw new RuntimeException("The terminal component cannot be removed.");
 			} else {
-				for(Set<Proposition> propositions : legalPropositions.values()) {
+				for(Set<BitProposition> propositions : legalPropositions.values()) {
 					if(propositions.contains(p)) {
 						propositions.remove(p);
-						Proposition partner = legalInputMap.get(p);
+						BitProposition partner = legalInputMap.get(p);
 						if(partner != null) {
 							legalInputMap.remove(partner);
 							legalInputMap.remove(p);
 						}
 					}
 				}
-				for(Set<Proposition> propositions : goalPropositions.values()) {
+				for(Set<BitProposition> propositions : goalPropositions.values()) {
 					propositions.remove(p);
 				}
 			}
@@ -589,12 +541,12 @@ public final class BitPropNet
 		components.remove(c);
 
 		//Remove all the local links to the component
-		for(Component parent : c.getInputs())
+		for(BitComponent parent : c.getInputs_set())
 			parent.removeOutput(c);
-		for(Component child : c.getOutputs())
+		for(BitComponent child : c.getOutputs_set())
 			child.removeInput(c);
 		//These are actually unnecessary...
 		//c.removeAllInputs();
 		//c.removeAllOutputs();
-	}*/
+	}
 }
