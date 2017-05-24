@@ -37,18 +37,14 @@ public final class XPropNet
 	private static final int INPUT_SHIFT = OUTPUT_SHIFT + NUM_OUTPUT_BITS;
 	private static final int TYPE_SHIFT = INPUT_SHIFT + NUM_INPUT_BITS;
 
-	private static final long TYPE_MASK = 0xF0000000;
-	private static final long INPUTS_MASK = 0x0FF00000;
-	private static final long OUTPUTS_MASK = 0x000FF000;
-	private static final long OFFSET_MASK = 0x00000FFF;
 
 	private static final long NOT_TRIGGER = 0;
-	private static final long TRIGGER_TRANSITION = 0xC000;
-	private static final long TRIGGER_LEGAL = 0x8000;
-	private static final int INIT_TRUE = 0x8000;
+	private static final long TRIGGER_TRANSITION = 0xC0_0000_0000_000000L;
+	private static final long TRIGGER_LEGAL = 0x80_0000_0000_000000L;
+	private static final int INIT_TRUE = 0x8000_0000;
 	private static final int INIT_FALSE = 0;
-	private static final int INIT_NOT = 0xFFFF;
-	private static final int INIT_DEFAULT = 0x7FFF;
+	private static final int INIT_NOT = 0xFFFF_FFFF;
+	private static final int INIT_DEFAULT = 0x7FFF_FFFF;
 
 	private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
 	private final Role[] roles;
@@ -104,62 +100,68 @@ public final class XPropNet
 			Proposition b = e.getValue();
 
 			gdlSentenceMap.put(compId, s);
-			basesMap.put(s, compId - numBases);
-			compIndices.put(b, compId++);
+			basesMap.put(s, compId - baseOffset);
+			compIndices.put(b, compId);
+			++compId;
 			bases.add(b);
 			++numBases;
 			total_outputs += b.getOutputs_set().size();
 		}
 
-/*
- * Define Proposition ordering for Inputs.  Set numInputs and inputsOffset. Define component IDs for
- * inputs and increment total outputs. Role Map necessary?
- */
-		List<Proposition> inputs = new ArrayList<Proposition>(prop.getInputPropositions().values());
-		numInputs = 0; inputOffset = compId;
-		numInputs = inputs.size();
-		for (Proposition i : inputs) {
-			compIndices.put(i, compId++);
-			total_outputs += i.getOutputs_set().size();
-		}
 
+/*
+ * Define Proposition ordering for Legals. The ordering will be in 1-1 correspondence with the
+ * ordering of inputs. Set numLegals and legalOffset.
+ */
+
+		List<Proposition> inputs = new ArrayList<Proposition>();
 		Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
 		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
+		actionsMap = new HashMap<Role, List<Move>>();
+		rolesIndexMap = new HashMap<Integer, Integer>();
 		numLegals = 0; legalOffset = compId;
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> rLegals = new ArrayList<Proposition>(moveMap.get(roles[i]));
-			rLegals.addAll(rLegals);
+			rolesIndexMap.put(i, compId);
+			List<Move> rMoves = new ArrayList<Move>();
 			rolesIndexMap.put(i, compId);
 
 			for (Proposition l : rLegals) {
-				legalArr.add(new Move(l.getName().getBody().get(1)));
-				inputs.add(legalInputMap.get(l)); //Ensures that legal move list exactly corresponds to input list
-				compIndices.put(l, compId++);
+				Move m = new Move(l.getName().getBody().get(1));
+				legalArr.add(m);
+				rMoves.add(m);
+				Proposition in = legalInputMap.get(l);
+				inputs.add(in); //Ensures that legal move list exactly corresponds to input list
+				props.add(in);
+				compIndices.put(l, compId);
+				++compId;
 				total_outputs += l.getOutputs_set().size();
+				total_outputs += in.getOutputs_set().size();
 			}
+
+			actionsMap.put(roles[i], rMoves);
 			numLegals += rLegals.size();
 			numInputs += rLegals.size();
 			props.addAll(rLegals);
+			legals.add(rLegals);
 		}
+
 
 		inputOffset = compId;
-		for (List<Proposition> rLegals : legals) {
-			for (Proposition l : rLegals) {
-				Proposition i = legalInputMap.get(l);
-				inputs.add(i);
-				compIndices.put(i, compId++);
-				total_outputs += i.getInputs_set().size();
-			}
+		for (Proposition i : inputs) {
+			compIndices.put(i, compId);
+			++compId;
 		}
 
-		actionsMap = new HashMap<Role, List<Move>>();
-		legalOffset = compId; numLegals = 0;
-		numLegals = 0;
-		rolesIndexMap = new HashMap<Integer, Integer>();
-
 		legalArray = legalArr.toArray(new Move[legalArr.size()]);
-		assert numLegals == numInputs;
+		if (numLegals != numInputs) {
+			System.out.println("numLegals != numInputs");
+			System.exit(0);
+		}
+
+
+///////////////////////////
 
 		Proposition init = prop.getInitProposition();
 		if (init == null) initProposition = -1;
@@ -167,20 +169,29 @@ public final class XPropNet
 		HashMap<Component, List<Component>> outputMap = new HashMap<Component, List<Component>>();
 		for (Component c : prop.getComponents()) {
 			outputMap.put(c, new ArrayList<Component>(c.getOutputs_set()));
-			if (c == init) initProposition = compId;
-			if (c == term) terminalProposition = compId;
+			if (c.equals(init)) initProposition = compId;
+			if (c.equals(term)) terminalProposition = compId;
+
 			if (!props.contains(c)) {
-				compIndices.put(c, compId++);
+				props.add(c);
+				compIndices.put(c, compId);
+				++compId;
 				total_outputs += c.getOutputs_set().size();
 			}
 		}
 
 		compIndexMap = compIndices;
 
+//Add bases, inputs, legals to props
 		props = new HashSet<Component>(prop.getBasePropositions().values());
 		props.addAll(prop.getInputPropositions().values());
 		for (int i = 0; i < roles.length; ++i) {
-			props.addAll(moveMap.get(roles[i]));
+			props.addAll(legals.get(i));
+		}
+
+		if (compId != pComponents.size()) {
+			System.out.println("compId != pComponents.size()");
+			System.exit(0);
 		}
 
 		connecTable = new int[total_outputs];
@@ -188,59 +199,88 @@ public final class XPropNet
 		compInfo = new long[pComponents.size()];
 		int outputIndex = 0;
 
+
 		basePropositions = new int[numBases];
-		for (int i = 0; i < numBases; ++i) basePropositions[i] = baseOffset + i;
+		for (int i = 0; i < numBases; ++i) {
+			basePropositions[i] = baseOffset + i;
+			Proposition b = bases.get(i);
+			if (compIndices.get(b) != (baseOffset + i)) {
+				System.out.println("compIndices.get(b) != (baseOffset + i)");
+				System.exit(0);
+			}
+		}
+
 		for (Proposition b : bases) {
 			long type = NOT_TRIGGER;
 			long num_inputs = ((long)b.getInputs_set().size()) << INPUT_SHIFT;
 			List<Component> outputs = outputMap.get(b);
 			long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
 			long outIndex = ((long)outputIndex);
-			long info = type ^ num_inputs ^ num_outputs ^ outIndex;
+			long info = type | num_inputs | num_outputs | outIndex;
 			compInfo[compIndices.get(b)] = info;
 			components[compIndices.get(b)] = INIT_DEFAULT;
 			for (Component out : outputs) {
-				connecTable[outputIndex++] = compIndices.get(out);
+				connecTable[outputIndex] = compIndices.get(out);
+				++outputIndex;
 			}
 		}
 
 		inputPropositions = new int[numInputs];
-		for (int i = 0; i < numInputs; ++i) inputPropositions[i] = inputOffset + i;
-		for (Proposition i : inputs) {
-			long type = NOT_TRIGGER;
-			long num_inputs = ((long)i.getInputs_set().size()) << INPUT_SHIFT;
-			List<Component> outputs = outputMap.get(i);
-			long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
-			long outIndex = ((long)outputIndex);
-			long info = type ^ num_inputs ^ num_outputs ^ outIndex;
-			compInfo[compIndices.get(i)] = info;
-			components[compIndices.get(i)] = INIT_DEFAULT;
-			for (Component out : outputs) {
-				connecTable[outputIndex++] = compIndices.get(out);
+		for (int i = 0; i < numInputs; ++i) {
+			inputPropositions[i] = inputOffset + i;
+			Proposition b = inputs.get(i);
+			if (compIndices.get(b) != (inputOffset + i)) {
+				System.out.println("compIndices.get(b) != (inputOffset + i)");
+				System.exit(0);
 			}
 		}
+
 
 		roleMoves = new ArrayList<HashMap<Move, Integer>>();
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> ls = legals.get(i);
 			props.addAll(ls);
 			HashMap<Move, Integer> mMap = new HashMap<Move, Integer>();
+
 			for (Proposition l : ls) {
-				mMap.put(new Move(l.getName().getBody().get(1)), compIndices.get(l));
+				mMap.put(new Move(l.getName().getBody().get(1)), compIndices.get(l) - legalOffset);
+				int inIndex = compIndices.get(legalInputMap.get(l)) - inputOffset;
+				if (inIndex != (compIndices.get(l) - legalOffset)) {
+					System.out.println("inIndex != (compIndices.get(l) - legalOffset)");
+					System.exit(0);
+				}
+
 				long type = TRIGGER_LEGAL;
 				long num_inputs = ((long)l.getInputs_set().size()) << INPUT_SHIFT;
 				List<Component> outputs = outputMap.get(l);
 				long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
 				long outIndex = ((long)outputIndex);
-				long info = type ^ num_inputs ^ num_outputs ^ outIndex;
+				long info = type | num_inputs | num_outputs | outIndex;
 				compInfo[compIndices.get(l)] = info;
 				components[compIndices.get(l)] = INIT_DEFAULT;
 				for (Component out : outputs) {
-					connecTable[outputIndex++] = compIndices.get(out);
+					connecTable[outputIndex] = compIndices.get(out);
+					++outputIndex;
 				}
 			}
 			roleMoves.add(mMap);
 		}
+
+		for (Proposition i : inputs) {
+			long type = NOT_TRIGGER;
+			long num_inputs = ((long)i.getInputs_set().size()) << INPUT_SHIFT;
+			List<Component> outputs = outputMap.get(i);
+			long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
+			long outIndex = ((long)outputIndex);
+			long info = type | num_inputs | num_outputs | outIndex;
+			compInfo[compIndices.get(i)] = info;
+			components[compIndices.get(i)] = INIT_DEFAULT;
+			for (Component out : outputs) {
+				connecTable[outputIndex] = compIndices.get(out);
+				++outputIndex;
+			}
+		}
+
 
 		for (Component c : prop.getComponents()) {
 			if (c instanceof Transition) {
