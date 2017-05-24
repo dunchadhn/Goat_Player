@@ -67,7 +67,7 @@ public final class XPropNet
 	public XPropNet(PropNet prop)
 	{
 		Set<Component> pComponents = prop.getComponents();
-	    roles = (Role[]) prop.getRoles().toArray();
+	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
 
 		Map<Role, Set<Proposition>> moveMap = prop.getLegalPropositions();
 		HashMap<Component, Integer> compIndices = new HashMap<Component, Integer>();
@@ -79,6 +79,8 @@ public final class XPropNet
 		baseOffset = 0;
 		List<Proposition> bases = new ArrayList<Proposition>(prop.getBasePropositions().values());
 		numBases = bases.size();
+		gdlSentenceMap = new HashMap<Integer, GdlSentence>();
+		basesMap = new HashMap<GdlSentence, Integer>();
 		for (Entry<GdlSentence, Proposition> e : prop.getBasePropositions().entrySet()) {
 			Proposition b = e.getValue();
 			bases.add(b);
@@ -96,6 +98,7 @@ public final class XPropNet
 			total_outputs += i.getOutputs_set().size();
 		}
 
+		List<Move> legalArr = new ArrayList<Move>();
 		actionsMap = new HashMap<Role, List<Move>>();
 		legalOffset = compId;
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
@@ -103,17 +106,18 @@ public final class XPropNet
 		rolesIndexMap = new HashMap<Integer, Integer>();
 		for (int i = 0; i < roles.length; ++i) {
 			legals.add(new ArrayList<Proposition>(moveMap.get(roles[i])));
-			List<Move> moves = new ArrayList<Move>();
+			//List<Move> moves = new ArrayList<Move>();
 			rolesIndexMap.put(i, compId);
 			for (Proposition l : legals.get(i)) {
+				legalArr.add(new Move(l.getName().getBody().get(1)));
 				compIndices.put(l, compId++);
 				total_outputs += l.getOutputs_set().size();
-				System.out.println(l.getName().getBody().get(1));
-				moves.add(new Move(l.getName().getBody().get(1)));
+				//System.out.println(l.getName().getBody().get(1));
 			}
 			numLegals += legals.get(i).size();
 			props.addAll(moveMap.get(roles[i]));
 		}
+		legalArray = legalArr.toArray(new Move[legalArr.size()]);
 		assert numLegals == numInputs;
 
 		Proposition init = prop.getInitProposition();
@@ -171,6 +175,7 @@ public final class XPropNet
 				connecTable[outputIndex++] = compIndices.get(out);
 			}
 		}
+
 		roleMoves = new ArrayList<HashMap<Move, Integer>>();
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> ls = legals.get(i);
@@ -185,7 +190,7 @@ public final class XPropNet
 				long outIndex = ((long)outputIndex);
 				long info = type ^ num_inputs ^ num_outputs ^ outIndex;
 				compInfo[compIndices.get(l)] = info;
-				components[compIndices.get(i)] = INIT_DEFAULT;
+				components[compIndices.get(l)] = INIT_DEFAULT;
 				for (Component out : outputs) {
 					connecTable[outputIndex++] = compIndices.get(out);
 				}

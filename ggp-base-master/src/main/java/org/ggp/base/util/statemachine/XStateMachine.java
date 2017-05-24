@@ -469,7 +469,7 @@ public class XStateMachine extends XMachine {
 	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
     	int[] baseProps = propNet.getBasePropositions();
-    	for (int i = state.nextSetBit(0); i != 1; i = state.nextSetBit(i)) {
+    	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
     		bases.add(gdlSentenceMap.get(baseOffset + i));
     	}
     	return new MachineState(bases);
