@@ -27,8 +27,7 @@ public class XStateMachine extends XMachine {
 
     private XPropNet propNet;
     private Role[] roles;
-    private OpenBitSet currentState;
-    private OpenBitSet currInputs;
+    private OpenBitSet currentState, currInputs, currLegals;
     private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
     private HashMap<Role, List<Move>> actions;
     private HashMap<Role, List<Move>> currentLegalMoves;
@@ -52,7 +51,6 @@ public class XStateMachine extends XMachine {
         	main_thread = Thread.currentThread().getId();
             propNet = new XPropNet(OptimizingPropNetFactory.create(description));
             propNet.renderToFile("init.dot");
-            System.exit(0);
             components = propNet.getComponents();
             compInfo = propNet.getCompInfo();
             connecTable = propNet.getConnecTable();
@@ -82,10 +80,10 @@ public class XStateMachine extends XMachine {
 	private static final int INPUT_SHIFT = OUTPUT_SHIFT + NUM_OUTPUT_BITS;
 	private static final int TYPE_SHIFT = INPUT_SHIFT + NUM_INPUT_BITS;
 
-	private static final long TYPE_MASK = 0xF0000000;
-	private static final long INPUTS_MASK = 0x0FF00000;
-    private static final long OUTPUTS_MASK = 0x000FF000;
-    private static final long OFFSET_MASK = 0x00000FFF;
+	private static final long TYPE_MASK = 0xFF_0000_0000_000000L;
+	private static final long INPUTS_MASK = 0x00_FFFF_0000_000000L;
+    private static final long OUTPUTS_MASK = 0x00_0000_FFFF_000000L;
+    private static final long OFFSET_MASK = 0x00_0000_0000_FFFFFFL;
 
     protected int type(long comp) {
     	return (int) ((comp & TYPE_MASK) >> TYPE_SHIFT);
@@ -109,11 +107,39 @@ public class XStateMachine extends XMachine {
     	return (value & CURR_VAL_MASK) != 0;
     }
 
+    @Override
+    public OpenBitSet getInitialState() {
+    	int thread_id = main_ind;
+    	int[] oldComponents = components;
+    	clearPropNet(thread_id);
+    	if (components == oldComponents) {
+    		System.out.println("PropNet not cleared properly");
+    		System.exit(0);
+    	}
+    	int init = propNet.getInitProposition();
+    	Queue<Integer> q = setInit(init, true);
+    	propNet.renderToFile("initialstate.dot");
+    	//setConstants(q);
+    	//addBases(q);
+    	//addInputs(q);
+    	rawPropagate(q, thread_id);
+    	q = setInit(init, false);
+    	propNet.renderToFile("test.dot");
+    	System.exit(0);
+        propagate(q, thread_id);
+        propNet.renderToFile("initial.dot");
+        System.exit(0);
+        return currentState;
+    }
+
 
     protected Queue<Integer> setInit(int initId, boolean val) {
     	Queue<Integer> q = new LinkedList<Integer>();
     	if (initId == -1) return q; //check if initProposition exists
-    	components[initId] ^= CURR_VAL_MASK; //Set init current value to be true //THIS SHOULD BE DONE BY PROPNET
+    	if (!get_current_value(components[initId])) {
+    		System.out.println("init is false in initial state");
+    		System.exit(0);
+    	}
     	if (!val) components[initId] &= NOT_CURR_VAL_MASK;
     	long comp = compInfo[initId];
     	int num_outputs = numOutputs(comp);
@@ -122,9 +148,11 @@ public class XStateMachine extends XMachine {
     	for (int i = 0; i < num_outputs; ++i) {
     		int outIndex = connecTable[outputsIndex + i];
     		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
-    		else components[outIndex] -= 1;
+    		//else components[outIndex] -= 1;
+    		System.out.println(outIndex);
     		q.add(outIndex); //add init outputs to the queue
     	}
+    	System.exit(0);
 
     	return q;
     }
@@ -170,23 +198,9 @@ public class XStateMachine extends XMachine {
         }
     }
 
-    @Override
-    public OpenBitSet getInitialState() {
-    	int thread_id = main_ind;
-    	clearPropNet(thread_id);
-    	int init = propNet.getInitProposition();
-    	Queue<Integer> q = setInit(init, true);
-    	setConstants(q);
-    	addBases(q);
-    	addInputs(q);
-    	rawPropagate(q, thread_id);
-    	q = setInit(init, false);
-        propagate(q, thread_id);
-        return currentState;
-    }
 
-    private static final long TRIGGER_MASK = 0x80000000;
-    private static final long TRANSITION_MASK = 0x40000000;
+    private static final long TRIGGER_MASK = 0x80_0000_0000_000000L;
+    private static final long TRANSITION_MASK = 0x40_0000_0000_000000L;
 
     protected boolean isTrigger(long comp) {
     	return (comp & TRIGGER_MASK) != 0;
@@ -200,26 +214,25 @@ public class XStateMachine extends XMachine {
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
     protected void rawPropagate(Queue<Integer> q, int thread_id) {
-    	OpenBitSet baseSet = new OpenBitSet(numBases);
-    	OpenBitSet legalSet = new OpenBitSet(numLegals);
+    	currentState = new OpenBitSet(numBases);
+    	currLegals = new OpenBitSet(numLegals);
     	while(!q.isEmpty()) {
-    		int compId = q.remove();
+    		System.out.println(q.remove());
+    		/*int compId = q.remove();
     		int value = components[compId];
     		boolean val = get_current_value(value);
     		long comp = compInfo[compId];
     		if (isTrigger(comp)) {
     			if (isTransition(comp)) {
-    				if (val) {
-    					int outputsIndex = outputsOffset(comp);
-        				int baseIndex = outputsIndex - baseOffset;
-        				baseSet.fastSet(baseIndex);
-    				}
+    				int outputsIndex = outputsOffset(comp);
+    				int baseIndex = outputsIndex - baseOffset;
+    				if (val) currentState.fastSet(baseIndex);
+    				else currentState.clear(baseIndex);
     				continue;
     			} else {
-    				if (val) {
-    					int legalIndex = compId - legalOffset;
-    					legalSet.fastSet(legalIndex);
-    				}
+    				int legalIndex = compId - legalOffset;
+    				if (val) currLegals.fastSet(legalIndex);
+    				else currLegals.clear(legalIndex);
     			}
     		}
 
@@ -230,16 +243,14 @@ public class XStateMachine extends XMachine {
         		int outIndex = connecTable[outputsIndex + i];
         		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
         		else components[outIndex] -= 1;
-        		q.add(outIndex); //add init outputs to the queue
-        	}
+        		q.add(outIndex);
+        	}*/
     	}
     }
 
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
     protected void propagate(Queue<Integer> q, int thread_id) {
-    	OpenBitSet baseSet = new OpenBitSet(numBases);
-    	OpenBitSet legalSet = new OpenBitSet(numLegals);
 
     	while(!q.isEmpty()) {
     		int compId = q.remove();
@@ -248,17 +259,15 @@ public class XStateMachine extends XMachine {
     		long comp = compInfo[compId];
     		if (isTrigger(comp)) {
     			if (isTransition(comp)) {
-    				if (val) {
-    					int outputsIndex = outputsOffset(comp);
-        				int baseIndex = outputsIndex - baseOffset;
-        				baseSet.fastSet(baseIndex);
-    				}
+    				int outputsIndex = outputsOffset(comp);
+    				int baseIndex = outputsIndex - baseOffset;
+    				if (val) currentState.fastSet(baseIndex);
+    				else currentState.clear(baseIndex);
     				continue;
     			} else {
-    				if (val) {
-    					int legalIndex = compId - legalOffset;
-    					legalSet.fastSet(legalIndex);
-    				}
+    				int legalIndex = compId - legalOffset;
+    				if (val) currLegals.fastSet(legalIndex);
+    				else currLegals.clear(legalIndex);
     			}
     		}
 
@@ -277,8 +286,6 @@ public class XStateMachine extends XMachine {
         	}
     	}
 
-    	currentState = baseSet;
-    	currentLegalMoves = getLegals(legalSet);
     }
 
     protected HashMap<Role, List<Move>> getLegals(OpenBitSet s) {
@@ -433,7 +440,7 @@ public class XStateMachine extends XMachine {
     //goal Propositions will never be Trigger components, so we
     //can use its 2nd bit. Goal value is stored in bits 2-8, reading
     //from the left
-    private static final long GOAL_MASK = 0x7F000000;
+    private static final long GOAL_MASK = 0x7F_0000_0000_000000L;
     private static final int GOAL_SHIFT = TYPE_SHIFT;
     protected int getGoalValue(long value) {//inline
     	return (int) (value & GOAL_MASK) >> TYPE_SHIFT;

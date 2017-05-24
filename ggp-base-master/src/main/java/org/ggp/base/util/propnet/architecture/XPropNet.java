@@ -73,58 +73,91 @@ public final class XPropNet
 
 	public XPropNet(PropNet prop)
 	{
+		System.out.println("XPropNet initializing...");
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
 	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
 
 		Map<Role, Set<Proposition>> moveMap = prop.getLegalPropositions();
+		//Mapping from component to component ID
 		HashMap<Component, Integer> compIndices = new HashMap<Component, Integer>();
 		int compId = 0, total_outputs = 0;
 
+		//Components that we have already processed
 		HashSet<Component> props = new HashSet<Component>(prop.getBasePropositions().values());
 		props.addAll(prop.getInputPropositions().values());
+		rolesIndexMap = new HashMap<Integer, Integer>();
 
-		baseOffset = 0;
-		List<Proposition> bases = new ArrayList<Proposition>(prop.getBasePropositions().values());
-		numBases = bases.size();
-		gdlSentenceMap = new HashMap<Integer, GdlSentence>();
-		basesMap = new HashMap<GdlSentence, Integer>();
+
+
+/*
+ * Define Proposition ordering for Bases. Populate gdlSentenceMap (mapping from GdlSentence to component ID) and
+ * basesMap (mapping from component ID to GdlSentence for bases). Set numBases and baseOffset into components
+ * and compInfo array. Define component IDs for bases and increment total outputs.
+ */
+		List<Proposition> bases = new ArrayList<Proposition>();
+		numBases = 0; baseOffset = 0;
+		gdlSentenceMap = new HashMap<Integer, GdlSentence>();//Mapping from compId to GdlSentence for bases
+		basesMap = new HashMap<GdlSentence, Integer>();//Mapping from GdlSentence to compId
 		for (Entry<GdlSentence, Proposition> e : prop.getBasePropositions().entrySet()) {
+			GdlSentence s = e.getKey();
 			Proposition b = e.getValue();
-			bases.add(b);
-			gdlSentenceMap.put(compId, e.getKey());
-			basesMap.put(e.getKey(), compId - numBases);
+
+			gdlSentenceMap.put(compId, s);
+			basesMap.put(s, compId - numBases);
 			compIndices.put(b, compId++);
+			bases.add(b);
+			++numBases;
 			total_outputs += b.getOutputs_set().size();
 		}
 
-		inputOffset = compId;
+/*
+ * Define Proposition ordering for Inputs.  Set numInputs and inputsOffset. Define component IDs for
+ * inputs and increment total outputs. Role Map necessary?
+ */
 		List<Proposition> inputs = new ArrayList<Proposition>(prop.getInputPropositions().values());
+		numInputs = 0; inputOffset = compId;
 		numInputs = inputs.size();
 		for (Proposition i : inputs) {
 			compIndices.put(i, compId++);
 			total_outputs += i.getOutputs_set().size();
 		}
 
-		List<Move> legalArr = new ArrayList<Move>();
-		actionsMap = new HashMap<Role, List<Move>>();
-		legalOffset = compId;
+		Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
-		numLegals = 0;
-		rolesIndexMap = new HashMap<Integer, Integer>();
+		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
+		numLegals = 0; legalOffset = compId;
 		for (int i = 0; i < roles.length; ++i) {
-			legals.add(new ArrayList<Proposition>(moveMap.get(roles[i])));
-			//List<Move> moves = new ArrayList<Move>();
+			List<Proposition> rLegals = new ArrayList<Proposition>(moveMap.get(roles[i]));
+			rLegals.addAll(rLegals);
 			rolesIndexMap.put(i, compId);
-			for (Proposition l : legals.get(i)) {
+
+			for (Proposition l : rLegals) {
 				legalArr.add(new Move(l.getName().getBody().get(1)));
+				inputs.add(legalInputMap.get(l)); //Ensures that legal move list exactly corresponds to input list
 				compIndices.put(l, compId++);
 				total_outputs += l.getOutputs_set().size();
-				//System.out.println(l.getName().getBody().get(1));
 			}
-			numLegals += legals.get(i).size();
-			props.addAll(moveMap.get(roles[i]));
+			numLegals += rLegals.size();
+			numInputs += rLegals.size();
+			props.addAll(rLegals);
 		}
+
+		inputOffset = compId;
+		for (List<Proposition> rLegals : legals) {
+			for (Proposition l : rLegals) {
+				Proposition i = legalInputMap.get(l);
+				inputs.add(i);
+				compIndices.put(i, compId++);
+				total_outputs += i.getInputs_set().size();
+			}
+		}
+
+		actionsMap = new HashMap<Role, List<Move>>();
+		legalOffset = compId; numLegals = 0;
+		numLegals = 0;
+		rolesIndexMap = new HashMap<Integer, Integer>();
+
 		legalArray = legalArr.toArray(new Move[legalArr.size()]);
 		assert numLegals == numInputs;
 
@@ -262,6 +295,12 @@ public final class XPropNet
 					components[compIndices.get(c)] = INIT_NOT;
 				} else if (c instanceof Constant) {
 					components[compIndices.get(c)] = c.getCurrentValue() ? INIT_TRUE : INIT_FALSE;
+				} else if (c.equals(init)) {
+					if (compIndices.get(init) != initProposition) {
+						System.out.println("init compId incorrect");
+						System.exit(0);
+					}
+					components[compIndices.get(c)] = INIT_TRUE;
 				} else {
 					components[compIndices.get(c)] = INIT_DEFAULT;
 				}
@@ -272,11 +311,16 @@ public final class XPropNet
 				long outIndex = ((long)outputIndex);
 				long info = type ^ num_inputs ^ num_outputs ^ outIndex;
 				compInfo[compIndices.get(c)] = info;
+				for (Component out : outputs) {
+					connecTable[outputIndex++] = compIndices.get(out);
+				}
 
 			}
 		}
 		constants = new int[consts.size()];
 		for (int i = 0; i < constants.length; ++i) constants[i] = consts.get(i);
+
+		checkPropNet();
 
 
 	}
@@ -378,21 +422,10 @@ public final class XPropNet
     	return (int) ((comp & 0x00_FFFF_0000_000000L) >> 40);
     }
 
-	/**
-	 * Returns a representation of the PropNet in .dot format.
-	 *
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		sb.append("digraph propNet\n{\n");
-		for ( Component component : compIndexMap.keySet())
+    public void checkPropNet() {
+    	for ( Component component : compIndexMap.keySet())
 		{
 			int index = compIndexMap.get(component);
-			sb.append("\t" + component.bitString(components[index], compInfo[index], connecTable) + "\n");
 			if (numInputs(compInfo[index]) != component.getInputs_set().size()) {
 				System.out.println(component);
 				System.out.println("NumInputs incorrect: " + "Correct: " + component.getInputs_set().size() + " Incorrect: " + numInputs(compInfo[index]));
@@ -415,6 +448,25 @@ public final class XPropNet
 			}
 		}
 		System.out.println("CORRECT!");
+    }
+
+	/**
+	 * Returns a representation of the PropNet in .dot format.
+	 *
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("digraph propNet\n{\n");
+		for ( Component component : compIndexMap.keySet())
+		{
+			int index = compIndexMap.get(component);
+			sb.append("\t" + component.bitString(components[index], compInfo[index], connecTable) + "\n");
+
+		}
 		sb.append("}");
 
 		return sb.toString();

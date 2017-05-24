@@ -53,7 +53,7 @@ public class LegalTest extends XStateMachineGamer {
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException, InterruptedException, ExecutionException {
-		// TODO Auto-generated method stub
+		return;
 
 	}
 
