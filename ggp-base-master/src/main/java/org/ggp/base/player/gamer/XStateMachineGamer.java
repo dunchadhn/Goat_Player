@@ -1,20 +1,20 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.ggp.base.player.gamer.Gamer;
+import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.player.gamer.exception.AbortingException;
 import org.ggp.base.player.gamer.exception.MetaGamingException;
 import org.ggp.base.player.gamer.exception.MoveSelectionException;
 import org.ggp.base.player.gamer.exception.StoppingException;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.logging.GamerLogger;
-import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
+import org.ggp.base.util.statemachine.XStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
@@ -31,7 +31,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
  * @author evancox
  * @author Sam
  */
-public abstract class BitStateMachineGamer extends Gamer
+public abstract class XStateMachineGamer extends Gamer
 {
     // =====================================================================
     // First, the abstract methods which need to be overridden by subclasses.
@@ -42,7 +42,7 @@ public abstract class BitStateMachineGamer extends Gamer
      * Defines which state machine this gamer will use.
      * @return
      */
-    public abstract BitStateMachine getInitialStateMachine();
+    public abstract XStateMachine getInitialStateMachine();
 
     /**
      * Defines the metagaming action taken by a player during the START_CLOCK
@@ -82,7 +82,7 @@ public abstract class BitStateMachineGamer extends Gamer
 	/**
 	 * Returns the current state of the game.
 	 */
-	public final BitMachineState getCurrentState()
+	public final OpenBitSet getCurrentState()
 	{
 		return currentState;
 	}
@@ -99,7 +99,7 @@ public abstract class BitStateMachineGamer extends Gamer
 	 * Returns the state machine.  This is used for calculating the next state and other operations, such as computing
 	 * the legal moves for all players, whether states are terminal, and the goal values of terminal states.
 	 */
-	public final BitStateMachine getStateMachine()
+	public final XStateMachine getStateMachine()
 	{
 		return stateMachine;
 	}
@@ -274,6 +274,6 @@ public abstract class BitStateMachineGamer extends Gamer
 
     // Internal state about the current state of the state machine.
     private Role role;
-    private BitMachineState currentState;
-    private BitStateMachine stateMachine;
+    private OpenBitSet currentState;
+    private XStateMachine stateMachine;
 }

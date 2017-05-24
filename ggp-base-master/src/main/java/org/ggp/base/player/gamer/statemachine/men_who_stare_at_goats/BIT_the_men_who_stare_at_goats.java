@@ -1,12 +1,15 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer.statemachine.men_who_stare_at_goats;
 
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import org.ggp.base.apps.player.Player;
+import org.ggp.base.player.gamer.BitStateMachineGamer;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
 import org.ggp.base.util.game.Game;
+import org.ggp.base.util.statemachine.BitDifferentialPropNetStateMachine;
+import org.ggp.base.util.statemachine.BitMachineState;
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
@@ -64,7 +67,7 @@ public class BIT_the_men_who_stare_at_goats extends BitStateMachineGamer {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "the_men_who_stare_at_goats Player";
+		return "BIT_the_men_who_stare_at_goats Player";
 	}
 
 	protected Move bestmove(Role role, BitStateMachine machine)

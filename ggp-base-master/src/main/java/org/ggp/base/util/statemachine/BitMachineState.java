@@ -1,4 +1,4 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.util.statemachine;
 
 import org.apache.lucene.util.OpenBitSet;
 

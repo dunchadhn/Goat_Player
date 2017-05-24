@@ -1,9 +1,10 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer;
 
 import org.ggp.base.apps.player.detail.DetailPanel;
 import org.ggp.base.apps.player.detail.SimpleDetailPanel;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
 import org.ggp.base.util.game.Game;
+import org.ggp.base.util.statemachine.BitDifferentialPropNetStateMachine;
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;

@@ -1,4 +1,4 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.util.statemachine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,10 +22,6 @@ import org.ggp.base.util.propnet.architecture.components.BitNot;
 import org.ggp.base.util.propnet.architecture.components.BitProposition;
 import org.ggp.base.util.propnet.architecture.components.BitTransition;
 import org.ggp.base.util.propnet.factory.BitOptimizingPropNetFactory;
-import org.ggp.base.util.statemachine.BitStateMachine;
-import org.ggp.base.util.statemachine.MachineState;
-import org.ggp.base.util.statemachine.Move;
-import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 

@@ -1,27 +1,28 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer.statemachine.men_who_stare_at_goats;
 
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.apps.player.Player;
+import org.ggp.base.player.gamer.XStateMachineGamer;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
 import org.ggp.base.util.game.Game;
-import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
-import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.XStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class the_men_who_stare_at_goats extends StateMachineGamer {
+public class X_the_men_who_stare_at_goats extends XStateMachineGamer {
 	protected Player p;
 
 	@Override
-	public StateMachine getInitialStateMachine() {
-		return new DifferentialPropNetStateMachine();
+	public XStateMachine getInitialStateMachine() {
+		return new XStateMachine();
 	}
 
 	@Override
@@ -36,7 +37,7 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException, InterruptedException, ExecutionException {
-		StateMachine machine = getStateMachine();
+		XStateMachine machine = getStateMachine();
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
 		Role role = getRole();
@@ -65,16 +66,17 @@ public class the_men_who_stare_at_goats extends StateMachineGamer {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "the_men_who_stare_at_goats Player";
+		return "X_the_men_who_stare_at_goats Player";
 	}
 
-	protected Move bestmove(Role role, StateMachine machine)
+	protected Move bestmove(Role role, XStateMachine machine)
 			throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		// TODO Auto-generated method stub
-		MachineState state = getCurrentState();
+		OpenBitSet state = getCurrentState();
 		List<Move> moves = machine.getLegalMoves(state, role);
 		return moves.get(0);
 	}
 
 
 }
+

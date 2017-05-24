@@ -7,8 +7,8 @@ import java.util.concurrent.BlockingQueue;
 
 import javax.swing.JPanel;
 
+import org.ggp.base.player.gamer.StateMachineGamer;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
-import org.ggp.base.player.gamer.statemachine.StateMachineGamer;
 import org.ggp.base.server.event.ServerCompletedMatchEvent;
 import org.ggp.base.server.event.ServerNewGameStateEvent;
 import org.ggp.base.util.game.Game;

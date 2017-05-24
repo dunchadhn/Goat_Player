@@ -1,4 +1,4 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer;
 
 import java.util.List;
 import java.util.Random;

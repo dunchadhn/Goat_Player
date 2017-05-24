@@ -3,8 +3,8 @@ package org.ggp.base.player.gamer.statemachine.human;
 import java.util.List;
 
 import org.ggp.base.apps.player.detail.DetailPanel;
+import org.ggp.base.player.gamer.StateMachineGamer;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
-import org.ggp.base.player.gamer.statemachine.StateMachineGamer;
 import org.ggp.base.player.gamer.statemachine.human.event.HumanNewMovesEvent;
 import org.ggp.base.player.gamer.statemachine.human.event.HumanTimeoutEvent;
 import org.ggp.base.player.gamer.statemachine.human.gui.HumanDetailPanel;
