@@ -3,6 +3,7 @@ package org.ggp.base.player.gamer.statemachine.sample;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import org.ggp.base.apps.player.Player;
 import org.ggp.base.player.gamer.XStateMachineGamer;
 import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
@@ -15,7 +16,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 public class LegalTest extends XStateMachineGamer {
 
-
+	Player p;
 
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException

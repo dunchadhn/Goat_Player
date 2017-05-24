@@ -52,4 +52,14 @@ public final class Constant extends Component
 	{
 		return toDot("doublecircle", (this.getCurrentValue() ? "red" : "grey"), Boolean.toString(value).toUpperCase());
 	}
+
+	protected int num_set(int compValue, long compInfo) {
+		return (int) (compValue - 0x8000);
+	}
+
+	@Override
+	public String bitString(int compValue, long compInfo, int[] connecTable) {
+		boolean currVal = get_current_value(compValue);
+		return toDot("doublecircle", (currVal ? "red" : "grey"), Boolean.toString(currVal).toUpperCase() + num_set(compValue, compInfo) + ", " + numInputs(compInfo));
+	}
 }

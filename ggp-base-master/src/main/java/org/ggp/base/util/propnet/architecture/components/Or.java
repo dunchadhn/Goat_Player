@@ -62,4 +62,14 @@ public final class Or extends Component
 			return toDot("ellipse", "grey", "OR" + T);
 		}
 	}
+
+	protected int num_set(int compValue, long compInfo) {
+		return (int) (compValue - 0x7FFF);
+	}
+
+	@Override
+	public String bitString(int compValue, long compInfo, int[] connecTable) {
+		boolean currVal = get_current_value(compValue);
+		return toDot("ellipse", (currVal ? "red" : "grey"), "OR" + num_set(compValue, compInfo) + ", " + numInputs(compInfo));
+	}
 }

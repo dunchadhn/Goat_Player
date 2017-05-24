@@ -20,7 +20,7 @@ public final class And extends Component
 	public boolean getCurrentValue()
 	{
 		if(N == 0) {
-			N = getInputsSize();
+			N = getInputs_set().size();
 		}
 		if(T == N) {
 			return true;
@@ -67,5 +67,17 @@ public final class And extends Component
 			return toDot("invhouse", "grey", "AND" + T + ", " + N);
 		}
 	}
+
+	protected int num_set(int compValue, long compInfo) {
+		return (int) (compValue - (0x8000 - numInputs(compInfo)));
+	}
+
+	@Override
+	public String bitString(int compValue, long compInfo, int[] connecTable) {
+		boolean currVal = get_current_value(compValue);
+		return toDot("invhouse", (currVal ? "red" : "grey"), "AND" + num_set(compValue, compInfo) + ", " + numInputs(compInfo));
+	}
+
+
 
 }

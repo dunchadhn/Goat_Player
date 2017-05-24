@@ -51,6 +51,8 @@ public class XStateMachine extends XMachine {
         	System.out.println("Initialized");
         	main_thread = Thread.currentThread().getId();
             propNet = new XPropNet(OptimizingPropNetFactory.create(description));
+            propNet.renderToFile("init.dot");
+            System.exit(0);
             components = propNet.getComponents();
             compInfo = propNet.getCompInfo();
             connecTable = propNet.getConnecTable();

@@ -67,4 +67,13 @@ public class Proposition extends Component
 	{
 		return toDot("circle", getCurrentValue() ? "red" : "white", name.toString());
 	}
+
+	@Override
+	public String bitString(int compValue, long compInfo, int[] connecTable) {
+		assert numInputs(compInfo) == 1;
+		assert numInputs(compInfo) == getInputs_set().size();
+		assert numOutputs(compInfo) == getOutputs_set().size();
+		boolean currVal = get_current_value(compValue);
+		return toDot("circle", (currVal ? "red" : "white"), name.toString());
+	}
 }

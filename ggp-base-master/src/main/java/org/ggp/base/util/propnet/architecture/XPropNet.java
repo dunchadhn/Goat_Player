@@ -1,5 +1,8 @@
 package org.ggp.base.util.propnet.architecture;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,6 +14,7 @@ import java.util.Set;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
+import org.ggp.base.util.logging.GamerLogger;
 import org.ggp.base.util.propnet.architecture.components.And;
 import org.ggp.base.util.propnet.architecture.components.Constant;
 import org.ggp.base.util.propnet.architecture.components.Not;
@@ -63,9 +67,13 @@ public final class XPropNet
     private Move[] legalArray;
     private List<HashMap<Move, Integer>> roleMoves;
 
+    PropNet oldProp;
+    HashMap<Component, Integer> compIndexMap;
+
 
 	public XPropNet(PropNet prop)
 	{
+		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
 	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
 
@@ -121,6 +129,7 @@ public final class XPropNet
 		assert numLegals == numInputs;
 
 		Proposition init = prop.getInitProposition();
+		if (init == null) initProposition = -1;
 		Proposition term = prop.getTerminalProposition();
 		HashMap<Component, List<Component>> outputMap = new HashMap<Component, List<Component>>();
 		for (Component c : prop.getComponents()) {
@@ -132,6 +141,8 @@ public final class XPropNet
 				total_outputs += c.getOutputs_set().size();
 			}
 		}
+
+		compIndexMap = compIndices;
 
 		props = new HashSet<Component>(prop.getBasePropositions().values());
 		props.addAll(prop.getInputPropositions().values());
@@ -249,6 +260,8 @@ public final class XPropNet
 					components[compIndices.get(c)] = INIT_TRUE - c.getInputs_set().size();
 				} else if (c instanceof Not) {
 					components[compIndices.get(c)] = INIT_NOT;
+				} else if (c instanceof Constant) {
+					components[compIndices.get(c)] = c.getCurrentValue() ? INIT_TRUE : INIT_FALSE;
 				} else {
 					components[compIndices.get(c)] = INIT_DEFAULT;
 				}
@@ -356,6 +369,76 @@ public final class XPropNet
 		return roleMoves;
 	}
 
+
+	public int numOutputs(long comp) {//inline these functions
+    	return (int) ((comp & 0x00_0000_FFFF_000000L) >> 24);
+    }
+
+    public int numInputs(long comp) {
+    	return (int) ((comp & 0x00_FFFF_0000_000000L) >> 40);
+    }
+
+	/**
+	 * Returns a representation of the PropNet in .dot format.
+	 *
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("digraph propNet\n{\n");
+		for ( Component component : compIndexMap.keySet())
+		{
+			int index = compIndexMap.get(component);
+			sb.append("\t" + component.bitString(components[index], compInfo[index], connecTable) + "\n");
+			if (numInputs(compInfo[index]) != component.getInputs_set().size()) {
+				System.out.println(component);
+				System.out.println("NumInputs incorrect: " + "Correct: " + component.getInputs_set().size() + " Incorrect: " + numInputs(compInfo[index]));
+				String hex = Long.toHexString(compInfo[index]);
+				String pad = "";
+				for (int i = 0; i < 16 - hex.length(); ++i) pad += "0";
+				hex = "0x" + pad + hex;
+				System.out.println("compInfo: " + hex);
+				System.exit(0);
+			}
+			if (numOutputs(compInfo[index]) != component.getOutputs_set().size()) {
+				System.out.println(component);
+				System.out.println("NumOutputs incorrect: " + "Correct: " + component.getOutputs_set().size() + " Incorrect: " + component.getOutputs_set().size());
+				String hex = Long.toHexString(compInfo[index]);
+				String pad = "";
+				for (int i = 0; i < 16 - hex.length(); ++i) pad += "0";
+				hex = "0x" + pad + hex;
+				System.out.println("compInfo: " + hex);
+				System.exit(0);
+			}
+		}
+		System.out.println("CORRECT!");
+		sb.append("}");
+
+		return sb.toString();
+	}
+
+	/**
+     * Outputs the propnet in .dot format to a particular file.
+     * This can be viewed with tools like Graphviz and ZGRViewer.
+     *
+     * @param filename the name of the file to output to
+     */
+    public void renderToFile(String filename) {
+        try {
+            File f = new File(filename);
+            FileOutputStream fos = new FileOutputStream(f);
+            OutputStreamWriter fout = new OutputStreamWriter(fos, "UTF-8");
+            fout.write(toString());
+            fout.close();
+            fos.close();
+        } catch(Exception e) {
+            GamerLogger.logStackTrace("StateMachine", e);
+        }
+        oldProp.renderToFile("old" + filename);
+    }
 
 }
 

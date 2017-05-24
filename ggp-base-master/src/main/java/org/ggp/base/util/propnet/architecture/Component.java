@@ -194,6 +194,8 @@ public abstract class Component implements Serializable
     @Override
     public abstract String toString();
 
+    public abstract String bitString(int compValue, long compInfo, int[] connecTable);
+
     /**
      * Returns a configurable representation of the Component in .dot format.
      *
@@ -216,6 +218,18 @@ public abstract class Component implements Serializable
         }
 
         return sb.toString();
+    }
+
+    public boolean get_current_value(int value) {
+    	return (value & 0x8000) != 0;
+    }
+
+    public int numOutputs(long comp) {//inline these functions
+    	return (int) ((comp & 0x00_0000_FFFF_000000L) >> 24);
+    }
+
+    public int numInputs(long comp) {
+    	return (int) ((comp & 0x00_FFFF_0000_000000L) >> 40);
     }
 
 }
