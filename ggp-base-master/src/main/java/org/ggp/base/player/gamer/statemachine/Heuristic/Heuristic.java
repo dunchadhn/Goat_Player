@@ -1,8 +1,9 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer.statemachine.Heuristic;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.ggp.base.player.gamer.statemachine.men_who_stare_at_goats.the_men_who_stare_at_goats;
 import org.ggp.base.util.Pair;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;

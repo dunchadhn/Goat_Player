@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Provides the base class for all state machine implementations.
  */
-public abstract class BitStateMachine
+public abstract class XMachine
 {
 	// ============================================
     // These methods (through findterminalp) layer over other methods
@@ -47,7 +47,7 @@ public abstract class BitStateMachine
 	/**
 	 * Returns the initial state of the game.
 	 */
-    public BitMachineState findInits()
+    public OpenBitSet findInits()
     {
     	return getInitialState();
     }
@@ -58,7 +58,7 @@ public abstract class BitStateMachine
      * @throws MoveDefinitionException if the role has no legal moves. This indicates
      * an error in either the game description or the StateMachine implementation.
      */
-    public Move findLegalx(Role role, BitMachineState state) throws MoveDefinitionException
+    public Move findLegalx(Role role, OpenBitSet state) throws MoveDefinitionException
     {
     	return getLegalMoves(state, role).get(0);
     }
@@ -68,7 +68,7 @@ public abstract class BitStateMachine
      * @throws MoveDefinitionException if the role has no legal moves. This indicates
      * an error in either the game description or the StateMachine implementation.
      */
-    public List<Move> findLegals(Role role, BitMachineState state) throws MoveDefinitionException
+    public List<Move> findLegals(Role role, OpenBitSet state) throws MoveDefinitionException
     {
     	return getLegalMoves(state, role);
     }
@@ -81,7 +81,7 @@ public abstract class BitStateMachine
      * returned by findroles().
      * @throws TransitionDefinitionException
      */
-    public BitMachineState findNext(List<Move> moves, BitMachineState state) throws TransitionDefinitionException
+    public OpenBitSet findNext(List<Move> moves, OpenBitSet state) throws TransitionDefinitionException
     {
     	return getNextState(state, moves);
     }
@@ -93,7 +93,7 @@ public abstract class BitStateMachine
      * is called on a terminal state, this indicates an error in either the game
      * description or the StateMachine implementation.
      */
-    public int findReward(Role role, BitMachineState state) throws GoalDefinitionException
+    public int findReward(Role role, OpenBitSet state) throws GoalDefinitionException
     {
     	return getGoal(state, role);
     }
@@ -102,7 +102,7 @@ public abstract class BitStateMachine
      * Returns true if and only if the given state is a terminal state (i.e. the
      * game is over).
      */
-    public boolean findTerminalp(BitMachineState state)
+    public boolean findTerminalp(OpenBitSet state)
     {
     	return isTerminal(state);
     }
@@ -127,12 +127,12 @@ public abstract class BitStateMachine
      * is called on a terminal state, this indicates an error in either the game
      * description or the StateMachine implementation.
      */
-    public abstract int getGoal(BitMachineState state, Role role) throws GoalDefinitionException;
+    public abstract int getGoal(OpenBitSet state, Role role) throws GoalDefinitionException;
     /**
      * Returns true if and only if the given state is a terminal state (i.e. the
      * game is over).
      */
-    public abstract boolean isTerminal(BitMachineState state);
+    public abstract boolean isTerminal(OpenBitSet state);
 
     /**
      * Returns a list of the roles in the game, in the same order as they
@@ -145,7 +145,7 @@ public abstract class BitStateMachine
     /**
      * Returns the initial state of the game.
      */
-    public abstract BitMachineState getInitialState();
+    public abstract OpenBitSet getInitialState();
 
     /**
      * Returns a list containing every move that is legal for the given role in the
@@ -155,7 +155,7 @@ public abstract class BitStateMachine
      * an error in either the game description or the StateMachine implementation.
      */
     // TODO: There are philosophical reasons for this to return Set<Move> rather than List<Move>.
-    public abstract List<Move> getLegalMoves(BitMachineState state, Role role) throws MoveDefinitionException;
+    public abstract List<Move> getLegalMoves(OpenBitSet state, Role role) throws MoveDefinitionException;
 
     /**
      * Returns the next state of the game given the current state and a joint move
@@ -166,7 +166,7 @@ public abstract class BitStateMachine
      * @throws TransitionDefinitionException indicates an error in either the
      * game description or the StateMachine implementation.
      */
-    public abstract BitMachineState getNextState(BitMachineState state, List<Move> moves) throws TransitionDefinitionException;
+    public abstract OpenBitSet getNextState(OpenBitSet state, List<Move> moves) throws TransitionDefinitionException;
 
     // The following methods are included in the abstract StateMachine base so
     // implementations which use alternative Role/Move/State representations
@@ -203,7 +203,7 @@ public abstract class BitStateMachine
      * <p>
      * CONTRACT: After calling this method, "state" should not be accessed.
      */
-    public BitMachineState getNextStateDestructively(BitMachineState state, List<Move> moves) throws TransitionDefinitionException {
+    public OpenBitSet getNextStateDestructively(OpenBitSet state, List<Move> moves) throws TransitionDefinitionException {
         return getNextState(state, moves);
     }
 
@@ -239,7 +239,7 @@ public abstract class BitStateMachine
      * joint moves returned will equal the number of possible moves for that
      * player.
      */
-    public List<List<Move>> getLegalJointMoves(BitMachineState state) throws MoveDefinitionException
+    public List<List<Move>> getLegalJointMoves(OpenBitSet state) throws MoveDefinitionException
     {
         List<List<Move>> legals = new ArrayList<List<Move>>();
         for (Role role : getRoles()) {
@@ -257,7 +257,7 @@ public abstract class BitStateMachine
      * the given role makes the given move. This will be a subset of the list
      * of joint moves given by {@link #getLegalJointMoves(MachineState)}.
      */
-    public List<List<Move>> getLegalJointMoves(BitMachineState state, Role role, Move move) throws MoveDefinitionException
+    public List<List<Move>> getLegalJointMoves(OpenBitSet state, Role role, Move move) throws MoveDefinitionException
     {
         List<List<Move>> legals = new ArrayList<List<Move>>();
         for (Role r : getRoles()) {
@@ -282,9 +282,9 @@ public abstract class BitStateMachine
      * joint move that could be played; as such, a single machine state could
      * be included multiple times.
      */
-    public List<BitMachineState> getNextStates(BitMachineState state) throws MoveDefinitionException, TransitionDefinitionException
+    public List<OpenBitSet> getNextStates(OpenBitSet state) throws MoveDefinitionException, TransitionDefinitionException
     {
-        List<BitMachineState> nextStates = new ArrayList<BitMachineState>();
+        List<OpenBitSet> nextStates = new ArrayList<OpenBitSet>();
         for (List<Move> move : getLegalJointMoves(state)) {
             nextStates.add(getNextState(state, move));
         }
@@ -300,14 +300,14 @@ public abstract class BitStateMachine
      * If the given role is the only role with more than one legal move,
      * then each list of states in the map will only contain one state.
      */
-    public Map<Move, List<BitMachineState>> getNextStates(BitMachineState state, Role role) throws MoveDefinitionException, TransitionDefinitionException
+    public Map<Move, List<OpenBitSet>> getNextStates(OpenBitSet state, Role role) throws MoveDefinitionException, TransitionDefinitionException
     {
-        Map<Move, List<BitMachineState>> nextStates = new HashMap<Move, List<BitMachineState>>();
+        Map<Move, List<OpenBitSet>> nextStates = new HashMap<Move, List<OpenBitSet>>();
         Map<Role, Integer> roleIndices = getRoleIndices();
         for (List<Move> moves : getLegalJointMoves(state)) {
             Move move = moves.get(roleIndices.get(role));
             if (!nextStates.containsKey(move)) {
-                nextStates.put(move, new ArrayList<BitMachineState>());
+                nextStates.put(move, new ArrayList<OpenBitSet>());
             }
             nextStates.get(move).add(getNextState(state, moves));
         }
@@ -359,7 +359,7 @@ public abstract class BitStateMachine
      * is called on a terminal state, this indicates an error in either the game
      * description or the StateMachine implementation.
      */
-    public List<Integer> getGoals(BitMachineState state) throws GoalDefinitionException {
+    public List<Integer> getGoals(OpenBitSet state) throws GoalDefinitionException {
         List<Integer> theGoals = new ArrayList<Integer>();
         for (Role r : getRoles()) {
             theGoals.add(getGoal(state, r));
@@ -371,7 +371,7 @@ public abstract class BitStateMachine
      * Returns a random joint move from among all the possible joint moves in
      * the given state.
      */
-    public List<Move> getRandomJointMove(BitMachineState state) throws MoveDefinitionException
+    public List<Move> getRandomJointMove(OpenBitSet state) throws MoveDefinitionException
     {
         List<Move> random = new ArrayList<Move>();
         for (Role role : getRoles()) {
@@ -385,7 +385,7 @@ public abstract class BitStateMachine
      * Returns a random joint move from among all the possible joint moves in
      * the given state in which the given role makes the given move.
      */
-    public List<Move> getRandomJointMove(BitMachineState state, Role role, Move move) throws MoveDefinitionException
+    public List<Move> getRandomJointMove(OpenBitSet state, Role role, Move move) throws MoveDefinitionException
     {
         List<Move> random = new ArrayList<Move>();
         for (Role r : getRoles()) {
@@ -403,7 +403,7 @@ public abstract class BitStateMachine
      * Returns a random move from among the possible legal moves for the
      * given role in the given state.
      */
-    public Move getRandomMove(BitMachineState state, Role role) throws MoveDefinitionException
+    public Move getRandomMove(OpenBitSet state, Role role) throws MoveDefinitionException
     {
         List<Move> legals = getLegalMoves(state, role);
         return legals.get(new Random().nextInt(legals.size()));
@@ -417,7 +417,7 @@ public abstract class BitStateMachine
      * This is not necessarily uniform among the possible states themselves,
      * as multiple joint moves may result in the same state.
      */
-    public BitMachineState getRandomNextState(BitMachineState state) throws MoveDefinitionException, TransitionDefinitionException
+    public OpenBitSet getRandomNextState(OpenBitSet state) throws MoveDefinitionException, TransitionDefinitionException
     {
         List<Move> random = getRandomJointMove(state);
         return getNextState(state, random);
@@ -434,7 +434,7 @@ public abstract class BitStateMachine
      * If the given role is the only role with more than one legal move, then
      * there is only one possible next state for this method to return.
      */
-    public BitMachineState getRandomNextState(BitMachineState state, Role role, Move move) throws MoveDefinitionException, TransitionDefinitionException
+    public OpenBitSet getRandomNextState(OpenBitSet state, Role role, Move move) throws MoveDefinitionException, TransitionDefinitionException
     {
         List<Move> random = getRandomJointMove(state, role, move);
         return getNextState(state, random);
@@ -447,7 +447,7 @@ public abstract class BitStateMachine
      * @param theDepth an integer array, the 0th element of which will be set to
      * the number of state changes that were made to reach a terminal state.
      */
-    public BitMachineState performDepthCharge(BitMachineState state, final int[] theDepth) throws TransitionDefinitionException, MoveDefinitionException {
+    public OpenBitSet performDepthCharge(OpenBitSet state, final int[] theDepth) throws TransitionDefinitionException, MoveDefinitionException {
         int nDepth = 0;
         while(!isTerminal(state)) {
             nDepth++;
@@ -458,14 +458,14 @@ public abstract class BitStateMachine
         return state;
     }
 
-    public void getAverageDiscountedScoresFromRepeatedDepthCharges(final BitMachineState state, final double[] avgScores, final double[] avgDepth, final double discountFactor, final int repetitions) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+    public void getAverageDiscountedScoresFromRepeatedDepthCharges(final OpenBitSet state, final double[] avgScores, final double[] avgDepth, final double discountFactor, final int repetitions) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
         avgDepth[0] = 0;
         for (int j = 0; j < avgScores.length; j++) {
             avgScores[j] = 0;
         }
         final int[] depth = new int[1];
         for (int i = 0; i < repetitions; i++) {
-            BitMachineState stateForCharge = state.clone();
+        	OpenBitSet stateForCharge = (OpenBitSet) state.clone();
             stateForCharge = performDepthCharge(stateForCharge, depth);
             avgDepth[0] += depth[0];
             final double accumulatedDiscountFactor = Math.pow(discountFactor, depth[0]);
@@ -484,6 +484,6 @@ public abstract class BitStateMachine
 		return null;
 	}
 
-	public abstract MachineState toGdl(BitMachineState state);
-	public abstract BitMachineState toBit(MachineState state);
+	public abstract MachineState toGdl(OpenBitSet state);
+	public abstract OpenBitSet toBit(MachineState state);
 }

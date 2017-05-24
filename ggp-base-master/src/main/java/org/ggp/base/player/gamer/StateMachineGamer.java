@@ -1,10 +1,9 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.ggp.base.player.gamer.Gamer;
 import org.ggp.base.player.gamer.exception.AbortingException;
 import org.ggp.base.player.gamer.exception.MetaGamingException;
 import org.ggp.base.player.gamer.exception.MoveSelectionException;

@@ -1,4 +1,4 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.util.statemachine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,17 +14,13 @@ import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.XPropNet;
 import org.ggp.base.util.propnet.architecture.components.BitProposition;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
-import org.ggp.base.util.statemachine.BitStateMachine;
-import org.ggp.base.util.statemachine.MachineState;
-import org.ggp.base.util.statemachine.Move;
-import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 
 
 
 @SuppressWarnings("unused")
-public class XStateMachine extends BitStateMachine {
+public class XStateMachine extends XMachine {
     private long main_thread;
     private int main_ind = 48;
     private int num_threads = 48;
@@ -32,7 +28,7 @@ public class XStateMachine extends BitStateMachine {
 
     private XPropNet propNet;
     private Role[] roles;
-    private BitMachineState currentState;
+    private OpenBitSet currentState;
     private OpenBitSet currInputs;
     private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
     private HashMap<Role, List<Move>> actions;
@@ -172,7 +168,7 @@ public class XStateMachine extends BitStateMachine {
     }
 
     @Override
-    public BitMachineState getInitialState() {
+    public OpenBitSet getInitialState() {
     	int thread_id = main_ind;
     	clearPropNet(thread_id);
     	int init = propNet.getInitProposition();
@@ -278,7 +274,7 @@ public class XStateMachine extends BitStateMachine {
         	}
     	}
 
-    	currentState = new BitMachineState(baseSet);
+    	currentState = baseSet;
     	currentLegalMoves = getLegals(legalSet);
     }
 
@@ -320,7 +316,7 @@ public class XStateMachine extends BitStateMachine {
     }
 
     @Override
-    public List<Move> getLegalMoves(BitMachineState state, Role role)//Change such that we don't have to keep updating legal moves
+    public List<Move> getLegalMoves(OpenBitSet state, Role role)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
     	int thread_id = main_ind;
     	setState(state, null, thread_id);
@@ -329,12 +325,11 @@ public class XStateMachine extends BitStateMachine {
     }
 
 
-	protected void setBases(BitMachineState state, Queue<Integer> q, int thread_id) {
-    	if (state == null) return;
+	protected void setBases(OpenBitSet nextSet, Queue<Integer> q, int thread_id) {
+    	if (nextSet == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
-    	OpenBitSet nextSet = state.getContents();
-    	OpenBitSet currSet = currentState.getContents();
+    	OpenBitSet currSet = currentState;
     	currSet.xor(nextSet);
 
     	for (int i = currSet.nextSetBit(0); i != -1; i = currSet.nextSetBit(i + 1)) {
@@ -402,7 +397,7 @@ public class XStateMachine extends BitStateMachine {
 		return movesSet;
 	}
 
-    protected void setState(BitMachineState state, List<Move> moves, int thread_id) {
+    protected void setState(OpenBitSet state, List<Move> moves, int thread_id) {
     	Queue<Integer> q = new LinkedList<Integer>();
     	setBases(state, q, thread_id);
     	setActions(movesToBit(moves), q, thread_id);
@@ -410,7 +405,7 @@ public class XStateMachine extends BitStateMachine {
     }
 
     @Override
-	public BitMachineState getNextState(BitMachineState state, List<Move> moves) {
+	public OpenBitSet getNextState(OpenBitSet state, List<Move> moves) {
     	int thread_id = main_ind;
     	long td = Thread.currentThread().getId();
     	setState(state, moves, thread_id);
@@ -424,7 +419,7 @@ public class XStateMachine extends BitStateMachine {
     }
 
     @Override
-    public boolean isTerminal(BitMachineState state) {
+    public boolean isTerminal(OpenBitSet state) {
     	int thread_id = main_ind;
     	setState(state, null, thread_id);
     	int term = propNet.getTerminalProposition();
@@ -441,7 +436,7 @@ public class XStateMachine extends BitStateMachine {
     }
 
     @Override
-    public int getGoal(BitMachineState state, Role role)
+    public int getGoal(OpenBitSet state, Role role)
             throws GoalDefinitionException {
     	int thread_id = main_ind;
     	setState(state, null, thread_id);
@@ -495,7 +490,7 @@ public class XStateMachine extends BitStateMachine {
 
 
     @Override
-	public MachineState toGdl(BitMachineState state) {
+	public MachineState toGdl(OpenBitSet state) {
     	int thread_id = main_ind;
     	long td = Thread.currentThread().getId();
     	if(td != main_thread) {
@@ -511,14 +506,14 @@ public class XStateMachine extends BitStateMachine {
     }
 
     @Override
-	public BitMachineState toBit(MachineState state) {
+	public OpenBitSet toBit(MachineState state) {
     	Set<GdlSentence> bases = state.getContents();
     	HashMap<GdlSentence, Integer> basesMap = propNet.getBasesMap();
     	OpenBitSet bitSet = new OpenBitSet(basesMap.values().size());
     	for (GdlSentence base : bases) {
     		bitSet.fastSet(basesMap.get(base));
     	}
-    	return new BitMachineState(bitSet);
+    	return bitSet;
     }
 
 

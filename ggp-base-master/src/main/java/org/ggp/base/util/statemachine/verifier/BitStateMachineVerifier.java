@@ -3,8 +3,8 @@ package org.ggp.base.util.statemachine.verifier;
 import java.util.HashSet;
 import java.util.List;
 
-import org.ggp.base.player.gamer.statemachine.BitMachineState;
 import org.ggp.base.util.logging.GamerLogger;
+import org.ggp.base.util.statemachine.BitMachineState;
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;

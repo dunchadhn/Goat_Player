@@ -1,9 +1,11 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer.statemachine.Old_Players;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.ggp.base.player.gamer.statemachine.Nodes.Node;
+import org.ggp.base.player.gamer.statemachine.men_who_stare_at_goats.the_men_who_stare_at_goats;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;

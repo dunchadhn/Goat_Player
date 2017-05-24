@@ -1,15 +1,16 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer.statemachine.Nodes;
 
 import java.util.HashMap;
 import java.util.List;
 
+import org.ggp.base.util.statemachine.BitMachineState;
 import org.ggp.base.util.statemachine.Move;
 
 public class BitNode {
 
 	public static int nodeCount = 0;
 
-	BitNode(BitMachineState state) {
+	public BitNode(BitMachineState state) {
 		this.state = state;
 		this.isTerminal = false;
 		this.children = new HashMap<List<Move>, BitNode>();

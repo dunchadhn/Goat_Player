@@ -1,4 +1,4 @@
-package org.ggp.base.player.gamer.statemachine;
+package org.ggp.base.player.gamer.statemachine.threadpools;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,6 +9,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.ggp.base.player.gamer.statemachine.Nodes.BitNode;
+import org.ggp.base.player.gamer.statemachine.men_who_stare_at_goats.BIT_the_men_who_stare_at_goats;
+import org.ggp.base.util.statemachine.BitMachineState;
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
