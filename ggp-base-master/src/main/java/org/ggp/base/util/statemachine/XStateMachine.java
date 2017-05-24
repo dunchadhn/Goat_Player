@@ -32,9 +32,9 @@ public class XStateMachine extends XMachine {
     private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
     private HashMap<Role, List<Move>> actions;
     private HashMap<Role, List<Move>> currentLegalMoves;
-    private HashMap<Integer, Integer> roleIndexMap;
+    private HashMap<Integer, Integer> rolesIndexMap;
     private Move[] legalArray;
-    private HashMap<Move, Integer>[] roleMoves;
+    private List<HashMap<Move, Integer>> roleMoves;
     private int[] components;
     private long[] compInfo;
     private int[] connecTable;
@@ -62,7 +62,7 @@ public class XStateMachine extends XMachine {
             legalOffset = propNet.getLegalOffset();
             inputOffset = propNet.getInputOffset();
             actions = propNet.getActionsMap();
-            roleIndexMap = propNet.getRoleIndexMap();
+            rolesIndexMap = propNet.getRolesIndexMap();
             legalArray = propNet.getLegalArray();
             roleMoves = propNet.getRoleMoves();
             gdlSentenceMap = propNet.getGdlSentenceMap();
@@ -284,14 +284,14 @@ public class XStateMachine extends XMachine {
     	int size = roles.length - 1;
     	for (int i = 0; i < size; ++i) {
     		List<Move> moves = new ArrayList<Move>();
-    		int roleIndex = roleIndexMap.get(i);
-    		int nextRoleIndex = roleIndexMap.get(i + 1);
+    		int roleIndex = rolesIndexMap.get(i);
+    		int nextRoleIndex = rolesIndexMap.get(i + 1);
     		for (int j = roleIndex; j < nextRoleIndex; ++j) {
     			if (s.fastGet(j)) moves.add(legalArray[j]);
     		}
     		legalMap.put(roles[i], moves);
     	}
-    	int start = roleIndexMap.get(size);
+    	int start = rolesIndexMap.get(size);
     	int end = legalArray.length;
     	List<Move> moves = new ArrayList<Move>();
     	for(int i = start; i < end; ++i) {
@@ -326,10 +326,11 @@ public class XStateMachine extends XMachine {
     }
 
 
-	protected void setBases(OpenBitSet nextSet, Queue<Integer> q, int thread_id) {
-    	if (nextSet == null) return;
+	protected void setBases(OpenBitSet state, Queue<Integer> q, int thread_id) {
+    	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
+    	OpenBitSet nextSet = state;
     	OpenBitSet currSet = currentState;
     	currSet.xor(nextSet);
 
@@ -392,7 +393,7 @@ public class XStateMachine extends XMachine {
 		if (moves == null || moves.isEmpty()) return null;
 		OpenBitSet movesSet = new OpenBitSet(numLegals);
 		for (int i = 0; i < moves.size(); ++i) {
-			int index = roleMoves[i].get(moves.get(i));
+			int index = roleMoves.get(i).get(moves.get(i));
 			movesSet.fastSet(index);
 		}
 		return movesSet;
@@ -462,46 +463,10 @@ public class XStateMachine extends XMachine {
         return rs;
     }
 
-    /* Helper methods */
-
-    /**
-     * The Input propositions are indexed by (does ?player ?action).
-     *
-     * This translates a list of Moves (backed by a sentence that is simply ?action)
-     * into GdlSentences that can be used to get Propositions from inputPropositions.
-     * and accordingly set their values etc.  This is a naive implementation when coupled with
-     * setting input values, feel free to change this for a more efficient implementation.
-     *
-     * @param moves
-     * @return
-     */
-   /* private OpenBitSet toDoes(List<Move> moves, int size, BitProposition[] inputs)
-    {
-    	OpenBitSet doeses = new OpenBitSet(size);
-    	HashMap< Pair<GdlTerm, GdlTerm>, Integer> m = propNet.getInputMap();
-    	for (int i = 0; i < moves.size(); ++i) {
-    		GdlConstant r = roles.get(i).getName();
-    		GdlTerm t = moves.get(i).getContents();
-    		Pair<GdlConstant, GdlTerm> pair = Pair.of(r, t);
-    		int index = m.get(pair);
-    		doeses.fastSet(index);
-    	}
-
-        return doeses;
-    }*/
-
 
 
     @Override
 	public MachineState toGdl(OpenBitSet state) {
-<<<<<<< HEAD:ggp-base-master/src/main/java/org/ggp/base/player/gamer/statemachine/XStateMachine.java
-=======
-    	int thread_id = main_ind;
-    	long td = Thread.currentThread().getId();
-    	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
-    	}
->>>>>>> 3754029e5dbf08ee97bb39b6d53157bbe2a222a4:ggp-base-master/src/main/java/org/ggp/base/util/statemachine/XStateMachine.java
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
     	int[] baseProps = propNet.getBasePropositions();
     	for (int i = state.nextSetBit(0); i != 1; i = state.nextSetBit(i)) {
@@ -514,7 +479,7 @@ public class XStateMachine extends XMachine {
 	public OpenBitSet toBit(MachineState state) {
     	Set<GdlSentence> bases = state.getContents();
     	HashMap<GdlSentence, Integer> basesMap = propNet.getBasesMap();
-    	OpenBitSet bitSet = new OpenBitSet(basesMap.values().size());
+    	OpenBitSet bitSet = new OpenBitSet(numBases);
     	for (GdlSentence base : bases) {
     		bitSet.fastSet(basesMap.get(base));
     	}

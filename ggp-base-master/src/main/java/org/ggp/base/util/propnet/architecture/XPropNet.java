@@ -20,47 +20,6 @@ import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 
 
-/**
- * The PropNet class is designed to represent Propositional Networks.
- *
- * A propositional network (also known as a "propnet") is a way of representing
- * a game as a logic circuit. States of the game are represented by assignments
- * of TRUE or FALSE to "base" propositions, each of which represents a single
- * fact that can be true about the state of the game. For example, in a game of
- * Tic-Tac-Toe, the fact (cell 1 1 x) indicates that the cell (1,1) has an 'x'
- * in it. That fact would correspond to a base proposition, which would be set
- * to TRUE to indicate that the fact is true in the current state of the game.
- * Likewise, the base corresponding to the fact (cell 1 1 o) would be false,
- * because in that state of the game there isn't an 'o' in the cell (1,1).
- *
- * A state of the game is uniquely determined by the assignment of truth values
- * to the base propositions in the propositional network. Every assignment of
- * truth values to base propositions corresponds to exactly one unique state of
- * the game.
- *
- * Given the values of the base propositions, you can use the connections in
- * the network (AND gates, OR gates, NOT gates) to determine the truth values
- * of other propositions. For example, you can determine whether the terminal
- * proposition is true: if that proposition is true, the game is over when it
- * reaches this state. Otherwise, if it is false, the game isn't over. You can
- * also determine the value of the goal propositions, which represent facts
- * like (goal xplayer 100). If that proposition is true, then that fact is true
- * in this state of the game, which means that xplayer has 100 points.
- *
- * You can also use a propositional network to determine the next state of the
- * game, given the current state and the moves for each player. First, you set
- * the input propositions which correspond to each move to TRUE. Once that has
- * been done, you can determine the truth value of the transitions. Each base
- * proposition has a "transition" component going into it. This transition has
- * the truth value that its base will take on in the next state of the game.
- *
- * For further information about propositional networks, see:
- *
- * "Decomposition of Games for Efficient Reasoning" by Eric Schkufza.
- * "Factoring General Games using Propositional Automata" by Evan Cox et al.
- *
- * @author Sam Schreiber
- */
 
 public final class XPropNet
 {
@@ -92,7 +51,6 @@ public final class XPropNet
 	private int initProposition, terminalProposition;
     private int[] basePropositions;
     private int[] inputPropositions;
-    private int[] legalPropositions;
     private int[] constants;
     private int[] components;
     private long[] compInfo;
@@ -100,7 +58,10 @@ public final class XPropNet
     private HashMap<Role, int[]> goalPropositions;
     private HashMap<Role, List<Move>> actionsMap;
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
+    private HashMap<GdlSentence, Integer> basesMap;
+    private HashMap<Integer, Integer> rolesIndexMap;
     private Move[] legalArray;
+    private List<HashMap<Move, Integer>> roleMoves;
 
 
 	public XPropNet(PropNet prop)
@@ -122,6 +83,7 @@ public final class XPropNet
 			Proposition b = e.getValue();
 			bases.add(b);
 			gdlSentenceMap.put(compId, e.getKey());
+			basesMap.put(e.getKey(), compId - numBases);
 			compIndices.put(b, compId++);
 			total_outputs += b.getOutputs_set().size();
 		}
@@ -138,9 +100,11 @@ public final class XPropNet
 		legalOffset = compId;
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
 		numLegals = 0;
+		rolesIndexMap = new HashMap<Integer, Integer>();
 		for (int i = 0; i < roles.length; ++i) {
 			legals.add(new ArrayList<Proposition>(moveMap.get(roles[i])));
 			List<Move> moves = new ArrayList<Move>();
+			rolesIndexMap.put(i, compId);
 			for (Proposition l : legals.get(i)) {
 				compIndices.put(l, compId++);
 				total_outputs += l.getOutputs_set().size();
@@ -207,10 +171,13 @@ public final class XPropNet
 				connecTable[outputIndex++] = compIndices.get(out);
 			}
 		}
+		roleMoves = new ArrayList<HashMap<Move, Integer>>();
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> ls = legals.get(i);
 			props.addAll(ls);
+			HashMap<Move, Integer> mMap = new HashMap<Move, Integer>();
 			for (Proposition l : ls) {
+				mMap.put(new Move(l.getName().getBody().get(1)), compIndices.get(l));
 				long type = TRIGGER_LEGAL;
 				long num_inputs = ((long)l.getInputs_set().size()) << INPUT_SHIFT;
 				List<Component> outputs = outputMap.get(l);
@@ -223,6 +190,7 @@ public final class XPropNet
 					connecTable[outputIndex++] = compIndices.get(out);
 				}
 			}
+			roleMoves.add(mMap);
 		}
 
 		for (Component c : prop.getComponents()) {
@@ -289,10 +257,9 @@ public final class XPropNet
 
 			}
 		}
-		constants = consts.toArray();
+		constants = new int[consts.size()];
+		for (int i = 0; i < constants.length; ++i) constants[i] = consts.get(i);
 
-		roleIndexMap = propNet.getRoleIndexMap();
-        roleMoves = propNet.getRoleMoves();
 
 	}
 
@@ -372,42 +339,24 @@ public final class XPropNet
 		return gdlSentenceMap;
 	}
 
+	public HashMap<GdlSentence, Integer> getBasesMap() {
+		return basesMap;
+	}
+
+	public HashMap<Integer, Integer> getRolesIndexMap() {
+		return rolesIndexMap;
+	}
+
+	public List<HashMap<Move, Integer>> getRoleMoves() {
+		return roleMoves;
+	}
+
 
 }
 
 
 
 
-
-
-
-
-	/*private Map<BitProposition, BitProposition> makeLegalInputMap() {
-		Map<BitProposition, BitProposition> legalInputMap = new HashMap<BitProposition, BitProposition>();
-		// Create a mapping from Body->Input.
-		Map<List<GdlTerm>, BitProposition> inputPropsByBody = new HashMap<List<GdlTerm>, BitProposition>();
-		int size = inputPropositions.length;
-		for(int i = 0; i < size; ++i) {
-			BitProposition inputProp = inputPropositions[i];
-			List<GdlTerm> inputPropBody = (inputProp.getName()).getBody();
-			inputPropsByBody.put(inputPropBody, inputProp);
-		}
-		// Use that mapping to map Input->Legal and Legal->Input
-		// based on having the same Body proposition.
-		for(BitProposition[] legalProps : legalPropositions.values()) {
-			size = legalProps.length;
-			for(int i = 0; i < size; ++i) {
-				BitProposition legalProp = legalProps[i];
-				List<GdlTerm> legalPropBody = (legalProp.getName()).getBody();
-				if (inputPropsByBody.containsKey(legalPropBody)) {
-    				BitProposition inputProp = inputPropsByBody.get(legalPropBody);
-    				legalInputMap.put(inputProp, legalProp);
-    				legalInputMap.put(legalProp, inputProp);
-				}
-			}
-		}
-		return legalInputMap;
-	}*/
 
 /*
 	@Override
