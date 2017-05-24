@@ -15,12 +15,12 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class BIT_the_men_who_stare_at_goats extends BitStateMachineGamer {
+public class X_the_men_who_stare_at_goats extends BitStateMachineGamer {
 	protected Player p;
 
 	@Override
 	public BitStateMachine getInitialStateMachine() {
-		return new BitDifferentialPropNetStateMachine();
+		return new XStateMachine();
 	}
 
 	@Override
@@ -64,7 +64,7 @@ public class BIT_the_men_who_stare_at_goats extends BitStateMachineGamer {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "BIT_the_men_who_stare_at_goats Player";
+		return "X_the_men_who_stare_at_goats Player";
 	}
 
 	protected Move bestmove(Role role, BitStateMachine machine)
@@ -77,3 +77,4 @@ public class BIT_the_men_who_stare_at_goats extends BitStateMachineGamer {
 
 
 }
+
