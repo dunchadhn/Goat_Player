@@ -12,7 +12,6 @@ import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.XPropNet;
-import org.ggp.base.util.propnet.architecture.components.BitProposition;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.BitStateMachine;
 import org.ggp.base.util.statemachine.MachineState;
@@ -43,6 +42,7 @@ public class XStateMachine extends BitStateMachine {
     private int[] components;
     private long[] compInfo;
     private int[] connecTable;
+    private HashMap<Integer, GdlSentence> gdlSentenceMap;
 
     /**
      * Initializes the PropNetStateMachine. You should compute the topological
@@ -59,16 +59,17 @@ public class XStateMachine extends BitStateMachine {
             compInfo = propNet.getCompInfo();
             connecTable = propNet.getConnecTable();
             roles = propNet.getRoles();
-            numBases = propNet.getBasePropositions().length;
-            numInputs = propNet.getInputPropositions().length;
+            numBases = propNet.numBases();
+            numInputs = propNet.numInputs();
             numLegals = numInputs;
             baseOffset = propNet.getBaseOffset();
             legalOffset = propNet.getLegalOffset();
             inputOffset = propNet.getInputOffset();
-            actions = propNet.getLegalPropositions();
+            actions = propNet.getActionsMap();
             roleIndexMap = propNet.getRoleIndexMap();
             legalArray = propNet.getLegalArray();
             roleMoves = propNet.getRoleMoves();
+            gdlSentenceMap = propNet.getGdlSentenceMap();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -420,7 +421,7 @@ public class XStateMachine extends BitStateMachine {
 
 
     protected void clearPropNet(int thread_id) {
-    	components = propNet.getDefaultComponents();
+    	components = propNet.getComponents();
     }
 
     @Override
@@ -461,7 +462,9 @@ public class XStateMachine extends BitStateMachine {
     /* Already implemented for you */
     @Override
     public List<Role> getRoles() {
-        return roles;
+    	List<Role> rs = new ArrayList<Role>();
+        for (int i = 0; i < roles.length; ++i) rs.add(roles[i]);
+        return rs;
     }
 
     /* Helper methods */
@@ -495,23 +498,17 @@ public class XStateMachine extends BitStateMachine {
 
 
     @Override
-	public MachineState toGdl(BitMachineState state) {
-    	int thread_id = main_ind;
-    	long td = Thread.currentThread().getId();
-    	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
-    	}
+	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
-    	BitProposition[] baseProps = propNet.getBasePropositions();
-    	for (int i = 0; i < baseProps.length; ++i) {
-    		BitProposition p = baseProps[i];
-    		if (p.getCurrentValue(thread_id)) bases.add(p.getName());
+    	int[] baseProps = propNet.getBasePropositions();
+    	for (int i = state.nextSetBit(0); i != 1; i = state.nextSetBit(i)) {
+    		bases.add(gdlSentenceMap.get(baseOffset + i));
     	}
     	return new MachineState(bases);
     }
 
     @Override
-	public BitMachineState toBit(MachineState state) {
+	public OpenBitSet toBit(MachineState state) {
     	Set<GdlSentence> bases = state.getContents();
     	HashMap<GdlSentence, Integer> basesMap = propNet.getBasesMap();
     	OpenBitSet bitSet = new OpenBitSet(basesMap.values().size());
