@@ -139,7 +139,6 @@ public class DifferentialPropNetStateMachine extends StateMachine {
             }
         }
         for(Proposition p: propNet.getInputPropositions().values()) {
-        	System.out.println(p.getName().getBody());
         	outputs = p.getOutputs_arr();
         	size = p.getOutputsSize();
         	for(int i = 0; i < size; i++) {
