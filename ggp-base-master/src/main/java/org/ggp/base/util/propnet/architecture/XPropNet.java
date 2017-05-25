@@ -290,11 +290,12 @@ public final class XPropNet
 				List<Component> outputs = outputMap.get(c);
 				long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
 				long outIndex = ((long)outputIndex);
-				long info = type ^ num_inputs ^ num_outputs ^ outIndex;
+				long info = type | num_inputs | num_outputs | outIndex;
 				compInfo[compIndices.get(c)] = info;
 				components[compIndices.get(c)] = INIT_DEFAULT;
 				for (Component out : outputs) {
-					connecTable[outputIndex++] = compIndices.get(out);
+					connecTable[outputIndex] = compIndices.get(out);
+					++outputIndex;
 				}
 
 			}
@@ -315,14 +316,17 @@ public final class XPropNet
 				List<Component> outputs = outputMap.get(g);
 				long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
 				long outIndex = ((long)outputIndex);
-				long info = type ^ num_inputs ^ num_outputs ^ outIndex;
+				long info = type | num_inputs | num_outputs | outIndex;
 				compInfo[compIndices.get(g)] = info;
 				components[compIndices.get(g)] = INIT_DEFAULT;
-				rewards[i++] = compIndices.get(g);
+				rewards[i] = compIndices.get(g);
+				++i;
 				for (Component out : outputs) {
-					connecTable[outputIndex++] = compIndices.get(out);
+					connecTable[outputIndex] = compIndices.get(out);
+					++outputIndex;
 				}
 			}
+			goalPropositions.put(r, rewards);
 		}
 
 		List<Integer> consts = new ArrayList<Integer>();
@@ -349,10 +353,11 @@ public final class XPropNet
 				List<Component> outputs = outputMap.get(c);
 				long num_outputs = ((long)outputs.size()) << OUTPUT_SHIFT;
 				long outIndex = ((long)outputIndex);
-				long info = type ^ num_inputs ^ num_outputs ^ outIndex;
+				long info = type | num_inputs | num_outputs | outIndex;
 				compInfo[compIndices.get(c)] = info;
 				for (Component out : outputs) {
-					connecTable[outputIndex++] = compIndices.get(out);
+					connecTable[outputIndex] = compIndices.get(out);
+					++outputIndex;
 				}
 
 			}

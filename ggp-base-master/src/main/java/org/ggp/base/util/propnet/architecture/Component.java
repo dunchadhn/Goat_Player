@@ -221,7 +221,7 @@ public abstract class Component implements Serializable
     }
 
     public boolean get_current_value(int value) {
-    	return (value & 0x8000) != 0;
+    	return (value & 0x8000_0000) != 0;
     }
 
     public int numOutputs(long comp) {//inline these functions

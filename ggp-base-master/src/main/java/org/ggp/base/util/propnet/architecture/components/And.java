@@ -69,7 +69,7 @@ public final class And extends Component
 	}
 
 	protected int num_set(int compValue, long compInfo) {
-		return (int) (compValue - (0x8000 - numInputs(compInfo)));
+		return (int) (compValue - (0x8000_0000 - numInputs(compInfo)));
 	}
 
 	@Override

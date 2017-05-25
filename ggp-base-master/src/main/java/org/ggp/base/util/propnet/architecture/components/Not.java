@@ -33,7 +33,7 @@ public final class Not extends Component
 		assert numInputs(compInfo) == 1;
 		boolean currVal = get_current_value(compValue);
 		if (currVal) {
-			if (compValue != 0xFFFF) {
+			if (compValue != 0xFFFF_FFFF) {
 				System.out.println("NOT is true but not 0xFFFF");
 				System.exit(0);
 			}

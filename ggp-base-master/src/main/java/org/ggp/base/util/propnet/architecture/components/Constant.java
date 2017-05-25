@@ -54,7 +54,7 @@ public final class Constant extends Component
 	}
 
 	protected int num_set(int compValue, long compInfo) {
-		return (int) (compValue - 0x8000);
+		return (int) (compValue - 0x8000_0000);
 	}
 
 	@Override

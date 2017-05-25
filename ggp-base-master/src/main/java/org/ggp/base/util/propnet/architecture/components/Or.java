@@ -64,7 +64,7 @@ public final class Or extends Component
 	}
 
 	protected int num_set(int compValue, long compInfo) {
-		return (int) (compValue - 0x7FFF);
+		return (int) (compValue - 0x7FFF_FFFF);
 	}
 
 	@Override

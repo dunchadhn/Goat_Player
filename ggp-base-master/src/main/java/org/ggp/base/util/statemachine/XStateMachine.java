@@ -100,8 +100,8 @@ public class XStateMachine extends XMachine {
     	return (int) (comp & OFFSET_MASK);
     }
 
-    private static final int CURR_VAL_MASK = 0x8000;
-    private static final int NOT_CURR_VAL_MASK = 0x7FFF;
+    private static final int CURR_VAL_MASK = 0x8000_0000;
+    private static final int NOT_CURR_VAL_MASK = 0x7FFF_FFFF;
 
     protected boolean get_current_value(int value) {
     	return (value & CURR_VAL_MASK) != 0;
@@ -119,16 +119,15 @@ public class XStateMachine extends XMachine {
     	int init = propNet.getInitProposition();
     	Queue<Integer> q = setInit(init, true);
     	propNet.renderToFile("initialstate.dot");
-    	//setConstants(q);
-    	//addBases(q);
-    	//addInputs(q);
+    	setConstants(q);
+    	addBases(q);
+    	addInputs(q);
     	rawPropagate(q, thread_id);
+    	OpenBitSet state = currentState;
     	q = setInit(init, false);
     	propNet.renderToFile("test.dot");
-    	System.exit(0);
         propagate(q, thread_id);
         propNet.renderToFile("initial.dot");
-        System.exit(0);
         return currentState;
     }
 
@@ -147,12 +146,16 @@ public class XStateMachine extends XMachine {
 
     	for (int i = 0; i < num_outputs; ++i) {
     		int outIndex = connecTable[outputsIndex + i];
-    		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
-    		//else components[outIndex] -= 1;
+    		if (val) {
+    			components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
+    			if (!get_current_value(components[outIndex])) {
+        			System.out.println("NOT TRUE");
+        		}
+    		}
+    		else components[outIndex] -= 1;
     		System.out.println(outIndex);
     		q.add(outIndex); //add init outputs to the queue
     	}
-    	System.exit(0);
 
     	return q;
     }
@@ -217,8 +220,7 @@ public class XStateMachine extends XMachine {
     	currentState = new OpenBitSet(numBases);
     	currLegals = new OpenBitSet(numLegals);
     	while(!q.isEmpty()) {
-    		System.out.println(q.remove());
-    		/*int compId = q.remove();
+    		int compId = q.remove();
     		int value = components[compId];
     		boolean val = get_current_value(value);
     		long comp = compInfo[compId];
@@ -244,14 +246,15 @@ public class XStateMachine extends XMachine {
         		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
         		else components[outIndex] -= 1;
         		q.add(outIndex);
-        	}*/
+        	}
     	}
     }
 
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
     protected void propagate(Queue<Integer> q, int thread_id) {
-
+    	currentState = new OpenBitSet(numBases);
+    	currLegals = new OpenBitSet(numLegals);
     	while(!q.isEmpty()) {
     		int compId = q.remove();
     		int value = components[compId];
@@ -330,6 +333,11 @@ public class XStateMachine extends XMachine {
             throws MoveDefinitionException {
     	int thread_id = main_ind;
     	setState(state, null, thread_id);
+    	int size = currLegals.getBits().length;
+    	for(int i = 0; i < size; ++i) {
+    		System.out.println(currLegals.getBits()[i]);
+    	}
+    	currentLegalMoves = getLegals(currLegals);
     	return currentLegalMoves.get(role);
 
     }
