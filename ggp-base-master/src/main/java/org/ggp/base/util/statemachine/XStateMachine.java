@@ -27,7 +27,7 @@ public class XStateMachine extends XMachine {
 
     private XPropNet propNet;
     private Role[] roles;
-    private OpenBitSet currentState, currInputs, currLegals;
+    private OpenBitSet currentState, lastNextState, nextState, currInputs, currLegals;
     private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
     private HashMap<Role, List<Move>> actions;
     private HashMap<Role, List<Move>> currentLegalMoves;
@@ -50,7 +50,6 @@ public class XStateMachine extends XMachine {
         	System.out.println("Initialized");
         	main_thread = Thread.currentThread().getId();
             propNet = new XPropNet(OptimizingPropNetFactory.create(description));
-            propNet.renderToFile("init.dot");
             components = propNet.getComponents();
             compInfo = propNet.getCompInfo();
             connecTable = propNet.getConnecTable();
@@ -116,19 +115,25 @@ public class XStateMachine extends XMachine {
     		System.out.println("PropNet not cleared properly");
     		System.exit(0);
     	}
+
+    	nextState = new OpenBitSet(numBases);
+
     	int init = propNet.getInitProposition();
     	Queue<Integer> q = setInit(init, true);
-    	propNet.renderToFile("initialstate.dot");
+    	propNet.renderToFile("initialstate.dot", components);
     	setConstants(q);
     	addBases(q);
     	addInputs(q);
-    	rawPropagate(q, thread_id);
+    	propNet.renderToFile("postBaseAct.dot", components);
+    	rawPropagate(q, thread_id);//CAREFUL. CAN"T HANDLE CYCLES. Compute Topological ordering or add nodes to visited, begin differential prop after node has been visited
     	OpenBitSet state = currentState;
+    	propNet.renderToFile("postRaw.dot", components);
+    	//System.out.println(Long.toBinaryString(state.getBits()[0]));
     	q = setInit(init, false);
-    	propNet.renderToFile("test.dot");
+    	propNet.renderToFile("test.dot", components);
         propagate(q, thread_id);
-        propNet.renderToFile("initial.dot");
-        return currentState;
+        propNet.renderToFile("initial.dot", components);
+        return state;
     }
 
 
@@ -148,12 +153,8 @@ public class XStateMachine extends XMachine {
     		int outIndex = connecTable[outputsIndex + i];
     		if (val) {
     			components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
-    			if (!get_current_value(components[outIndex])) {
-        			System.out.println("NOT TRUE");
-        		}
     		}
     		else components[outIndex] -= 1;
-    		System.out.println(outIndex);
     		q.add(outIndex); //add init outputs to the queue
     	}
 
@@ -169,7 +170,7 @@ public class XStateMachine extends XMachine {
         	int num_outputs = numOutputs(comp);
         	int outputsIndex = outputsOffset(comp);
 
-        	boolean val = (components[c] & CURR_VAL_MASK) != 0;
+        	boolean val = get_current_value(components[constants[c]]);
         	for (int i = 0; i < num_outputs; ++i) {
         		int outIndex = connecTable[outputsIndex + i];
         		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
@@ -244,7 +245,7 @@ public class XStateMachine extends XMachine {
         	for (int i = 0; i < num_outputs; ++i) {
         		int outIndex = connecTable[outputsIndex + i];
         		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
-        		else components[outIndex] -= 1;
+        		//else components[outIndex] -= 1;
         		q.add(outIndex);
         	}
     	}
@@ -253,7 +254,13 @@ public class XStateMachine extends XMachine {
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
     protected void propagate(Queue<Integer> q, int thread_id) {
-    	currentState = new OpenBitSet(numBases);
+    	OpenBitSet testState = (OpenBitSet) currentState.clone();
+    	if (testState.getBits() == currentState.getBits()) {
+    		System.out.println("didn't clone properly");
+    		System.exit(0);
+    	}
+
+    	currentState = (OpenBitSet) currentState.clone();
     	currLegals = new OpenBitSet(numLegals);
     	while(!q.isEmpty()) {
     		int compId = q.remove();
@@ -331,15 +338,19 @@ public class XStateMachine extends XMachine {
     @Override
     public List<Move> getLegalMoves(OpenBitSet state, Role role)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
+    	System.out.println("getLegalMoves");
+    	System.out.println(Long.toBinaryString(state.getBits()[0]));
+    	propNet.renderToFile("preLegal.dot", components);
     	int thread_id = main_ind;
     	setState(state, null, thread_id);
+    	propNet.renderToFile("postLegal.dot", components);
     	int size = currLegals.getBits().length;
     	for(int i = 0; i < size; ++i) {
-    		System.out.println(currLegals.getBits()[i]);
+    		System.out.println(Long.toBinaryString(currLegals.getBits()[i]));
     	}
     	currentLegalMoves = getLegals(currLegals);
+    	System.exit(0);
     	return currentLegalMoves.get(role);
-
     }
 
 
@@ -347,12 +358,13 @@ public class XStateMachine extends XMachine {
     	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
-    	OpenBitSet nextSet = state;
-    	OpenBitSet currSet = currentState;
-    	currSet.xor(nextSet);
 
-    	for (int i = currSet.nextSetBit(0); i != -1; i = currSet.nextSetBit(i + 1)) {
-    		boolean val = nextSet.fastGet(i);
+
+    	OpenBitSet diff = (OpenBitSet) state.clone();//create a new instance so we don't modify caller's OpenBitSet
+    	diff.xor(currentState);
+
+    	for (int i = diff.nextSetBit(0); i != -1; i = diff.nextSetBit(i + 1)) {
+    		boolean val = diff.fastGet(i);
     		if (val) components[baseOffset + i] += 1;
     		else components[baseOffset + i] -= 1;
 
@@ -427,8 +439,12 @@ public class XStateMachine extends XMachine {
 	public OpenBitSet getNextState(OpenBitSet state, List<Move> moves) {
     	int thread_id = main_ind;
     	long td = Thread.currentThread().getId();
+    	System.out.println("preNextState");
+    	propNet.renderToFile("preNext.dot", components);
     	setState(state, moves, thread_id);
-    	return currentState;
+    	propNet.renderToFile("postNextState.dot", components);
+    	System.exit(0);
+    	return (OpenBitSet) currentState.clone();
     }
 
 

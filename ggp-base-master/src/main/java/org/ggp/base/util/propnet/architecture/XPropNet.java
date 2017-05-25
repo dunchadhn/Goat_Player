@@ -495,13 +495,8 @@ public final class XPropNet
 		System.out.println("CORRECT!");
     }
 
-	/**
-	 * Returns a representation of the PropNet in .dot format.
-	 *
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString()
+
+	public String bitString(int[] comps)
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -509,7 +504,7 @@ public final class XPropNet
 		for ( Component component : compIndexMap.keySet())
 		{
 			int index = compIndexMap.get(component);
-			sb.append("\t" + component.bitString(components[index], compInfo[index], connecTable) + "\n");
+			sb.append("\t" + component.bitString(comps[index], compInfo[index], connecTable) + "\n");
 
 		}
 		sb.append("}");
@@ -523,18 +518,18 @@ public final class XPropNet
      *
      * @param filename the name of the file to output to
      */
-    public void renderToFile(String filename) {
+    public void renderToFile(String filename, int[] comps) {
         try {
             File f = new File(filename);
             FileOutputStream fos = new FileOutputStream(f);
             OutputStreamWriter fout = new OutputStreamWriter(fos, "UTF-8");
-            fout.write(toString());
+            fout.write(bitString(comps));
             fout.close();
             fos.close();
         } catch(Exception e) {
             GamerLogger.logStackTrace("StateMachine", e);
         }
-        oldProp.renderToFile("old" + filename);
+        //oldProp.renderToFile("old" + filename);
     }
 
 }
