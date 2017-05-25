@@ -1,11 +1,10 @@
 package org.ggp.base.player.gamer.statemachine.threadpools;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
@@ -27,9 +26,8 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	private long finishBy;
 	private BitNode root;
 	private List<BitNode> path;
-	private ExecutorService executor;
+	private CompletionService<Double> executor;
 	private Thread thread;
-	private Set<Future<Double>> futures;
 	private BitNode n;
 
 	private static final double C_CONST = 50;
@@ -52,7 +50,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		root = new BitNode(machine.getInitialState());
 		Expand(root);
 		num_threads = Runtime.getRuntime().availableProcessors() * 12;
-		executor = Executors.newFixedThreadPool(num_threads);
+		executor = new ExecutorCompletionService<Double>(Executors.newFixedThreadPool(num_threads));
 		thread = new Thread(new runMCTS());
 		depthCharges = 0;
 		last_depthCharges = 0;
@@ -105,7 +103,6 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 			while (true) {
 				root_thread = root;
 				path = new ArrayList<BitNode>();
-				futures = new HashSet<Future<Double>>();
 				path.add(root_thread);
 				try {
 					Select(root_thread, path);
@@ -122,19 +119,25 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 				}
 				// spawn off multiple threads
 				for(int i = 0; i < num_threads; ++i) {
-					Callable<Double> r = new RunMe();
-					futures.add(executor.submit(r));
+					executor.submit(new RunMe());
 				}
 				depthCharges += num_threads;
 				last_depthCharges += num_threads;
 				double sum = 0;
-				for (Future<Double> f : futures) {
+				for (int i = 0; i < num_threads; ++i) {
+					Future<Double> f = null;
+			        try {
+						f = executor.take();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 			        try {
 						sum += f.get();
 					} catch (InterruptedException | ExecutionException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-					} //blocks until the runnable completes
+					}
 			    }
 				Backpropogate(sum,path);
 			}
