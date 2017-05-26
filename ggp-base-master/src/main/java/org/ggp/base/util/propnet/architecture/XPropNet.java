@@ -10,10 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Stack;
 
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
+import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.logging.GamerLogger;
 import org.ggp.base.util.propnet.architecture.components.And;
 import org.ggp.base.util.propnet.architecture.components.Constant;
@@ -53,6 +56,7 @@ public final class XPropNet
     private int[] inputPropositions;
     private int[] constants;
     private int[] components;
+    private int[] initBases;
     private long[] compInfo;
     private int[] connecTable;
     private HashMap<Role, int[]> goalPropositions;
@@ -60,13 +64,16 @@ public final class XPropNet
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<GdlSentence, Integer> basesMap;
     private HashMap<Integer, Integer> rolesIndexMap;
+    private HashMap<Integer, Component> indexCompMap;
     private Move[] legalArray;
-    private List<HashMap<Move, Integer>> roleMoves;
+    private HashMap<Pair<Role, Move>, Integer> roleMoves;
+    private Stack<Integer> ordering;
 
     PropNet oldProp;
     HashMap<Component, Integer> compIndexMap;
 
 
+	@SuppressWarnings("unused")
 	public XPropNet(PropNet prop)
 	{
 		System.out.println("XPropNet initializing...");
@@ -82,8 +89,6 @@ public final class XPropNet
 		//Components that we have already processed
 		HashSet<Component> props = new HashSet<Component>(prop.getBasePropositions().values());
 		props.addAll(prop.getInputPropositions().values());
-		rolesIndexMap = new HashMap<Integer, Integer>();
-
 
 
 /*
@@ -108,14 +113,21 @@ public final class XPropNet
 			total_outputs += b.getOutputs_set().size();
 		}
 
+		int tot = prop.getBasePropositions().values().size();
+
+		if (compId == tot) {
+			System.out.println("all good");
+		} else {
+			System.out.println(compId + ", " + tot);
+			System.out.println("no good");
+			System.exit(0);
+		}
+
 
 /*
- * Define Proposition ordering for Legals. The ordering will be in 1-1 correspondence with the
- * ordering of inputs. Set numLegals and legalOffset.
+ * Define Proposition ordering for Legals. Set numLegals and legalOffset.
  */
 
-		List<Proposition> inputs = new ArrayList<Proposition>();
-		Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
 		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
 		actionsMap = new HashMap<Role, List<Move>>();
@@ -123,53 +135,79 @@ public final class XPropNet
 		numLegals = 0; legalOffset = compId;
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> rLegals = new ArrayList<Proposition>(moveMap.get(roles[i]));
-			rolesIndexMap.put(i, compId);
+			rolesIndexMap.put(i, compId - legalOffset);
 			List<Move> rMoves = new ArrayList<Move>();
-			rolesIndexMap.put(i, compId);
 
 			for (Proposition l : rLegals) {
 				Move m = new Move(l.getName().getBody().get(1));
 				legalArr.add(m);
 				rMoves.add(m);
-				Proposition in = legalInputMap.get(l);
-				inputs.add(in); //Ensures that legal move list exactly corresponds to input list
-				props.add(in);
 				compIndices.put(l, compId);
 				++compId;
 				total_outputs += l.getOutputs_set().size();
-				total_outputs += in.getOutputs_set().size();
+
 			}
 
 			actionsMap.put(roles[i], rMoves);
 			numLegals += rLegals.size();
-			numInputs += rLegals.size();
 			props.addAll(rLegals);
 			legals.add(rLegals);
 		}
 
-
-		inputOffset = compId;
-		for (Proposition i : inputs) {
-			compIndices.put(i, compId);
-			++compId;
-		}
-
 		legalArray = legalArr.toArray(new Move[legalArr.size()]);
-		if (numLegals != numInputs) {
-			System.out.println("numLegals != numInputs");
+
+		for (Entry<Role, Set<Proposition>> e : prop.getLegalPropositions().entrySet()) tot += e.getValue().size();
+		if (compId == tot) {
+			System.out.println("all good");
+		} else {
+			System.out.println(compId + ", " + tot);
+			System.out.println("no good");
 			System.exit(0);
 		}
 
 
+/*
+ * Define Proposition ordering from Inputs. Set numInputs and inputOffset
+ */
+		List<Proposition> inputs = new ArrayList<Proposition>(prop.getInputPropositions().values());
+		props.addAll(inputs);
+		numInputs = 0; inputOffset = compId;
+		for (Proposition i : inputs) {
+			compIndices.put(i, compId);
+			++compId;
+			++numInputs;
+			total_outputs += i.getOutputs_set().size();
+		}
+		if (numInputs != prop.getInputPropositions().values().size()) {
+			System.out.println("numInputs != prop.getInputPropositions().values().size()");
+			System.exit(0);
+		}
+
+
+		tot += prop.getInputPropositions().values().size();
+		if (compId == tot) {
+			System.out.println("all good");
+		} else {
+			System.out.println(compId + ", " + tot);
+			System.out.println("no good");
+			System.exit(0);
+		}
+
+
+
+
+/*
+ * Everything Else
+ */
 ///////////////////////////
 
-		Proposition init = prop.getInitProposition();
-		if (init == null) initProposition = -1;
+		//Proposition init = prop.getInitProposition();
+		//if (init == null) initProposition = -1;
 		Proposition term = prop.getTerminalProposition();
 		HashMap<Component, List<Component>> outputMap = new HashMap<Component, List<Component>>();
 		for (Component c : prop.getComponents()) {
 			outputMap.put(c, new ArrayList<Component>(c.getOutputs_set()));
-			if (c.equals(init)) initProposition = compId;
+			//if (c.equals(init)) initProposition = compId;
 			if (c.equals(term)) terminalProposition = compId;
 
 			if (!props.contains(c)) {
@@ -181,6 +219,16 @@ public final class XPropNet
 		}
 
 		compIndexMap = compIndices;
+		indexCompMap = new HashMap<Integer, Component>();
+		for (Component c : compIndexMap.keySet()) indexCompMap.put(compIndexMap.get(c), c);
+
+
+		if (compId != pComponents.size()) {
+			System.out.println("compId != pComponents.size()");
+			System.out.println("compId: " + compId + " p.Components.size(): " + pComponents.size());
+			System.exit(0);
+		}
+
 
 //Add bases, inputs, legals to props
 		props = new HashSet<Component>(prop.getBasePropositions().values());
@@ -189,17 +237,15 @@ public final class XPropNet
 			props.addAll(legals.get(i));
 		}
 
-		if (compId != pComponents.size()) {
-			System.out.println("compId != pComponents.size()");
-			System.exit(0);
-		}
-
 		connecTable = new int[total_outputs];
 		components = new int[pComponents.size()];
 		compInfo = new long[pComponents.size()];
 		int outputIndex = 0;
 
 
+/*
+ * BASES
+ */
 		basePropositions = new int[numBases];
 		for (int i = 0; i < numBases; ++i) {
 			basePropositions[i] = baseOffset + i;
@@ -225,31 +271,15 @@ public final class XPropNet
 			}
 		}
 
-		inputPropositions = new int[numInputs];
-		for (int i = 0; i < numInputs; ++i) {
-			inputPropositions[i] = inputOffset + i;
-			Proposition b = inputs.get(i);
-			if (compIndices.get(b) != (inputOffset + i)) {
-				System.out.println("compIndices.get(b) != (inputOffset + i)");
-				System.exit(0);
-			}
-		}
 
-
-		roleMoves = new ArrayList<HashMap<Move, Integer>>();
+/*
+ * LEGALS
+ */
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> ls = legals.get(i);
 			props.addAll(ls);
-			HashMap<Move, Integer> mMap = new HashMap<Move, Integer>();
 
 			for (Proposition l : ls) {
-				mMap.put(new Move(l.getName().getBody().get(1)), compIndices.get(l) - legalOffset);
-				int inIndex = compIndices.get(legalInputMap.get(l)) - inputOffset;
-				if (inIndex != (compIndices.get(l) - legalOffset)) {
-					System.out.println("inIndex != (compIndices.get(l) - legalOffset)");
-					System.exit(0);
-				}
-
 				long type = TRIGGER_LEGAL;
 				long num_inputs = ((long)l.getInputs_set().size()) << INPUT_SHIFT;
 				List<Component> outputs = outputMap.get(l);
@@ -263,10 +293,34 @@ public final class XPropNet
 					++outputIndex;
 				}
 			}
-			roleMoves.add(mMap);
 		}
 
+
+/*
+ * INPUTS
+ */
+		inputPropositions = new int[numInputs];
+		for (int i = 0; i < numInputs; ++i) {
+			inputPropositions[i] = inputOffset + i;
+			Proposition in = inputs.get(i);
+			if (compIndices.get(in) != (inputOffset + i)) {
+				System.out.println("compIndices.get(in) != (inputOffset + i)");
+				System.exit(0);
+			}
+		}
+
+		roleMoves = new HashMap<Pair<Role, Move>, Integer>();
 		for (Proposition i : inputs) {
+
+			List<GdlTerm> iGdl = i.getName().getBody();
+			Pair<Role, Move> p = Pair.of(new Role((GdlConstant) iGdl.get(0)), new Move(iGdl.get(1)));
+			if (!prop.getLegalPropositions().keySet().contains(new Role((GdlConstant) iGdl.get(0)))) {
+				System.out.println("Not a valid role");
+				System.exit(0);
+			}
+			int inIndex = compIndices.get(i) - inputOffset;
+			roleMoves.put(p, inIndex);
+
 			long type = NOT_TRIGGER;
 			long num_inputs = ((long)i.getInputs_set().size()) << INPUT_SHIFT;
 			List<Component> outputs = outputMap.get(i);
@@ -282,7 +336,10 @@ public final class XPropNet
 		}
 
 
-		for (Component c : prop.getComponents()) {
+/*
+ * TRANSITIONS
+ */
+		for (Component c : pComponents) {
 			if (c instanceof Transition) {
 				props.add(c);
 				long type = TRIGGER_TRANSITION;
@@ -301,6 +358,9 @@ public final class XPropNet
 			}
 		}
 
+/*
+ * GOAL PROPOSITIONS
+ */
 		Map<Role, Set<Proposition>> goalProps = prop.getGoalPropositions();
 		goalPropositions = new HashMap<Role, int[]>();
 		for (Role r : goalProps.keySet()) {
@@ -329,25 +389,31 @@ public final class XPropNet
 			goalPropositions.put(r, rewards);
 		}
 
+/*
+ * CONSTANTS & Everything Else
+ */
 		List<Integer> consts = new ArrayList<Integer>();
-		for (Component c : prop.getComponents()) {
+		for (Component c : pComponents) {
 			if (c instanceof Constant) consts.add(compIndices.get(c));
+
 			if (!props.contains(c)) {
+
 				if (c instanceof And) {
 					components[compIndices.get(c)] = INIT_TRUE - c.getInputs_set().size();
 				} else if (c instanceof Not) {
 					components[compIndices.get(c)] = INIT_NOT;
 				} else if (c instanceof Constant) {
 					components[compIndices.get(c)] = c.getCurrentValue() ? INIT_TRUE : INIT_FALSE;
-				} else if (c.equals(init)) {
+				/*} else if (c.equals(init)) {
 					if (compIndices.get(init) != initProposition) {
 						System.out.println("init compId incorrect");
 						System.exit(0);
 					}
-					components[compIndices.get(c)] = INIT_TRUE;
+					components[compIndices.get(c)] = INIT_TRUE;*/
 				} else {
 					components[compIndices.get(c)] = INIT_DEFAULT;
 				}
+
 				long type = NOT_TRIGGER;
 				long num_inputs = ((long)c.getInputs_set().size()) << INPUT_SHIFT;
 				List<Component> outputs = outputMap.get(c);
@@ -367,7 +433,81 @@ public final class XPropNet
 
 		checkPropNet();
 
+		HashSet<Component> initB = new HashSet<Component>();
+		Proposition initProp = prop.getInitProposition();
+		if (initProp != null) {
+			Stack<Component> s = new Stack<Component>();
+			s.push(initProp);
+			while (!s.isEmpty()) {
+				Component c = s.pop();
+				if (c instanceof Transition) {
+					initB.add(c.getSingleOutput_set());
+				} else {
+					for (Component out : c.getOutputs_set()) {
+						s.push(out);
+					}
+				}
+			}
 
+			initBases = new int[initB.size()];
+			int index = 0;
+			for (Component b : initB) {
+				initBases[index++] = compIndexMap.get(b);
+			}
+		} else {
+			initBases = null;
+		}
+
+
+/*
+ * Compute topological ordering
+ */
+		ordering = new Stack<Integer>();
+    	HashSet<Component> visited = new HashSet<Component>();
+    	/*Component initP = indexCompMap.get(initProposition);
+    	initP = null;
+    	if (initP != null) {
+    		for (Component out : initP.getOutputs_set()) {
+    			if (!visited.contains(out)) {
+    				visited.add(out);
+    				topologicalSort(out, ordering, visited);
+    			}
+    		}
+    	}*/
+
+    	for (Component b : bases) {
+    		for (Component out : b.getOutputs_set()) {
+    			if (!visited.contains(out)) {
+    				visited.add(out);
+    				topologicalSort(out, ordering, visited);
+    			}
+    		}
+    	}
+
+    	for (Component i : inputs) {
+    		for (Component out : i.getOutputs_set()) {
+    			if (!visited.contains(out)) {
+    				visited.add(out);
+    				topologicalSort(out, ordering, visited);
+    			}
+    		}
+    	}
+
+    	for (int i = 0; i < constants.length; ++i) {
+    		Component c = indexCompMap.get(constants[i]);
+    		for (Component out : c.getOutputs_set()) {
+    			if (!visited.contains(out)) {
+    				visited.add(out);
+    				topologicalSort(out, ordering, visited);
+    			}
+    		}
+    	}
+
+
+	}
+
+	public int[] initBases() {
+		return initBases;
 	}
 
 	public int[] getComponents() {
@@ -454,10 +594,13 @@ public final class XPropNet
 		return rolesIndexMap;
 	}
 
-	public List<HashMap<Move, Integer>> getRoleMoves() {
+	public HashMap< Pair<Role, Move>, Integer> getRoleMoves() {
 		return roleMoves;
 	}
 
+	public HashMap<Integer, Component> indexCompMap() {
+		return indexCompMap;
+	}
 
 	public int numOutputs(long comp) {//inline these functions
     	return (int) ((comp & 0x00_0000_FFFF_000000L) >> 24);
@@ -496,6 +639,25 @@ public final class XPropNet
     }
 
 
+    protected void topologicalSort(Component c, Stack<Integer> s, HashSet<Component> visited) {
+    	if (!(c instanceof Transition)) {
+    		for (Component out : c.getOutputs_set()) {
+        		if (!visited.contains(out)) {
+        			visited.add(out);
+        			topologicalSort(out, s, visited);
+        		}
+        	}
+    	}
+
+    	s.push(compIndexMap.get(c));
+    }
+
+    @SuppressWarnings("unchecked")
+	public Stack<Integer> getOrdering() {
+    	return (Stack<Integer>) ordering.clone();
+    }
+
+
 	public String bitString(int[] comps)
 	{
 		StringBuilder sb = new StringBuilder();
@@ -504,7 +666,7 @@ public final class XPropNet
 		for ( Component component : compIndexMap.keySet())
 		{
 			int index = compIndexMap.get(component);
-			sb.append("\t" + component.bitString(comps[index], compInfo[index], connecTable) + "\n");
+			sb.append("\t" + component.bitString(comps[index], compInfo[index], connecTable, index) + "\n");
 
 		}
 		sb.append("}");
@@ -529,146 +691,8 @@ public final class XPropNet
         } catch(Exception e) {
             GamerLogger.logStackTrace("StateMachine", e);
         }
-        //oldProp.renderToFile("old" + filename);
+        oldProp.renderToFile("old" + filename);
     }
 
 }
-
-
-
-
-
-/*
-	@Override
-	public String toString()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		sb.append("digraph propNet\n{\n");
-		for (int i = 0; i < components.length; ++i)
-		{
-			sb.append("\t" + i + "\n");
-		}
-		sb.append("}");
-
-		return sb.toString();
-	}
-*/
-	/**
-     * Outputs the propnet in .dot format to a particular file.
-     * This can be viewed with tools like Graphviz and ZGRViewer.
-     *
-     * @param filename the name of the file to output to
-     */
-   /* public void renderToFile(String filename) {
-        try {
-            File f = new File(filename);
-            FileOutputStream fos = new FileOutputStream(f);
-            OutputStreamWriter fout = new OutputStreamWriter(fos, "UTF-8");
-            fout.write(toString());
-            fout.close();
-            fos.close();
-        } catch(Exception e) {
-            GamerLogger.logStackTrace("StateMachine", e);
-        }
-    }*/
-
-
-	/*public int getSize() {
-		return components.length;
-	}
-
-	public int getNumAnds() {
-		int andCount = 0;
-		for(BitComponent c : components) {
-			if(c instanceof BitAnd)
-				andCount++;
-		}
-		return andCount;
-	}
-
-	public int getNumOrs() {
-		int orCount = 0;
-		for(BitComponent c : components) {
-			if(c instanceof BitOr)
-				orCount++;
-		}
-		return orCount;
-	}
-
-	public int getNumNots() {
-		int notCount = 0;
-		for(BitComponent c : components) {
-			if(c instanceof BitNot)
-				notCount++;
-		}
-		return notCount;
-	}
-
-	public int getNumLinks() {
-		int linkCount = 0;
-		for(BitComponent c : components) {
-			linkCount += c.getOutputs_set().size();
-		}
-		return linkCount;
-	}*/
-
-	/**
-	 * Removes a component from the propnet. Be very careful when using
-	 * this method, as it is not thread-safe. It is highly recommended
-	 * that this method only be used in an optimization period between
-	 * the propnet's creation and its initial use, during which it
-	 * should only be accessed by a single thread.
-	 *
-	 * The INIT and terminal components cannot be removed.
-	 */
-	/*public void removeComponent(Component c) {
-
-
-		//Go through all the collections it could appear in
-		if(c instanceof Proposition) {
-			Proposition p = (Proposition) c;
-			GdlSentence name = p.getName();
-			if(basePropositions.containsKey(name)) {
-				basePropositions.remove(name);
-			} else if(inputPropositions.containsKey(name)) {
-				inputPropositions.remove(name);
-				//The map goes both ways...
-				Proposition partner = legalInputMap.get(p);
-				if(partner != null) {
-					legalInputMap.remove(partner);
-					legalInputMap.remove(p);
-				}
-			} else if(name == GdlPool.getProposition(GdlPool.getConstant("INIT"))) {
-				throw new RuntimeException("The INIT component cannot be removed. Consider leaving it and ignoring it.");
-			} else if(name == GdlPool.getProposition(GdlPool.getConstant("terminal"))) {
-				throw new RuntimeException("The terminal component cannot be removed.");
-			} else {
-				for(Set<Proposition> propositions : legalPropositions.values()) {
-					if(propositions.contains(p)) {
-						propositions.remove(p);
-						Proposition partner = legalInputMap.get(p);
-						if(partner != null) {
-							legalInputMap.remove(partner);
-							legalInputMap.remove(p);
-						}
-					}
-				}
-				for(Set<Proposition> propositions : goalPropositions.values()) {
-					propositions.remove(p);
-				}
-			}
-			propositions.remove(p);
-		}
-		components.remove(c);
-
-		//Remove all the local links to the component
-		for(Component parent : c.getInputs())
-			parent.removeOutput(c);
-		for(Component child : c.getOutputs())
-			child.removeInput(c);
-		//These are actually unnecessary...
-		//c.removeAllInputs();
-		//c.removeAllOutputs();
-	}*/
 

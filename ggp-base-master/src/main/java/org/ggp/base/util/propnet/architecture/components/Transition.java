@@ -29,8 +29,8 @@ public final class Transition extends Component
 	}
 
 	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable) {
+	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
 		boolean currVal = get_current_value(compValue);
-		return toDot("box", (currVal ? "red" : "grey"), "TRANSITION");
+		return toDot("box", (currVal ? "red" : "grey"), "TRANSITION" + " (" + index + ")");
 	}
 }

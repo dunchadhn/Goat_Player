@@ -194,7 +194,7 @@ public abstract class Component implements Serializable
     @Override
     public abstract String toString();
 
-    public abstract String bitString(int compValue, long compInfo, int[] connecTable);
+    public abstract String bitString(int compValue, long compInfo, int[] connecTable, int index);
 
     /**
      * Returns a configurable representation of the Component in .dot format.

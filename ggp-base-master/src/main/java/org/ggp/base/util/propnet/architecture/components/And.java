@@ -73,9 +73,9 @@ public final class And extends Component
 	}
 
 	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable) {
+	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
 		boolean currVal = get_current_value(compValue);
-		return toDot("invhouse", (currVal ? "red" : "grey"), "AND" + num_set(compValue, compInfo) + ", " + numInputs(compInfo));
+		return toDot("invhouse", (currVal ? "red" : "grey"), "AND" + num_set(compValue, compInfo) + ", " + numInputs(compInfo) + " (" + index + ")");
 	}
 
 

@@ -1,6 +1,7 @@
 package org.ggp.base.player.gamer.statemachine.sample;
 
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import org.ggp.base.apps.player.Player;
@@ -24,11 +25,18 @@ public class LegalTest extends XStateMachineGamer {
 		// We get the current start time
 		long start = System.currentTimeMillis();
 
-
+		Move selection = null;
 		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
+		/*for (Move m : moves) {
+			if (m.getContents().toString().equals("h")) {
+				selection = m;
+				break;
+			}
+		}*/
 
 		// SampleLegalGamer is very simple : it picks the first legal move
-		Move selection = moves.get(0);
+		System.out.println("numMoves: " + moves.size());
+		selection = moves.get((new Random()).nextInt(moves.size()));
 
 		// We get the end time
 		// It is mandatory that stop<timeout

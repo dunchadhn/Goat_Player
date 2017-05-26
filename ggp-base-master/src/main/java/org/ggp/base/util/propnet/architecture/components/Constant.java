@@ -58,8 +58,8 @@ public final class Constant extends Component
 	}
 
 	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable) {
+	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
 		boolean currVal = get_current_value(compValue);
-		return toDot("doublecircle", (currVal ? "red" : "grey"), Boolean.toString(currVal).toUpperCase() + num_set(compValue, compInfo) + ", " + numInputs(compInfo));
+		return toDot("doublecircle", (currVal ? "red" : "grey"), Boolean.toString(currVal).toUpperCase() + num_set(compValue, compInfo) + ", " + numInputs(compInfo) + " (" + index + ")");
 	}
 }

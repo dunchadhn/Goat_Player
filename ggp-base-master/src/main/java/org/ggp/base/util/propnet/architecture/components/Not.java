@@ -29,22 +29,22 @@ public final class Not extends Component
 
 
 	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable) {
+	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
 		boolean currVal = get_current_value(compValue);
 		if (currVal) {
 			if (compValue != 0xFFFF_FFFF) {
-				System.out.println("NOT is true but not 0xFFFFFFFF");
+				System.out.println("NOT (" + index + ") is true but not 0xFFFFFFFF");
 				System.out.println(Integer.toHexString(compValue));
 				System.exit(0);
 			}
 		}
 		else {
 			if (compValue != 0) {
-				System.out.println("NOT is false but not 0");
+				System.out.println("NOT (" + index + ") is false but not 0");
 				System.out.println(Integer.toHexString(compValue));
 				System.exit(0);
 			}
 		}
-		return toDot("invtriangle", (currVal ? "red" : "grey"), "NOT");
+		return toDot("invtriangle", (currVal ? "red" : "grey"), "NOT" + " (" + index + ")");
 	}
 }

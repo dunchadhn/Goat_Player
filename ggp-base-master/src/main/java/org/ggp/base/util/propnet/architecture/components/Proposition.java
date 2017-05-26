@@ -69,8 +69,8 @@ public class Proposition extends Component
 	}
 
 	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable) {
+	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
 		boolean currVal = get_current_value(compValue);
-		return toDot("circle", (currVal ? "red" : "white"), name.toString());
+		return toDot("circle", (currVal ? "red" : "white"), name.toString() + " (" + index + ")");
 	}
 }

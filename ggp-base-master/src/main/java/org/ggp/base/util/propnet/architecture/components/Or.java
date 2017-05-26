@@ -68,8 +68,8 @@ public final class Or extends Component
 	}
 
 	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable) {
+	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
 		boolean currVal = get_current_value(compValue);
-		return toDot("ellipse", (currVal ? "red" : "grey"), "OR" + num_set(compValue, compInfo) + ", " + numInputs(compInfo));
+		return toDot("ellipse", (currVal ? "red" : "grey"), "OR" + num_set(compValue, compInfo) + ", " + numInputs(compInfo) + " (" + index + ")");
 	}
 }
