@@ -51,7 +51,7 @@ public class X_MCTS_threadpool extends X_the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new XNode(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
+		num_threads = 1;//Runtime.getRuntime().availableProcessors() * 12;
 		executor = Executors.newFixedThreadPool(num_threads);
 		thread = new Thread(new runMCTS());
 		depthCharges = 0;
