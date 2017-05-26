@@ -19,18 +19,26 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
+public class Beta_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	private BitStateMachine machine;
 	private List<Role> roles;
 	private int self_index, num_threads, depthCharges, last_depthCharges;
 	private long finishBy;
 	private BitNode root;
 	private List<BitNode> path;
-	private CompletionService<Double> executor;
+	private CompletionService<Struct> executor;
 	private Thread thread;
-	private BitNode n;
 
 	private static final double C_CONST = 50;
+
+	public class Struct {
+		public List<BitNode> path;
+		public double val;
+		public Struct(List<BitNode> l, double v) {
+			this.path = l;
+			this.val = v;
+		}
+	}
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
@@ -49,8 +57,8 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 		self_index = roles.indexOf(getRole());
 		root = new BitNode(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
-		executor = new ExecutorCompletionService<Double>(Executors.newFixedThreadPool(num_threads));
+		num_threads = Runtime.getRuntime().availableProcessors() * 2;
+		executor = new ExecutorCompletionService<Struct>(Executors.newFixedThreadPool(num_threads));
 		thread = new Thread(new runMCTS());
 		depthCharges = 0;
 		last_depthCharges = 0;
@@ -110,7 +118,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				n = path.get(path.size() - 1);
+				BitNode n = path.get(path.size() - 1);
 				try {
 					Expand(n, path);
 				} catch (MoveDefinitionException | TransitionDefinitionException e) {
@@ -119,42 +127,48 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 				}
 				// spawn off multiple threads
 				for(int i = 0; i < num_threads; ++i) {
-					executor.submit(new RunMe());
+					executor.submit(new RunMe(path, n));
 				}
 				depthCharges += num_threads;
 				last_depthCharges += num_threads;
-				double sum = 0;
-				for (int i = 0; i < num_threads; ++i) {
-					Future<Double> f = null;
+				while(true) {
+					Future<Struct> f = executor.poll();
+			        if (f == null) {
+			        	break;
+			        }
+			        Struct s = null;
 			        try {
-						f = executor.take();
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-			        try {
-						sum += f.get();
+						s = f.get();
 					} catch (InterruptedException | ExecutionException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
+			        Backpropogate(s.val,s.path);
 			    }
-				Backpropogate(sum,path);
 			}
 		}
 	}
 
-	public class RunMe implements Callable<Double> {
+	public class RunMe implements Callable<Struct> {
+		private List<BitNode> list;
+		private BitNode node;
+		private Struct s;
+
+		public RunMe(List<BitNode> l, BitNode n) {
+			this.list = l;
+			this.node = n;
+		}
 		@Override
-		public Double call() {
+		public Struct call() {
 	    	double val = 0;
 			try {
-				val = Playout(n);
+				val = Playout(node);
 			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			return val;
+			s = new Struct(list, val);
+			return s;
 	    }
 	}
 
@@ -168,11 +182,11 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				BitNode succNode = n.children.get(jointMove);
-				if (succNode.visits != 0) {
-					double nodeValue = succNode.utility / succNode.visits;
+				if (succNode.updates != 0) {
+					double nodeValue = succNode.utility / succNode.updates;
 					if (nodeValue < minValue) {
 						minValue = nodeValue;
-						visits = succNode.visits;
+						visits = succNode.updates;
 					}
 				}
 			}
@@ -187,19 +201,19 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	}
 
 	protected void Backpropogate(double val, List<BitNode> path) {
-		BitNode nod = path.get(path.size() - 1);
-		if (machine.isTerminal(nod.state)) {
-			nod.isTerminal = true;
+		BitNode node = path.get(path.size() - 1);
+		if (machine.isTerminal(node.state)) {
+			node.isTerminal = true;
 		}
 		for (int i = path.size() - 1; i >= 0; --i) {
-			nod = path.get(i);
-			nod.utility += val;
-			nod.visits += num_threads;
+			node = path.get(i);
+			node.utility += val;
+			++node.updates;
 		}
 	}
 
-	protected double Playout(BitNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		BitMachineState state = n.state;
+	protected double Playout(BitNode node) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		BitMachineState state = node.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
 		}
@@ -207,6 +221,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	}
 
 	protected void Select(BitNode n, List<BitNode> path) throws MoveDefinitionException {
+		++n.visits;
 		if (machine.isTerminal(n.state)) return;
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
@@ -220,6 +235,7 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 				BitNode succNode = n.children.get(jointMove);
 				if (succNode.visits == 0) {
 					path.add(succNode);
+					++succNode.visits;
 					return;
 				}
 				double nodeValue = uctMin(succNode, n.visits);
@@ -305,11 +321,12 @@ public class Bit_MCTS_threadpool extends BIT_the_men_who_stare_at_goats {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "Bit_MCTS_threadpool Player";
+		return "Beta_MCTS_threadpool Player";
 	}
 
 
 
 
 }
+
 

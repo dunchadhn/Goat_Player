@@ -93,20 +93,6 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
         return 0;
     }
 
-
-    protected void setInit(boolean val, Queue<BitComponent> queue, int thread_id) {
-    	BitProposition init = propNet.getInitProposition();
-    	if (init.getLastPropagatedOutputValue(thread_id) == val) return;
-    	init.setCurrentValue(val,thread_id);
-    	init.setLastPropagatedOutputValue(val,thread_id);
-    	BitComponent[] outputs = init.getOutputs_arr();
-    	int size = init.getOutputsSize();
-    	for(int i = 0; i < size; ++i) {
-    		outputs[i].edit_T(val,thread_id);
-			queue.add(outputs[i]);
-        }
-    }
-
     protected void setInitAll(boolean val, Queue<BitComponent> queue, int thread_id) {
     	BitProposition init = propNet.getInitProposition();
     	if (init.getLastPropagatedOutputValue(thread_id) == val) return;
@@ -177,37 +163,16 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     		clearPropNetAll(thread_id);
     	}
     	BitProposition init = propNet.getInitProposition();
-    	if(initialized) {
-    		init.setCurrentValue(true,thread_id);
-    		init.setLastPropagatedOutputValue(true,thread_id);
-    	} else {
-    		init.setCurrentValueAll(true,thread_id);
-    		init.setLastPropagatedOutputValueAll(true,thread_id);
-    	}
+    	Queue<BitComponent> queue = new LinkedList<BitComponent>();
+    	setInitAll(true, queue, thread_id);
 
-        Queue<BitComponent> queue = new LinkedList<BitComponent>();
-        if(initialized) {
-        	setConstants(queue, thread_id);//Constants don't change throughout the game, so we set them once here
-        } else {
-        	setConstantsAll(queue, thread_id);
-        }
-
-        BitComponent[] outputs = init.getOutputs_arr();
-    	int size = init.getOutputsSize();
-    	for(int i = 0; i < size; ++i) {
-    		if(initialized) {
-    			outputs[i].edit_T(true,thread_id);
-    		} else {
-    			outputs[i].edit_TAll(true,thread_id);
-    		}
-			queue.add(outputs[i]);
-        }
+        setConstantsAll(queue, thread_id);
 
     	BitProposition[] bases = propNet.getBasePropositions();
-    	size = bases.length;
+    	int size = bases.length;
         for(int i = 0; i < size; ++i) {//Don't add redundant states
         	BitProposition p = bases[i];
-        	outputs = p.getOutputs_arr();
+        	BitComponent[] outputs = p.getOutputs_arr();
         	int size_2 = p.getOutputsSize();
         	for(int j = 0; j < size_2; ++j) {
     			queue.add(outputs[j]);
@@ -218,29 +183,18 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
     	size = inputs.length;
         for(int i = 0; i < size; ++i) {
         	BitProposition p = inputs[i];
-        	outputs = p.getOutputs_arr();
+        	BitComponent[] outputs = p.getOutputs_arr();
         	int size_2 = p.getOutputsSize();
         	for(int j = 0; j < size_2; ++j) {
     			queue.add(outputs[j]);
             }
         }
         BitMachineState state = null;
-        if(initialized) {
-        	rawPropagate(queue, thread_id);
-        	state = getStateFromBase(thread_id);
-        } else {
-        	rawPropagateAll(queue, thread_id);
-        	state = getStateFromBaseAll(thread_id);
-        }
+        rawPropagateAll(queue, thread_id);
+        state = getStateFromBaseAll(thread_id);
         queue = new LinkedList<BitComponent>();
-        if(initialized) {
-        	setInit(false, queue, thread_id);
-        	propagate(queue, thread_id);
-        } else {
-        	setInitAll(false, queue, thread_id);
-        	propagateAll(queue, thread_id);
-        }
-        initialized = true;
+        setInitAll(false, queue, thread_id);
+        propagateAll(queue, thread_id);
         return state;
     }
 
@@ -341,7 +295,7 @@ public class BitDifferentialPropNetStateMachine extends BitStateMachine {
 
     protected void setState(BitMachineState state, List<Move> moves, int thread_id) {
     	Queue<BitComponent> q = new LinkedList<BitComponent>();
-    	setInit(false, q, thread_id);
+    	//setInit(false, q, thread_id);
     	setBases(state, q, thread_id);
     	setActions(moves, q, thread_id);
     	propagate(q, thread_id);

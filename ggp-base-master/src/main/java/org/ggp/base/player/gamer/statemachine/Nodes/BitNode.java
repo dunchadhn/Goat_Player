@@ -17,11 +17,13 @@ public class BitNode {
 		this.legalJointMoves = new HashMap<Move, List<List<Move>>>();
 		this.utility = 0;
 		this.visits = 0;
+		this.updates = 0;
 		++nodeCount;
 	}
 	public BitMachineState state;
 	public double utility;
 	public double visits;
+	public double updates;
 	public Move[] legalMoves;
 	public HashMap<List<Move>, BitNode> children;
 	public HashMap<Move, List<List<Move>>> legalJointMoves;
