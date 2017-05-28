@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
 
@@ -17,6 +18,7 @@ import org.ggp.base.util.propnet.architecture.XPropNet;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
+import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
 
@@ -45,6 +47,7 @@ public class XStateMachine extends XMachine {
     private HashMap<Integer, Component> indexCompMap;
 
     private ArrayDeque<Pair<Integer, Boolean>> q;
+    private Random rand;
 
 
     @Override
@@ -71,6 +74,7 @@ public class XStateMachine extends XMachine {
             gdlSentenceMap = propNet.getGdlSentenceMap();
             indexCompMap = propNet.indexCompMap();
             q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo.length);
+            rand = new Random();
 
             goalPropositions = propNet.getGoalPropositions();
 
@@ -326,6 +330,39 @@ public class XStateMachine extends XMachine {
         return crossProduct;
     }
 
+    @Override
+	public List<Move> getRandomJointMove(OpenBitSet state) throws MoveDefinitionException
+    {
+        List<List<Move>> jointMoves = getLegalJointMoves(state);
+        return jointMoves.get(rand.nextInt(jointMoves.size()));
+
+    }
+
+    public Move getRandomMove(OpenBitSet state, int rIndex) throws MoveDefinitionException
+    {
+        List<Move> legals = getLegalMoves(state, rIndex);
+        return legals.get(rand.nextInt(legals.size()));
+    }
+
+    /**
+     * Returns a random joint move from among all the possible joint moves in
+     * the given state in which the given role makes the given move. Assumes move is a valid move
+     */
+    public List<Move> getRandomJointMove(OpenBitSet state, int rIndex, Move move) throws MoveDefinitionException
+    {
+    	List<List<Move>> randJointMove = new ArrayList<List<Move>>();
+    	for (List<Move> jointMove : getLegalJointMoves(state)) {
+    		if (jointMove.get(rIndex).equals(move)) randJointMove.add(jointMove);
+    	}
+    	return randJointMove.get(rand.nextInt(randJointMove.size()));//ASSUMES move is a valid move
+    }
+
+    @Override
+	public OpenBitSet getRandomNextState(OpenBitSet state) throws MoveDefinitionException, TransitionDefinitionException
+    {
+        List<Move> random = getRandomJointMove(state);
+        return getNextState(state, random);
+    }
 
     /**
      * Computes all possible actions for role.
@@ -482,6 +519,14 @@ public class XStateMachine extends XMachine {
     	return (int) ((value & GOAL_MASK) >> TYPE_SHIFT);
     }
 
+    @Override
+	public List<Integer> getGoals(OpenBitSet state) throws GoalDefinitionException {
+        List<Integer> theGoals = new ArrayList<Integer>();
+        for (int i = 0; i < roles.length; ++i) {
+            theGoals.add(getGoal(state, i));
+        }
+        return theGoals;
+    }
 
     public int getGoal(OpenBitSet state, int rIndex)
             throws GoalDefinitionException {
