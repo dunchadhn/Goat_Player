@@ -14,8 +14,6 @@ import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.XPropNet;
-import org.ggp.base.util.propnet.architecture.components.Not;
-import org.ggp.base.util.propnet.architecture.components.Or;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
@@ -41,16 +39,14 @@ public class XStateMachine extends XMachine {
     public long[] compInfo;
     public int[] connecTable;
 
+    private int[][] goalPropositions;
+
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<Integer, Component> indexCompMap;
 
     private ArrayDeque<Pair<Integer, Boolean>> q;
 
-    /**
-     * Initializes the PropNetStateMachine. You should compute the topological
-     * ordering here. Additionally you may compute the initial state here, at
-     * your discretion.
-     */
+
     @Override
     public void initialize(List<Gdl> description) {
         try {
@@ -74,7 +70,9 @@ public class XStateMachine extends XMachine {
 
             gdlSentenceMap = propNet.getGdlSentenceMap();
             indexCompMap = propNet.indexCompMap();
-            q = new ArrayDeque<Pair<Integer, Boolean>>(components.length);
+            q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo.length);
+
+            goalPropositions = propNet.getGoalPropositions();
 
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -246,11 +244,6 @@ public class XStateMachine extends XMachine {
         	for (int i = 0; i < num_outputs; ++i) {
         		int outIndex = connecTable[outputsIndex + i];
         		if (val) components[outIndex] += 1;
-        		if ((components[outIndex] & CURR_VAL_MASK) != 0 && components[outIndex] != 0x8000_0000 && (!(indexCompMap.get(outIndex) instanceof Or) && !(indexCompMap.get(outIndex) instanceof Not))) {
-        			System.out.println("\ncomponents[outIndex] != 0x8000_0000");
-        			System.out.println(Integer.toBinaryString(components[outIndex]));
-        			System.exit(0);
-        		}
         	}
     	}
     }
@@ -297,33 +290,40 @@ public class XStateMachine extends XMachine {
     	}
     }
 
-    protected HashMap<Role, List<Move>> getLegals(OpenBitSet s) {
-    	HashMap<Role, List<Move>> legalMap = new HashMap<Role, List<Move>>();
-    	int size = roles.length - 1;
+    @Override
+	public List<List<Move>> getLegalJointMoves(OpenBitSet state) throws MoveDefinitionException {
+    	setState(state, null);
+
+        List<List<Move>> jointMoves = new ArrayList<List<Move>>();
+
+        int size = roles.length - 1;
     	for (int i = 0; i < size; ++i) {
     		List<Move> moves = new ArrayList<Move>();
     		int roleIndex = rolesIndexMap.get(i);
     		int nextRoleIndex = rolesIndexMap.get(i + 1);
 
     		for (int j = roleIndex; j < nextRoleIndex; ++j) {
-    			if (s.fastGet(j)) {
+    			if (currLegals.fastGet(j)) {
     				moves.add(legalArray[j]);
     			}
     		}
-    		legalMap.put(roles[i], moves);
+    		jointMoves.add(moves);
     	}
 
     	int start = rolesIndexMap.get(size);
     	int end = legalArray.length;
     	List<Move> moves = new ArrayList<Move>();
     	for(int i = start; i < end; ++i) {
-    		if (s.fastGet(i)) {
+    		if (currLegals.fastGet(i)) {
     			moves.add(legalArray[i]);
     		}
     	}
-    	legalMap.put(roles[size], moves);
+    	jointMoves.add(moves);
 
-    	return legalMap;
+        List<List<Move>> crossProduct = new ArrayList<List<Move>>();
+        crossProductLegalMoves(jointMoves, crossProduct, new ArrayDeque<Move>());//
+
+        return crossProduct;
     }
 
 
@@ -341,15 +341,22 @@ public class XStateMachine extends XMachine {
     	return propNet;
     }
 
-    @Override
-    public List<Move> getLegalMoves(OpenBitSet state, Role role)//Change such that we don't have to keep updating legal moves
+
+    public List<Move> getLegalMoves(OpenBitSet state, int rIndex)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
 
     	setState(state, null);
 
-    	currentLegalMoves = getLegals(currLegals);
+    	List<Move> moves = new ArrayList<Move>();
+    	int roleIndex = rolesIndexMap.get(rIndex);
+    	int nextRoleIndex = (rIndex == (roles.length - 1) ? legalArray.length : rolesIndexMap.get(rIndex + 1));
+    	for (int i = roleIndex; i < nextRoleIndex; ++i) {
+			if (currLegals.fastGet(i)) {
+				moves.add(legalArray[i]);
+			}
+		}
 
-    	return currentLegalMoves.get(role);
+    	return moves;
     }
 
 
@@ -475,19 +482,19 @@ public class XStateMachine extends XMachine {
     	return (int) ((value & GOAL_MASK) >> TYPE_SHIFT);
     }
 
-    @Override
-    public int getGoal(OpenBitSet state, Role role)
+
+    public int getGoal(OpenBitSet state, int rIndex)
             throws GoalDefinitionException {
 
     	setState(state, null);
-        int[] rewards = propNet.getGoalPropositions().get(role);
+        int[] rewards = goalPropositions[rIndex];
         int size = rewards.length;
 
         for(int i = 0; i < size; ++i) {
         	int rewardIndex = rewards[i];
         	int value = components[rewardIndex];
         	if ((value & CURR_VAL_MASK) != 0) {
-        		int goalVal = getGoalValue(compInfo[rewardIndex]);
+        		int goalVal = (int) ((compInfo[rewardIndex] & GOAL_MASK) >> TYPE_SHIFT);
         		return goalVal;
         	}
 
@@ -529,6 +536,22 @@ public class XStateMachine extends XMachine {
 	public MachineState getMachineStateFromBitSet(OpenBitSet contents) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public List<Move> getLegalMoves(OpenBitSet state, Role role)
+			throws MoveDefinitionException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public int getGoal(OpenBitSet state, Role role)
+			throws GoalDefinitionException {
+		// TODO Auto-generated method stub
+		System.out.println("Shouldn't call this method");
+		System.exit(0);
+		return 0;
 	}
 
 

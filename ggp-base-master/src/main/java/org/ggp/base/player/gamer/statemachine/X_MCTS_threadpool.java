@@ -239,7 +239,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
 		}
-		return machine.getGoal(state, roles.get(self_index));
+		return machine.getGoal(state, self_index);
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
@@ -287,7 +287,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			List<Move> moves = machine.getLegalMoves(n.state, roles.get(self_index));
+			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
 			for (int i = 0; i < size; ++i) {
@@ -307,7 +307,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			List<Move> moves = machine.getLegalMoves(n.state, roles.get(self_index));
+			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
 			for (int i = 0; i < size; ++i) {

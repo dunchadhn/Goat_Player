@@ -59,7 +59,7 @@ public final class XPropNet
     private int[] initBases;
     private long[] compInfo;
     private int[] connecTable;
-    private HashMap<Role, int[]> goalPropositions;
+    private int[][] goalPropositions;
     private HashMap<Role, List<Move>> actionsMap;
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<GdlSentence, Integer> basesMap;
@@ -333,8 +333,9 @@ public final class XPropNet
  * GOAL PROPOSITIONS
  */
 		Map<Role, Set<Proposition>> goalProps = prop.getGoalPropositions();
-		goalPropositions = new HashMap<Role, int[]>();
-		for (Role r : goalProps.keySet()) {
+		goalPropositions = new int[roles.length][];
+		for (int j = 0; j < roles.length; ++j) {
+			Role r = roles[j];
 			int[] rewards = new int[goalProps.get(r).size()];
 			int i = 0;
 			for (Proposition g : goalProps.get(r)) {
@@ -357,7 +358,7 @@ public final class XPropNet
 					++outputIndex;
 				}
 			}
-			goalPropositions.put(r, rewards);
+			goalPropositions[j] = rewards;
 		}
 
 /*
@@ -503,7 +504,8 @@ public final class XPropNet
 		return terminalProposition;
 	}
 
-	public HashMap<Role, int[]> getGoalPropositions() {
+
+	public int[][] getGoalPropositions() {
 		return goalPropositions;
 	}
 

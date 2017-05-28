@@ -1,8 +1,8 @@
 package org.ggp.base.util.statemachine;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -246,7 +246,7 @@ public abstract class XMachine
         }
 
         List<List<Move>> crossProduct = new ArrayList<List<Move>>();
-        crossProductLegalMoves(legals, crossProduct, new LinkedList<Move>());
+        crossProductLegalMoves(legals, crossProduct, new ArrayDeque<Move>());
 
         return crossProduct;
     }
@@ -270,7 +270,7 @@ public abstract class XMachine
         }
 
         List<List<Move>> crossProduct = new ArrayList<List<Move>>();
-        crossProductLegalMoves(legals, crossProduct, new LinkedList<Move>());
+        crossProductLegalMoves(legals, crossProduct, new ArrayDeque<Move>());
 
         return crossProduct;
     }
@@ -314,7 +314,7 @@ public abstract class XMachine
         return nextStates;
     }
 
-    protected void crossProductLegalMoves(List<List<Move>> legals, List<List<Move>> crossProduct, LinkedList<Move> partial)
+    protected void crossProductLegalMoves(List<List<Move>> legals, List<List<Move>> crossProduct, ArrayDeque<Move> partial)
     {
         if (partial.size() == legals.size()) {
             crossProduct.add(new ArrayList<Move>(partial));

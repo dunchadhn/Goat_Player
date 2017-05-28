@@ -96,8 +96,9 @@ public class BitStateMachineVerifier {
                 }
                 for(Role theRole : theReference.getRoles()) {
                     try {
+                    	int rIndex = theReference.getRoles().indexOf(theRole);
                     	List<Move> refMoves = theReference.getLegalMoves(state1, theRole);
-                    	List<Move> subjMoves = theSubject.getLegalMoves(state, theRole);
+                    	List<Move> subjMoves = theSubject.getLegalMoves(state, rIndex);
                         if(!(refMoves.size() == subjMoves.size())) {
                             GamerLogger.log("StateMachine", "Inconsistency between bitMachine and ProverStateMachine over state " + state2.toString() + " vs " + state1.getContents());
                             GamerLogger.log("StateMachine", "RefMachine has move count = " + refMoves.size() + " for player " + theRole + " and moves: " + refMoves.toString());
@@ -117,7 +118,7 @@ public class BitStateMachineVerifier {
                             }
                             return false;
                         }
-                        if(!(new HashSet<Move>(theReference.getLegalMoves(state1, theRole)).equals(new HashSet<Move>(theSubject.getLegalMoves(state, theRole))))) {
+                        if(!(new HashSet<Move>(theReference.getLegalMoves(state1, theRole)).equals(new HashSet<Move>(theSubject.getLegalMoves(state, rIndex))))) {
                         	GamerLogger.log("StateMachine", "Inconsistency between bitMachine and ProverStateMachine over state " + state1.toString());
                             GamerLogger.log("StateMachine", "refMachine has moves = " + theReference.getLegalMoves(state1, theRole).toString() + " for player " + theRole);
                             GamerLogger.log("StateMachine", "bitMachine has moves = " + theSubject.getLegalMoves(state, theRole).toString() + " for player " + theRole);
@@ -163,7 +164,8 @@ public class BitStateMachineVerifier {
             }
             for(Role theRole : theReference.getRoles()) {
                 try {
-                	int refVal = theReference.getGoal(state1, theRole); int subjVal = theSubject.getGoal(state, theRole);
+                	int rIndex = theReference.getRoles().indexOf(theRole);
+                	int refVal = theReference.getGoal(state1, theRole); int subjVal = theSubject.getGoal(state, rIndex);
                     if(refVal != subjVal) {
                         GamerLogger.log("StateMachine", "Inconsistency between bitMachine and ProverStateMachine over goal value for " + theRole + " of state " + state1.toString() + ": " + subjVal + " vs " + refVal);
                         return false;
