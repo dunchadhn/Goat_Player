@@ -107,94 +107,12 @@ public class BitStateMachineVerifier {
                             diff.removeAll(subjMoves);
                             HashMap<Integer, Component> indexCompMap = theSubject.getPropNet().indexCompMap();
                             HashMap<Component, Integer> compIndexMap = theSubject.getPropNet().compIndexMap();
-                            int[] components = theSubject.getComps();
+                            int[] components = theSubject.components;
                             for (Move m : diff) {
                             	Pair<Role, Move> p = Pair.of(theRole, m);
                             	int index = legalMoveMap.get(p);
                             	Component c = indexCompMap.get(index);
                             	printInputs(c, compIndexMap, components, 1, 17, theSubject.connecTable, theSubject.compInfo, theSubject.getPropNet().outputMap);
-                            	/*System.out.println(c + " (" + index + ") " + get_current_value(components[index]) + " " + Integer.toBinaryString(components[index]));
-                            	System.out.println("  Inputs:" + c.getInputs_set().toString());
-                            	for (Component in : c.getInputs_set()) {
-                            		int iIndex = compIndexMap.get(in);
-                            		System.out.println("   " + in + " (" + iIndex + ") " + get_current_value(components[iIndex]) + " " + Integer.toBinaryString(components[iIndex]));
-                            		System.out.println("    Inputs2:" + in.getInputs_set().toString());
-                            		for (Component in2 : in.getInputs_set()) {
-                                		int iIndex2 = compIndexMap.get(in2);
-                                		System.out.println("     " + in2 + " (" + iIndex2 + ") " + get_current_value(components[iIndex2]) + " " + Integer.toBinaryString(components[iIndex2]));
-                                		System.out.println("      Inputs3:" + in2.getInputs_set().toString());
-                                		for (Component in3 : in2.getInputs_set()) {
-                                    		int iIndex3 = compIndexMap.get(in3);
-                                    		System.out.println("       " + in3 + " (" + iIndex3 + ") " + get_current_value(components[iIndex3]) + " " + Integer.toBinaryString(components[iIndex3]));
-                                    		System.out.println("        Inputs4:" + in3.getInputs_set().toString());
-                                    		for (Component in4 : in3.getInputs_set()) {
-                                        		int iIndex4 = compIndexMap.get(in4);
-                                        		System.out.println("         " + in4 + " (" + iIndex4 + ") " + get_current_value(components[iIndex4]) + " " + Integer.toBinaryString(components[iIndex4]));
-                                        		System.out.println("          Inputs5:" + in4.getInputs_set().toString());
-                                        		for (Component in5 : in4.getInputs_set()) {
-                                            		int iIndex5 = compIndexMap.get(in5);
-                                            		System.out.println("           " + in5 + " (" + iIndex5 + ") " + get_current_value(components[iIndex5]) + " " + Integer.toBinaryString(components[iIndex5]));
-                                            		System.out.println("            Inputs6:" + in5.getInputs_set().toString());
-                                            		for (Component in6 : in5.getInputs_set()) {
-                                                		int iIndex6 = compIndexMap.get(in6);
-                                                		System.out.println("             " + in6 + " (" + iIndex6 + ") " + get_current_value(components[iIndex6]) + " " + Integer.toBinaryString(components[iIndex6]));
-                                                		System.out.println("              Inputs7:" + in6.getInputs_set().toString());
-                                                		for (Component in7 : in6.getInputs_set()) {
-                                                    		int iIndex7 = compIndexMap.get(in7);
-                                                    		System.out.println("               " + in7 + " (" + iIndex7 + ") " + get_current_value(components[iIndex7]) + " " + Integer.toBinaryString(components[iIndex7]));
-                                                    		System.out.println("                Inputs8:" + in7.getInputs_set().toString());
-                                                    		for (Component in8 : in7.getInputs_set()) {
-                                                        		int iIndex8 = compIndexMap.get(in8);
-                                                        		System.out.println("               " + in8 + " (" + iIndex8 + ") " + get_current_value(components[iIndex8]) + " " + Integer.toBinaryString(components[iIndex8]));
-                                                        		System.out.println("                 Inputs9:" + in8.getInputs_set().toString());
-                                                        		for (Component in9 : in8.getInputs_set()) {
-                                                            		int iIndex9 = compIndexMap.get(in9);
-                                                            		System.out.println("                  " + in9 + " (" + iIndex9 + ") " + get_current_value(components[iIndex9]) + " " + Integer.toBinaryString(components[iIndex9]));
-                                                            		System.out.println("                   Inputs10:" + in9.getInputs_set().toString());
-                                                            		for (Component in10 : in9.getInputs_set()) {
-                                                                		int iIndex10 = compIndexMap.get(in10);
-                                                                		System.out.println("                    " + in10 + " (" + iIndex10 + ") " + get_current_value(components[iIndex10]) + " " + Integer.toBinaryString(components[iIndex10]));
-                                                                		System.out.println("                     Inputs11:" + in10.getInputs_set().toString());
-                                                                		for (Component in11 : in10.getInputs_set()) {
-                                                                    		int iIndex11 = compIndexMap.get(in11);
-                                                                    		System.out.println("                      " + in11 + " (" + iIndex11 + ") " + get_current_value(components[iIndex11]) + " " + Integer.toBinaryString(components[iIndex11]));
-                                                                    		System.out.println("                       Inputs12:" + in11.getInputs_set().toString());
-                                                                    		for (Component in12 : in11.getInputs_set()) {
-                                                                        		int iIndex12 = compIndexMap.get(in12);
-                                                                        		System.out.println("                        " + in12 + " (" + iIndex12 + ") " + get_current_value(components[iIndex12]) + " " + Integer.toBinaryString(components[iIndex12]));
-                                                                        		System.out.println("                         Inputs13:" + in12.getInputs_set().toString());
-                                                                        		for (Component in13 : in12.getInputs_set()) {
-                                                                            		int iIndex13 = compIndexMap.get(in13);
-                                                                            		System.out.println("                          " + in13 + " (" + iIndex13 + ") " + get_current_value(components[iIndex13]) + " " + Integer.toBinaryString(components[iIndex13]));
-                                                                            		System.out.println("                           Inputs14:" + in13.getInputs_set().toString());
-                                                                            		for (Component in14 : in13.getInputs_set()) {
-                                                                                		int iIndex14 = compIndexMap.get(in14);
-                                                                                		System.out.println("                            " + in14 + " (" + iIndex14 + ") " + get_current_value(components[iIndex14]) + " " + Integer.toBinaryString(components[iIndex14]));
-                                                                                		System.out.println("                             Inputs15:" + in14.getInputs_set().toString());
-                                                                                		for (Component in15 : in14.getInputs_set()) {
-                                                                                    		int iIndex15 = compIndexMap.get(in15);
-                                                                                    		System.out.println("                              " + in15 + " (" + iIndex15 + ") " + get_current_value(components[iIndex15]) + " " + Integer.toBinaryString(components[iIndex15]));
-                                                                                    		System.out.println("                               Inputs16:" + in15.getInputs_set().toString());
-                                                                                    		for (Component in16 : in15.getInputs_set()) {
-                                                                                        		int iIndex16 = compIndexMap.get(in16);
-                                                                                        		System.out.println("                                " + in16 + " (" + iIndex16 + ") " + get_current_value(components[iIndex16]) + " " + Integer.toBinaryString(components[iIndex16]));
-                                                                                        	}
-                                                                                    	}
-                                                                                	}
-                                                                            	}
-                                                                        	}
-                                                                    	}
-                                                                	}
-                                                            	}
-                                                        	}
-                                                    	}
-                                                	}
-                                            	}
-                                        	}
-                                    	}
-                                	}
-                            	}*/
-
 
                             }
                             return false;

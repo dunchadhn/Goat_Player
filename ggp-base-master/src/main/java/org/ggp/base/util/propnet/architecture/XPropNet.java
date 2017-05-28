@@ -97,9 +97,6 @@ public final class XPropNet
 		HashSet<Component> props = new HashSet<Component>(prop.getBasePropositions().values());
 		props.addAll(prop.getInputPropositions().values());
 
-
-		int outputsP = 0;
-		for (Proposition b : prop.getBasePropositions().values()) outputsP += b.getOutputs().size();
 /*
  * Define Proposition ordering for Bases. Populate gdlSentenceMap (mapping from GdlSentence to component ID) and
  * basesMap (mapping from component ID to GdlSentence for bases). Set numBases and baseOffset into components
@@ -122,29 +119,11 @@ public final class XPropNet
 			total_outputs += b.getOutputs().size();
 		}
 
-		if (total_outputs != outputsP) {
-			System.out.println("total_outputs != outputsP1");
-			System.exit(0);
-		}
-
-		int tot = prop.getBasePropositions().values().size();
-
-		if (compId == tot) {
-			System.out.println("all good");
-		} else {
-			System.out.println(compId + ", " + tot);
-			System.out.println("no good");
-			System.exit(0);
-		}
-
 
 /*
  * Define Proposition ordering for Legals. Set numLegals and legalOffset.
  */
 
-		for (Set<Proposition> rLegals : prop.getLegalPropositions().values()) {
-			for (Proposition rP : rLegals) outputsP += rP.getOutputs().size();
-		}
 
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
 		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
@@ -172,27 +151,12 @@ public final class XPropNet
 			legals.add(rLegals);
 		}
 
-		if (total_outputs != outputsP) {
-			System.out.println("total_outputs != outputsP2");
-			System.exit(0);
-		}
-
 		legalArray = legalArr.toArray(new Move[legalArr.size()]);
-
-		for (Entry<Role, Set<Proposition>> e : prop.getLegalPropositions().entrySet()) tot += e.getValue().size();
-		if (compId == tot) {
-			System.out.println("all good");
-		} else {
-			System.out.println(compId + ", " + tot);
-			System.out.println("no good");
-			System.exit(0);
-		}
 
 
 /*
  * Define Proposition ordering from Inputs. Set numInputs and inputOffset
  */
-		for (Proposition i : prop.getInputPropositions().values()) outputsP += i.getOutputs().size();
 
 		List<Proposition> inputs = new ArrayList<Proposition>(prop.getInputPropositions().values());
 		props.addAll(inputs);
@@ -203,26 +167,6 @@ public final class XPropNet
 			++numInputs;
 			total_outputs += i.getOutputs().size();
 		}
-		if (numInputs != prop.getInputPropositions().values().size()) {
-			System.out.println("numInputs != prop.getInputPropositions().values().size()");
-			System.exit(0);
-		}
-
-		if (total_outputs != outputsP) {
-			System.out.println("total_outputs != outputsP3");
-			System.exit(0);
-		}
-
-		tot += prop.getInputPropositions().values().size();
-		if (compId == tot) {
-			System.out.println("all good");
-		} else {
-			System.out.println(compId + ", " + tot);
-			System.out.println("no good");
-			System.exit(0);
-		}
-
-
 
 
 /*
@@ -230,13 +174,11 @@ public final class XPropNet
  */
 ///////////////////////////
 
-		int currOutputsP = 0;
 		Proposition init = prop.getInitProposition();
 		if (init == null) initProposition = -1;
 		Proposition term = prop.getTerminalProposition();
 		outputMap = new HashMap<Component, List<Component>>();
 		for (Component c : pComponents) {
-			currOutputsP += c.getOutputs().size();
 			outputMap.put(c, new ArrayList<Component>(c.getOutputs()));
 			if (c.equals(init)) initProposition = compId;
 			if (c.equals(term)) terminalProposition = compId;
@@ -250,23 +192,9 @@ public final class XPropNet
 			}
 		}
 
-		if (total_outputs != currOutputsP) {
-			System.out.println("total_outputs != currOutputsP");
-			System.exit(0);
-		}
-
 		compIndexMap = compIndices;
 		indexCompMap = new HashMap<Integer, Component>();
 		for (Component c : compIndexMap.keySet()) indexCompMap.put(compIndexMap.get(c), c);
-
-		System.out.println("compIndexMapKeys: " + compIndexMap.keySet().size() + " ComponentsSize: " + pComponents.size());
-
-
-		if (compId != pComponents.size()) {
-			System.out.println("compId != pComponents.size()");
-			System.out.println("compId: " + compId + " p.Components.size(): " + pComponents.size());
-			System.exit(0);
-		}
 
 
 //Add bases, inputs, legals to props
@@ -361,10 +289,6 @@ public final class XPropNet
 
 			List<GdlTerm> iGdl = i.getName().getBody();
 			Pair<Role, Move> p = Pair.of(new Role((GdlConstant) iGdl.get(0)), new Move(iGdl.get(1)));
-			if (!prop.getLegalPropositions().keySet().contains(new Role((GdlConstant) iGdl.get(0)))) {
-				System.out.println("Not a valid role");
-				System.exit(0);
-			}
 			int inIndex = compIndices.get(i) - inputOffset;
 			roleMoves.put(p, inIndex);
 
@@ -475,10 +399,9 @@ public final class XPropNet
 
 			}
 		}
-		constants = new int[consts.size()];
+		constants = (consts.isEmpty() ? null : new int[consts.size()]);
 		for (int i = 0; i < constants.length; ++i) constants[i] = consts.get(i);
 
-		System.out.println("OutputsIndex: " + outputIndex);
 		checkPropNet();
 
 		HashSet<Component> initB = new HashSet<Component>();
@@ -553,42 +476,9 @@ public final class XPropNet
     		}
     	}
 
-
-
-    	/*for (Component c : pComponents) {
-    		if (c instanceof And) {
-    			List<Component> outputs = outputMap.get(c);
-    			if (!((new HashSet<Component>(outputs)).equals(c.getOutputs_set()))) {
-    				System.out.println("!new HashSet<Component>(outputs)).equals(c.getOutputs_set())");
-    				System.exit(0);
-    			}
-    			System.out.println("And " + "(" + compIndexMap.get(c) + ") ");
-    			System.out.println("Outputs: ");
-    			int fIndex = outputsOffset(compInfo[compIndexMap.get(c)]);
-    			System.out.println("First Output: " + connecTable[fIndex]);
-    			for (Component out : outputs) {
-    				System.out.println(out + " " + "(" + compIndexMap.get(out) + ")");
-    			}
-			}
-    	}*/
-
-
 	}
 
-	protected void writeComps(String compsString) {
-		try {
-			File f = new File("comps.txt");
-	        FileOutputStream fos = new FileOutputStream(f);
-	        OutputStreamWriter fout = new OutputStreamWriter(fos, "UTF-8");
-	        fout.write(compsString);
-	        fout.close();
-	        fos.close();
-		} catch (Exception e) {
-			System.out.println("Exception");
-			System.exit(0);
-		}
 
-	}
 	public int[] initBases() {
 		return initBases;
 	}
@@ -709,7 +599,6 @@ public final class XPropNet
     		for (Component in : inputs) {
     			if (!(in.getOutputs().contains(component))) {
     				System.out.println("!(in.getOutputs_set().contains(component))");
-    				//System.out.println(in.getOutputs_set().toString());
     				System.out.println(component + " Inputs: " + inputs.toString());
     				System.out.println(in + "Outputs: " + in.getOutputs().toString());
     				System.exit(0);
