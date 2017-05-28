@@ -232,13 +232,13 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 		knownProps = new HashMap<Proposition, Double>();
 		trueProps = new HashSet<Proposition>();
 		for (Transition t : iipropNet.getNonDoesTransitions()) { // get iivalues of base propositions connected to transition
-			double iivalue = propMark(t.getSingleInput_set());
-			if (t.getOutputs_set().size() > 1) System.out.println("NABIIPNSM: Transition found with more than one base proposition.");
-			knownProps.put((Proposition)t.getSingleOutput_set(), iivalue);
+			double iivalue = propMark(t.getSingleInput());
+			if (t.getOutputs().size() > 1) System.out.println("NABIIPNSM: Transition found with more than one base proposition.");
+			knownProps.put((Proposition)t.getSingleOutput(), iivalue);
 		}
 		for (Transition t : iipropNet.getDoesTransitions().get(role)) {
-			double iivalue = propMark(t.getSingleInput_set());
-			knownProps.put((Proposition)t.getSingleOutput_set(), iivalue);
+			double iivalue = propMark(t.getSingleInput());
+			knownProps.put((Proposition)t.getSingleOutput(), iivalue);
 		}
 		for (Proposition p : knownProps.keySet()) { // set iivalues of these base props
 			iipropNet.setIIValue(p, knownProps.get(p));
@@ -293,18 +293,18 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 		List<Proposition> falseSees = new ArrayList<Proposition>();
 		for (Proposition prop : iipropNet.getSeesPropositionsByName().values()) {
 			seesPropagationProps.add(prop);
-			if (prop.getCurrentValue()) trueSees.add(prop);
+			if (prop.getValue()) trueSees.add(prop);
 			else falseSees.add(prop);
 		}
 		// propagate true values
 		for (Proposition prop : trueSees) {
-			for (Component c : prop.getInputs_set()) {
+			for (Component c : prop.getInputs()) {
 				propagateSeesHelper(c, true);
 			}
 		}
 		// propagate false values
 		for (Proposition prop : falseSees) {
-			for (Component c : prop.getInputs_set()) {
+			for (Component c : prop.getInputs()) {
 				propagateSeesHelper(c, false);
 			}
 		}
@@ -321,18 +321,18 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 
 			if (!seesPropagationProps.contains(prop)) seesPropagationProps.add(prop);
 
-			if (prop.getInputs_set().size() > 1 || ((prop.getInputs_set().size() == 1) && !(prop.getSingleInput_set() instanceof Transition))) {
-				for (Component comp : prop.getInputs_set()) propagateSeesHelper(comp, value);
+			if (prop.getInputs().size() > 1 || ((prop.getInputs().size() == 1) && !(prop.getSingleInput() instanceof Transition))) {
+				for (Component comp : prop.getInputs()) propagateSeesHelper(comp, value);
 			}
 
 		} else if ((c instanceof And) && value) {
-			for (Component comp : c.getInputs_set()) propagateSeesHelper(comp, value);
+			for (Component comp : c.getInputs()) propagateSeesHelper(comp, value);
 
 		} else if ((c instanceof Or) && !value) {
-			for (Component comp : c.getInputs_set()) propagateSeesHelper(comp, value);
+			for (Component comp : c.getInputs()) propagateSeesHelper(comp, value);
 
 		} else if (c instanceof Not) {
-			propagateSeesHelper(c.getSingleInput_set(), !value);
+			propagateSeesHelper(c.getSingleInput(), !value);
 		}
 
 	}
@@ -372,8 +372,8 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 				return iivalue;
 			}
 			// view proposition
-			if (iiprop.getInputs_set().size() == 1 && !(iiprop.getSingleInput_set() instanceof Transition)){
-				return propMark(iiprop.getSingleInput_set());
+			if (iiprop.getInputs().size() == 1 && !(iiprop.getSingleInput() instanceof Transition)){
+				return propMark(iiprop.getSingleInput());
 			}
 			// base or input proposition
 			else{
@@ -382,7 +382,7 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 		}
 		else if (c instanceof And){
 			double propValue = 1;
-			for (Component c2 : c.getInputs_set()){
+			for (Component c2 : c.getInputs()){
 				if (propMark(c2) == 0) return 0;
 				if (propMark(c2) == 0.5) propValue = 0.5;
 			}
@@ -390,23 +390,23 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 		}
 		else if (c instanceof Or){
 			double propValue = 0;
-			for (Component c2 : c.getInputs_set()){
+			for (Component c2 : c.getInputs()){
 				if (propMark(c2) == 1) return 1;
 				if (propMark(c2) == 0.5) propValue = 0.5;
 			}
 			return propValue;
 		}
 		else if (c instanceof Constant){
-			if(c.getCurrentValue()) return 1;
+			if(c.getValue()) return 1;
 			else return 0;
 		}
 		else if (c instanceof Not){
-			if (propMark(c.getSingleInput_set()) == 0) return 1;
-			else if (propMark(c.getSingleInput_set()) == 1) return 0;
-			else return propMark(c.getSingleInput_set());
+			if (propMark(c.getSingleInput()) == 0) return 1;
+			else if (propMark(c.getSingleInput()) == 1) return 0;
+			else return propMark(c.getSingleInput());
 		}
 		else if (c instanceof Transition){
-			return propMark(c.getSingleInput_set());
+			return propMark(c.getSingleInput());
 		}
 
 		return 0;
@@ -416,34 +416,34 @@ public class IISamplePropNetStateMachine extends IIStateMachine {
 		if (c instanceof Proposition){
 
 			// view proposition
-			if (!(c.getSingleInput_set() instanceof Transition)){
-				return normalStatePropMark(c.getSingleInput_set());
+			if (!(c.getSingleInput() instanceof Transition)){
+				return normalStatePropMark(c.getSingleInput());
 			}
 			// base or input proposition
 			else{
-				return c.getCurrentValue();
+				return c.getValue();
 			}
 		}
 		else if (c instanceof And){
-			for (Component c2:c.getInputs_set()){
+			for (Component c2:c.getInputs()){
 				if (!normalStatePropMark(c2)) return false;
 			}
 			return true;
 		}
 		else if (c instanceof Or){
-			for (Component c2:c.getInputs_set()){
+			for (Component c2:c.getInputs()){
 				if (normalStatePropMark(c2)) return true;
 			}
 			return false;
 		}
 		else if (c instanceof Constant){
-			return c.getCurrentValue();
+			return c.getValue();
 		}
 		else if (c instanceof Not){
-			return !normalStatePropMark(c.getSingleInput_set());
+			return !normalStatePropMark(c.getSingleInput());
 		}
 		else if (c instanceof Transition){
-			return normalStatePropMark(c.getSingleInput_set());
+			return normalStatePropMark(c.getSingleInput());
 		}
 
 		System.out.println("NotABotIIPropNetStateMachine found unknown Component during normalStatePropMark");

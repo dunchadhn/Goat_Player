@@ -1,45 +1,55 @@
-package org.ggp.base.player.gamer.statemachine.threadpools;
+package org.ggp.base.player.gamer.statemachine;
+
+
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-import org.ggp.base.player.gamer.statemachine.Nodes.Node;
-import org.ggp.base.player.gamer.statemachine.men_who_stare_at_goats.the_men_who_stare_at_goats;
-import org.ggp.base.util.statemachine.MachineState;
+import org.apache.lucene.util.OpenBitSet;
+import org.ggp.base.apps.player.Player;
+import org.ggp.base.player.gamer.exception.GamePreviewException;
+import org.ggp.base.util.game.Game;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
-import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.XStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class MCTS_threadpool extends the_men_who_stare_at_goats {
-	private StateMachine machine;
-	private List<StateMachine> machines;
+public class X_MCTS_threadpool extends XStateMachineGamer {
+	protected Player p;
+	private XStateMachine machine;
 	private List<Role> roles;
-	private int self_index, num_threads, depthCharges;
+	private int self_index, num_threads, depthCharges, last_depthCharges;
 	private long finishBy;
-	private Node root;
-	private List<Node> path;
+	private XNode root;
+	private List<XNode> path;
 	private ExecutorService executor;
-	private List<Future<?>> futures;
-	private Node n;
-	private Lock lock;
+	private Thread thread;
+	private Set<Future<Double>> futures;
+	private XNode n;
 
 	private static final double C_CONST = 50;
+
+	@Override
+	public XStateMachine getInitialStateMachine() {
+		return new XStateMachine();
+	}
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
-		runMCTS();
+		//Thread.sleep(finishBy - System.currentTimeMillis());
+		doMCTS();
+		//last_depthCharges = 0;
 		bestMove(root);
 	}
 
@@ -47,18 +57,17 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		machine = getStateMachine();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(getRole());
-		root = new Node(machine.getInitialState());
+		root = new XNode(machine.getInitialState());
 		Expand(root);
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
-		executor = Executors.newFixedThreadPool(num_threads);
-		machines = new ArrayList<StateMachine>();
-		for(int i = 0; i < num_threads; i++) {
-			machines.add(getInitialStateMachine());
-			machines.get(i).initialize(getMatch().getGame().getRules());
-			machines.get(i).getInitialState();
-		}
+		//num_threads = 1;//Runtime.getRuntime().availableProcessors() * 12;
+		//executor = Executors.newFixedThreadPool(num_threads);
+		//thread = new Thread(new runMCTS());
+		//depthCharges = 0;
+		//last_depthCharges = 0;
+		//thread.start();
+
 		finishBy = timeout - 2500;
-		System.out.println("NumThreads: " + num_threads);
+		//System.out.println("NumThreads: " + num_threads);
 	}
 
 	@Override
@@ -67,17 +76,17 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
+		//System.out.println("Background Depth Charges: " + last_depthCharges);
 		finishBy = timeout - 2500;
 		return MCTS();
 	}
 
 	protected void initializeMCTS() throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		for (int i = 0; i < machines.size(); ++i) machines.get(i).doPerMoveWork();
-		MachineState currentState = getCurrentState();
+		OpenBitSet currentState = getCurrentState();
 		if (root == null) System.out.println("NULL ROOT");
 		if (root.state.equals(currentState)) return;
 		for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
-			MachineState nextState = machine.getNextState(root.state, jointMove);
+			OpenBitSet nextState = machine.getNextState(root.state, jointMove);
 			if (currentState.equals(nextState)) {
 				root = root.children.get(jointMove);
 				if (root == null) System.out.println("NOT IN MAP");
@@ -85,49 +94,95 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 			}
 		}
 		System.out.println("ERROR. Current State not in tree");
-		root = new Node(currentState);
+		root = new XNode(currentState);
 	}
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS();
-		runMCTS();
+		//Thread.sleep(finishBy - System.currentTimeMillis());
+		//System.out.println("Depth Charges: " + depthCharges);
+		//last_depthCharges = 0;
+		doMCTS();
 		return bestMove(root);
 	}
 
-	protected void runMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+	public void doMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		depthCharges = 0;
-		int loops = 0;
-		long total_time = 0;
-		long average_time = 0;
-		long time_elapsed = 0;
-		while (System.currentTimeMillis() + average_time < finishBy) {
-			time_elapsed = System.currentTimeMillis();
-			path = new ArrayList<Node>();
-			futures = new ArrayList<> ();
-			lock = new ReentrantLock();
+		double selectAvg = 0;
+		double expandAvg = 0;
+		double playoutAvg = 0;
+		double backpropAvg = 0;
+		while (System.currentTimeMillis() < finishBy) {
+			path = new ArrayList<XNode>();
 			path.add(root);
+			Long t1 = System.currentTimeMillis();
 			Select(root, path);
+			Long t2 = System.currentTimeMillis();
+			selectAvg += (t2 - t1);
 			n = path.get(path.size() - 1);
 			Expand(n, path);
-			// spawn off multiple threads
-			for(int i = 0; i < num_threads; ++i) {
-				RunMe r = new RunMe();
-				futures.add(executor.submit(r));
-			}
-			depthCharges += futures.size();
-			for (Future<?> f : futures) {
-		        f.get(); //blocks until the runnable completes
-		    }
-			total_time += (System.currentTimeMillis() - time_elapsed);
-			loops += 1;
-			average_time = total_time / loops;
+			Long t3 = System.currentTimeMillis();
+			expandAvg += (t3 - t2);
+			double val = Playout(n);
+			Long t4 = System.currentTimeMillis();
+			playoutAvg += (t4 - t3);
+			Backpropogate(val, path);
+			backpropAvg += (System.currentTimeMillis() - t4);
+			++depthCharges;
+			//System.out.println(depthCharges);
 		}
+		selectAvg /= depthCharges; expandAvg /= depthCharges; playoutAvg /= depthCharges; backpropAvg /= depthCharges;
+		System.out.println("Select: " + selectAvg + " Expand: " + expandAvg + " Playout: " + playoutAvg + " BackProp: " + backpropAvg);
 		System.out.println("Depth Charges: " + depthCharges);
 	}
 
-	public class RunMe implements Runnable {
+
+	public class runMCTS implements Runnable {
 		@Override
 		public void run() {
+			XNode root_thread;
+			while (true) {
+				root_thread = root;
+				path = new ArrayList<XNode>();
+				futures = new HashSet<Future<Double>>();
+				path.add(root_thread);
+				try {
+					Select(root_thread, path);
+				} catch (MoveDefinitionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				n = path.get(path.size() - 1);
+				try {
+					Expand(n, path);
+				} catch (MoveDefinitionException | TransitionDefinitionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				// spawn off multiple threads
+				for(int i = 0; i < num_threads; ++i) {
+					Callable<Double> r = new RunMe();
+					futures.add(executor.submit(r));
+				}
+				depthCharges += num_threads;
+				last_depthCharges += num_threads;
+				double sum = 0;
+				for (Future<Double> f : futures) {
+			        try {
+						sum += f.get();
+					} catch (InterruptedException | ExecutionException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} //blocks until the runnable completes
+			    }
+				Backpropogate(sum,path);
+			}
+		}
+	}
+
+	public class RunMe implements Callable<Double> {
+		@Override
+		public Double call() {
 	    	double val = 0;
 			try {
 				val = Playout(n);
@@ -135,20 +190,20 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	    	lock.lock();
-	    	Backpropogate(val, path);
-	    	lock.unlock();
+			return val;
 	    }
 	}
 
-	protected Move bestMove(Node n) throws MoveDefinitionException {
+	protected Move bestMove(XNode n) throws MoveDefinitionException {
 		double maxValue = Double.NEGATIVE_INFINITY;
-		Move maxMove = n.legalMoves.get(0);
-		for(Move move: n.legalMoves) {
+		Move maxMove = n.legalMoves[0];
+		int size = n.legalMoves.length;
+		for(int i = 0; i < size; ++i) {
+			Move move = n.legalMoves[i];
 			double minValue = Double.POSITIVE_INFINITY;
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
-				Node succNode = n.children.get(jointMove);
+				XNode succNode = n.children.get(jointMove);
 				if (succNode.visits != 0) {
 					double nodeValue = succNode.utility / succNode.visits;
 					if (nodeValue < minValue) {
@@ -167,8 +222,8 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		return maxMove;
 	}
 
-	protected void Backpropogate(double val, List<Node> path) {
-		Node nod = path.get(path.size() - 1);
+	protected void Backpropogate(double val, List<XNode> path) {
+		XNode nod = path.get(path.size() - 1);
 		if (machine.isTerminal(nod.state)) {
 			nod.isTerminal = true;
 		}
@@ -179,26 +234,26 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		}
 	}
 
-	protected double Playout(Node n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		int threadId = (int) (Thread.currentThread().getId() % num_threads);
-		StateMachine machine = machines.get(threadId);
-		MachineState state = n.state;
+	protected double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		OpenBitSet state = n.state;
 		while(!machine.isTerminal(state)) {
 			state = machine.getRandomNextState(state);
 		}
 		return machine.getGoal(state, roles.get(self_index));
 	}
 
-	protected void Select(Node n, List<Node> path) throws MoveDefinitionException {
+	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
 		if (machine.isTerminal(n.state)) return;
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
-		Node maxChild = null;
-		for(Move move: n.legalMoves) {
+		XNode maxChild = null;
+		int size = n.legalMoves.length;
+		for(int i = 0; i < size; ++i) {
+			Move move = n.legalMoves[i];
 			double minValue = Double.NEGATIVE_INFINITY;
-			Node minChild = null;
+			XNode minChild = null;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
-				Node succNode = n.children.get(jointMove);
+				XNode succNode = n.children.get(jointMove);
 				if (succNode.visits == 0) {
 					path.add(succNode);
 					return;
@@ -220,24 +275,27 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 	}
 
 
-	protected double uctMin(Node n, double parentVisits) {
+	protected double uctMin(XNode n, double parentVisits) {
 		double value = n.utility / n.visits;
 		return -value + C_CONST * Math.sqrt(Math.log(parentVisits) / n.visits);
 	}
 
-	protected double uctMax(Node n, double parentVisits) {
+	protected double uctMax(XNode n, double parentVisits) {
 		double value = n.utility / n.visits;
 		return value + C_CONST * Math.sqrt(Math.log(parentVisits) / n.visits);
 	}
 
-	protected void Expand(Node n, List<Node> path) throws MoveDefinitionException, TransitionDefinitionException {
+	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
-			for (Move move: n.legalMoves) {
+			List<Move> moves = machine.getLegalMoves(n.state, roles.get(self_index));
+			int size = moves.size();
+			n.legalMoves = moves.toArray(new Move[size]);
+			for (int i = 0; i < size; ++i) {
+				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				Node child = new Node(machine.getNextState(n.state, jointMove));
+				XNode child = new XNode(machine.getNextState(n.state, jointMove));
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -247,14 +305,17 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		}
 	}
 
-	protected void Expand(Node n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
+	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			n.legalMoves = machine.getLegalMoves(n.state, roles.get(self_index));
-			for (Move move: n.legalMoves) {
+			List<Move> moves = machine.getLegalMoves(n.state, roles.get(self_index));
+			int size = moves.size();
+			n.legalMoves = moves.toArray(new Move[size]);
+			for (int i = 0; i < size; ++i) {
+				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				Node child = new Node(machine.getNextState(n.state, jointMove));
+				XNode child = new XNode(machine.getNextState(n.state, jointMove));
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -263,26 +324,36 @@ public class MCTS_threadpool extends the_men_who_stare_at_goats {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void stateMachineStop() {
-		//executor.shutdownNow();
+		//thread.stop();
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void stateMachineAbort() {
 		// TODO Auto-generated method stub
-		//executor.shutdownNow();
+		//thread.stop();
 	}
 
 
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "MCTS_threadpool Player";
+		return "X_MCTS_threadpool Player";
+	}
+
+	@Override
+	public void preview(Game g, long timeout) throws GamePreviewException {
+		// TODO Auto-generated method stub
+
 	}
 
 
 
 
 }
+
+
 

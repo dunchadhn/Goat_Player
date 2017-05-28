@@ -11,6 +11,8 @@ public class Proposition extends Component
 {
 	/** The name of the Proposition. */
 	private GdlSentence name;
+	/** The value of the Proposition. */
+	private boolean value;
 
 	/**
 	 * Creates a new Proposition with name <tt>name</tt>.
@@ -21,6 +23,7 @@ public class Proposition extends Component
 	public Proposition(GdlSentence name)
 	{
 		this.name = name;
+		this.value = false;
 	}
 
 	/**
@@ -51,13 +54,22 @@ public class Proposition extends Component
 	 *
 	 * @see org.ggp.base.util.propnet.architecture.Component#getValue()
 	 */
+	@Override
+	public boolean getValue()
+	{
+		return value;
+	}
+
 	/**
 	 * Setter method.
 	 *
 	 * @param value
 	 *            The new value of the Proposition.
 	 */
-
+	public void setValue(boolean value)
+	{
+		this.value = value;
+	}
 
 	/**
 	 * @see org.ggp.base.util.propnet.architecture.Component#toString()
@@ -65,12 +77,6 @@ public class Proposition extends Component
 	@Override
 	public String toString()
 	{
-		return toDot("circle", getCurrentValue() ? "red" : "white", name.toString());
-	}
-
-	@Override
-	public String bitString(int compValue, long compInfo, int[] connecTable, int index) {
-		boolean currVal = get_current_value(compValue);
-		return toDot("circle", (currVal ? "red" : "white"), name.toString() + " (" + index + ")");
+		return toDot("circle", value ? "red" : "white", name.toString());
 	}
 }

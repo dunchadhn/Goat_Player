@@ -173,9 +173,8 @@ public abstract class XMachine
     // can look up/compute what some Gdl corresponds to in their representation.
     // They are implemented for convenience, using the default ways of generating
     // these objects, but they can be overridden to support machine-specific objects.
-    public BitMachineState getMachineStateFromBitSet(OpenBitSet contents) {
-        return new BitMachineState(contents);
-    }
+    public abstract MachineState getMachineStateFromBitSet(OpenBitSet contents);
+
     public Role getRoleFromConstant(GdlConstant constant) {
         return new Role(constant);
     }
@@ -215,7 +214,7 @@ public abstract class XMachine
      * CONTRACT: After calling this method, the state machine never deals with a state that
      *           is not "theState" or one of its descendants in the game tree.
      */
-    public void updateRoot(BitMachineState theState) {
+    public void updateRoot(OpenBitSet theState) {
         ;
     }
 

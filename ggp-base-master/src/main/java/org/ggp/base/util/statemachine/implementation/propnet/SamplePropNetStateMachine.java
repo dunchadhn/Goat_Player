@@ -210,8 +210,8 @@ public class SamplePropNetStateMachine extends StateMachine {
         Set<GdlSentence> contents = new HashSet<GdlSentence>();
         for (Proposition p : propNet.getBasePropositions().values())
         {
-            p.setCurrentValue(p.getSingleInput_set().getCurrentValue());
-            if (p.getCurrentValue())
+            p.setValue(p.getSingleInput().getValue());
+            if (p.getValue())
             {
                 contents.add(p.getName());
             }

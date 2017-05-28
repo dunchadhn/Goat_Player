@@ -113,9 +113,9 @@ public final class IIPropNet {
 	public void setIIValue(Proposition prop, double value) {
 		iivalues.put(prop, value);
 		if (value == 0) {
-			prop.setCurrentValue(false);
+			prop.setValue(false);
 		} else if (value == 1) {
-			prop.setCurrentValue(true);
+			prop.setValue(true);
 		}
 	}
 
@@ -178,7 +178,7 @@ public final class IIPropNet {
 	private Set<Transition> recordNonDoesTransitions() {
 		Set<Transition> nonDoes = new HashSet<Transition>();
 		for (Transition t : transitions) {
-			if (transitionsHelper(t.getSingleInput_set()).size() == 0) nonDoes.add(t);
+			if (transitionsHelper(t.getSingleInput()).size() == 0) nonDoes.add(t);
 		}
 		return nonDoes;
 	}
@@ -191,7 +191,7 @@ public final class IIPropNet {
 		}
 		for (Transition t : transitions) {
 			if (!nonDoesTransitions.contains(t)) {
-				Set<Role> roles = transitionsHelper(t.getSingleInput_set());
+				Set<Role> roles = transitionsHelper(t.getSingleInput());
 				for (Role r : roles) {
 					transMap.get(r).add(t);
 				}
@@ -213,13 +213,13 @@ public final class IIPropNet {
 				}
 
 			} else {	// not an inputProposition
-				for (Component comp : c.getInputs_set()) {
+				for (Component comp : c.getInputs()) {
 					roles.addAll(transitionsHelper(comp));
 				}
 			}
 			return roles;
 		} else {	// not a Transition or Proposition
-			for (Component comp : c.getInputs_set()) {
+			for (Component comp : c.getInputs()) {
 				roles.addAll(transitionsHelper(comp));
 			}
 			return roles;
@@ -380,7 +380,7 @@ public final class IIPropNet {
 	public int getNumLinks() {
 		int linkCount = 0;
 		for(Component c : getComponents()) {
-			linkCount += c.getOutputs_set().size();
+			linkCount += c.getOutputs().size();
 		}
 		return linkCount;
 	}
@@ -435,9 +435,9 @@ public final class IIPropNet {
 		getComponents().remove(c);
 
 		//Remove all the local links to the component
-		for(Component parent : c.getInputs_set())
+		for(Component parent : c.getInputs())
 			parent.removeOutput(c);
-		for(Component child : c.getOutputs_set())
+		for(Component child : c.getOutputs())
 			child.removeInput(c);
 		//These are actually unnecessary...
 		//c.removeAllInputs();

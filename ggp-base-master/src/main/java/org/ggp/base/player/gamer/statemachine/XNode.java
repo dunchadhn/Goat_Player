@@ -1,31 +1,29 @@
-package org.ggp.base.player.gamer.statemachine.Nodes;
+package org.ggp.base.player.gamer.statemachine;
 
 import java.util.HashMap;
 import java.util.List;
 
-import org.ggp.base.util.statemachine.BitMachineState;
+import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.statemachine.Move;
 
-public class BitNode {
+public class XNode {
 
 	public static int nodeCount = 0;
 
-	public BitNode(BitMachineState state) {
+	public XNode(OpenBitSet state) {
 		this.state = state;
 		this.isTerminal = false;
-		this.children = new HashMap<List<Move>, BitNode>();
+		this.children = new HashMap<List<Move>, XNode>();
 		this.legalJointMoves = new HashMap<Move, List<List<Move>>>();
 		this.utility = 0;
 		this.visits = 0;
-		this.updates = 0;
 		++nodeCount;
 	}
-	public BitMachineState state;
+	public OpenBitSet state;
 	public double utility;
 	public double visits;
-	public double updates;
 	public Move[] legalMoves;
-	public HashMap<List<Move>, BitNode> children;
+	public HashMap<List<Move>, XNode> children;
 	public HashMap<Move, List<List<Move>>> legalJointMoves;
 	public boolean isTerminal;
 }

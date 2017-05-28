@@ -1,7 +1,6 @@
 package org.ggp.base.util.statemachine.verifier;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import org.ggp.base.util.logging.GamerLogger;
@@ -31,18 +30,13 @@ public class StateMachineVerifier {
             for(int i = 0; i < theMachines.size(); i++) {
                 try {
                     theCurrentStates[i] = theMachines.get(i).getInitialState();
-                    if (!theCurrentStates[i].equals(theCurrentStates[0])) {
-                    	GamerLogger.log("StateMachine", "Inconsistency between machine #" + i + " and ProverStateMachine over initial state " + theCurrentStates[0].toString() + " vs \n" + theCurrentStates[i].toString());
-                    	return false;
-                    }
                 } catch(Exception e) {
                     GamerLogger.log("StateMachine", "Machine #" + i + " failed to generate an initial state!");
                     return false;
                 }
             }
-            //int n = 1;
+
             while(!theMachines.get(0).isTerminal(theCurrentStates[0])) {
-            	//GamerLogger.emitToConsole("n: " + n++);
                 if(System.currentTimeMillis() > startTime + timeToSpend)
                     break;
 
@@ -54,12 +48,6 @@ public class StateMachineVerifier {
                                 GamerLogger.log("StateMachine", "Inconsistency between machine #" + i + " and ProverStateMachine over state " + theCurrentStates[0] + " vs " + theCurrentStates[i].getContents());
                                 GamerLogger.log("StateMachine", "Machine #" + 0 + " has move count = " + theMachines.get(0).getLegalMoves(theCurrentStates[0], theRole).size() + " for player " + theRole);
                                 GamerLogger.log("StateMachine", "Machine #" + i + " has move count = " + theMachines.get(i).getLegalMoves(theCurrentStates[i], theRole).size() + " for player " + theRole);
-                                return false;
-                            }
-                            if(!(new HashSet<Move>(theMachines.get(i).getLegalMoves(theCurrentStates[i], theRole)).equals(new HashSet<Move>(theMachines.get(0).getLegalMoves(theCurrentStates[0], theRole))))) {
-                            	GamerLogger.log("StateMachine", "Inconsistency between machine #" + i + " and ProverStateMachine over state " + theCurrentStates[0] + " vs " + theCurrentStates[i].getContents());
-                                GamerLogger.log("StateMachine", "Machine #" + 0 + " has moves = " + theMachines.get(0).getLegalMoves(theCurrentStates[0], theRole).toString() + " for player " + theRole);
-                                GamerLogger.log("StateMachine", "Machine #" + i + " has moves = " + theMachines.get(i).getLegalMoves(theCurrentStates[i], theRole).toString() + " for player " + theRole);
                                 return false;
                             }
                         } catch(Exception e) {
@@ -75,14 +63,6 @@ public class StateMachineVerifier {
                     for(int i = 0; i < theMachines.size(); i++) {
                         try {
                             theCurrentStates[i] = theMachines.get(i).getNextState(theCurrentStates[i], theJointMove);
-                            if (!theCurrentStates[i].equals(theCurrentStates[0])) {
-                            	GamerLogger.log("StateMachine", "Inconsistency between machine #" + i + " and ProverStateMachine over state " + theCurrentStates[0].toString() + " vs \n" + theCurrentStates[i].toString());
-                            	return false;
-                            }
-                            if (theMachines.get(0).isTerminal(theCurrentStates[0]) != theMachines.get(i).isTerminal(theCurrentStates[0])) {
-                            	GamerLogger.log("StateMachine", "Inconsistency between machine #" + i + " and ProverStateMachine over Terminality of state " + theCurrentStates[0].toString() + " vs \n" + theCurrentStates[i].toString());
-                            	return false;
-                            }
                         } catch(Exception e) {
                             GamerLogger.logStackTrace("StateMachine", e);
                         }
@@ -95,15 +75,11 @@ public class StateMachineVerifier {
             if(System.currentTimeMillis() > startTime + timeToSpend)
                 break;
 
-
             // Do final consistency checks
             for(int i = 1; i < theMachines.size(); i++) {
                 if(!theMachines.get(i).isTerminal(theCurrentStates[i])) {
                     GamerLogger.log("StateMachine", "Inconsistency between machine #" + i + " and ProverStateMachine over terminal-ness of state " + theCurrentStates[0] + " vs " + theCurrentStates[i]);
                     return false;
-                } else if(!theCurrentStates[i].equals(theCurrentStates[0])) {
-                	GamerLogger.log("StateMachine", theCurrentStates[i].toString() + " " + theCurrentStates[0].toString());
-                	return false;
                 }
                 for(Role theRole : theMachines.get(0).getRoles()) {
                     try {

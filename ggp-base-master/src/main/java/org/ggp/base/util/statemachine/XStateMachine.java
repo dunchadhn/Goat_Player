@@ -25,10 +25,6 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 
 @SuppressWarnings("unused")
 public class XStateMachine extends XMachine {
-    private long main_thread;
-    private int main_ind = 48;
-    private int num_threads = 48;
-    private boolean initialized = false;
 
     private XPropNet propNet;
     private Role[] roles;
@@ -40,8 +36,8 @@ public class XStateMachine extends XMachine {
     private Move[] legalArray;
     private HashMap< Pair<Role, Move>, Integer> roleMoves;
     private int[] components;
-    private long[] compInfo;
-    private int[] connecTable;
+    public long[] compInfo;
+    public int[] connecTable;
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<Integer, Component> indexCompMap;
 
@@ -54,9 +50,8 @@ public class XStateMachine extends XMachine {
     public void initialize(List<Gdl> description) {
         try {
         	System.out.println("Initialized");
-        	main_thread = Thread.currentThread().getId();
             propNet = new XPropNet(OptimizingPropNetFactory.create(description));
-            components = propNet.getComponents();
+            components = null;
             compInfo = propNet.getCompInfo();
             connecTable = propNet.getConnecTable();
             roles = propNet.getRoles();
@@ -72,7 +67,7 @@ public class XStateMachine extends XMachine {
             roleMoves = propNet.getRoleMoves();
             gdlSentenceMap = propNet.getGdlSentenceMap();
             indexCompMap = propNet.indexCompMap();
-            currInputs = new OpenBitSet(numInputs);
+
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -114,30 +109,116 @@ public class XStateMachine extends XMachine {
     	return (value & CURR_VAL_MASK) != 0;
     }
 
+    private List<Long> curr = new ArrayList<Long>();
+    private List<Long> next = new ArrayList<Long>();
+
+    protected void setLegals() {
+    	for (int i = 0; i < numLegals; ++i) {
+    		if (get_current_value(components[legalOffset + i])) {
+    			currLegals.fastSet(i);
+
+    		}
+    		else currLegals.fastClear(i);
+    	}
+    }
+
+    public int[] getComps() {
+    	return components;
+    }
+
+
     @Override
-    public OpenBitSet getInitialState() {
-    	int thread_id = main_ind;
+    public OpenBitSet getInitialState() {//Do initialization in initialize
     	int[] oldComponents = components;
-    	clearPropNet(thread_id);
+    	clearPropNet();
     	if (components == oldComponents) {
     		System.out.println("PropNet not cleared properly");
     		System.exit(0);
     	}
 
+    	//System.out.println("getInitial");
+    	currInputs = new OpenBitSet(numInputs);
+    	setInit(true);
+    	//propNet.renderToFile("init.dot", components);
     	initBases();
-    	propNet.renderToFile("init.dot", components);
+    	OpenBitSet state = (OpenBitSet) currentState.clone();
 
     	setConstants();
-    	propNet.renderToFile("postInitConstants.dot", components);
+    	//propNet.renderToFile("postInitConstants.dot", components);
 
-    	rawPropagate(thread_id);
-    	propNet.renderToFile("postRaw.dot", components);
+    	rawPropagate();
+    	//propNet.renderToFile("postRaw.dot", components);
 
-    	System.out.println("CurrentState: " + Long.toBinaryString(currentState.getBits()[0]));
-    	System.out.println("CurrLegals: " + Long.toBinaryString(currLegals.getBits()[0]));
+    	//System.out.println("NextState: " + Long.toBinaryString(nextState.getBits()[0]));
+    	//System.out.println(toGdl(nextState).toString());
 
-        return (OpenBitSet) currentState.clone();//necessary to clone?
+    	OpenBitSet legals = (OpenBitSet) currLegals.clone();
+    	//System.out.println("CurrLegals: ");
+    	for (int i = 0; i < currLegals.getBits().length; ++i) {
+    		//System.out.println(Long.toBinaryString(currLegals.getBits()[i]));
+    		curr.add(currLegals.getBits()[i]);
+    	}
+
+    	Queue<Pair<Integer, Boolean>> q = setInit(false);
+    	propagate(q);
+    	//propNet.renderToFile("postInit.dot", components);
+    	//currLegals = legals;
+
+    	//System.out.println("nextState: " + Long.toBinaryString(nextState.getBits()[0]));
+    	//System.out.println(toGdl(nextState).toString());
+    	/*System.out.println("newLegals: ");
+    	for (int i = 0; i < currLegals.getBits().length; ++i) {
+    		//System.out.println(Long.toBinaryString(currLegals.getBits()[i]));
+    		next.add(currLegals.getBits()[i]);
+    	}
+    	if (curr.size() != next.size()) {
+    		System.out.println("size diff");
+    		System.exit(0);
+    	}
+    	for (int i = 0; i < curr.size(); ++i) {
+    		if ((curr.get(i) == 0) && (next.get(i) == 0)) {
+    			curr.remove(i); next.remove(i);
+    		}
+    	}
+
+    	System.out.println();
+    	for (int i = 0; i < curr.size(); ++i) {
+    		if (curr.get(i) != 0)
+    		System.out.println("curr: " + Long.toBinaryString(curr.get(i)) + " next: " + Long.toBinaryString(next.get(i)));
+    	}*/
+    	currentState = state;
+
+        return (OpenBitSet) state.clone();//necessary to clone?
     }
+
+    protected Queue<Pair<Integer, Boolean>> setInit(boolean val) {
+    	Queue<Pair<Integer, Boolean>> q = new LinkedList<Pair<Integer, Boolean>>();
+    	int initId = propNet.getInitProposition();
+    	if (initId == -1) return q;
+    	if (!val) components[initId] -= 1;
+    	long comp = compInfo[initId];
+    	int num_outputs = numOutputs(comp);
+    	int outputsIndex = outputsOffset(comp);
+
+    	for (int j = 0; j < num_outputs; ++j) {
+    		int outIndex = connecTable[outputsIndex + j];
+    		boolean lastPropagatedValue = get_current_value(components[outIndex]);
+    		if (val) {
+    			components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
+    			//q.add(Pair.of(outIndex, get_current_value(components[outIndex])));//Not used
+    		} else {
+    			components[outIndex] -= 1;
+    			boolean newVal = get_current_value(components[outIndex]);
+    			if (newVal != lastPropagatedValue) {
+    				q.add(Pair.of(outIndex, newVal));
+    			}
+    		}
+
+    	}
+
+    	return q;
+    }
+
 
     protected void initBases() {
     	currentState = new OpenBitSet(numBases);
@@ -146,6 +227,7 @@ public class XStateMachine extends XMachine {
     		for (int i = 0; i < initBases.length; ++i) {
         		int bIndex = initBases[i];
         		components[bIndex] += 1;
+        		currentState.fastSet(bIndex - baseOffset);
 
         		long comp = compInfo[bIndex];
             	int num_outputs = numOutputs(comp);
@@ -191,7 +273,7 @@ public class XStateMachine extends XMachine {
 
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
-    protected void rawPropagate(int thread_id) {//compute ordering
+    protected void rawPropagate() {//compute ordering
     	Stack<Integer> ordering = propNet.getOrdering();
     	currLegals = new OpenBitSet(numLegals);
     	nextState = new OpenBitSet(numBases);
@@ -206,12 +288,18 @@ public class XStateMachine extends XMachine {
     			if (isTransition(comp)) {
     				int outputIndex = outputsOffset(comp);
     				int baseIndex = connecTable[outputIndex] - baseOffset;
-    				if (val) nextState.fastSet(baseIndex);
-    				else nextState.clear(baseIndex);
+    				if (val) {
+    					nextState.fastSet(baseIndex);
+    					//components[baseIndex] += 1;
+    				}
+    				else {
+    					nextState.clear(baseIndex);
+    				}
     				continue;
 
     			} else {
     				int legalIndex = compId - legalOffset;
+    				//System.out.println("legalTrigger");
     				if (val) currLegals.fastSet(legalIndex);
     				else currLegals.clear(legalIndex);
     			}
@@ -233,23 +321,29 @@ public class XStateMachine extends XMachine {
     	}
     }
 
-  //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
-    //is only called during getInitialState()
-    protected void propagate(Queue<Integer> q, int thread_id) {
-
+    private int kIter = 0;
+    protected void propagate(Queue<Pair<Integer, Boolean>> q) {
+    	//kIter = 0;
     	while(!q.isEmpty()) {
-    		int compId = q.remove();
-    		int value = components[compId];
-    		boolean val = get_current_value(value);
+    		Pair<Integer, Boolean> p = q.remove();
+    		int compId = p.left;
+    		boolean val = p.right;
+
+    		//System.out.println(indexCompMap.get(compId) + " (" + compId + ") " + val + Long.toHexString(compInfo[compId]));
+    		//System.out.print("     Outputs:");
     		long comp = compInfo[compId];
     		if (isTrigger(comp)) {
+    			//System.out.println("Trigger");
     			if (isTransition(comp)) {
+    				//System.out.println("Transition");
     				int outputIndex = outputsOffset(comp);
     				int baseIndex = connecTable[outputIndex] - baseOffset;
     				if (val) nextState.fastSet(baseIndex);
     				else nextState.clear(baseIndex);
+    				//System.out.println(indexCompMap.get(baseIndex + baseOffset) + " (" + (baseIndex + baseOffset) + ") " + " " + val);
     				continue;
     			} else {
+    				//System.out.println("Trigger");
     				int legalIndex = compId - legalOffset;
     				if (val) currLegals.fastSet(legalIndex);
     				else currLegals.clear(legalIndex);
@@ -259,16 +353,25 @@ public class XStateMachine extends XMachine {
         	int num_outputs = numOutputs(comp);
         	int outputsIndex = outputsOffset(comp);
 
+        	//System.out.print("NumOutputs: " + num_outputs + " OutputsIndex: " + outputsIndex + " FirstOutput: " + connecTable[outputsIndex]);
+
         	for (int i = 0; i < num_outputs; ++i) {
         		int outIndex = connecTable[outputsIndex + i];
         		int outValue = components[outIndex];
         		boolean lastPropagatedValue = get_current_value(outValue);
+        		int lastVal = outValue;
         		if (val) components[outIndex] += 1; //+= 1 corresponds to edit_T(true)
         		else components[outIndex] -= 1;
-        		if (get_current_value(components[outIndex]) != lastPropagatedValue) {
-        			q.add(outIndex);
+        		int newValue = components[outIndex];
+        		boolean newVal = get_current_value(components[outIndex]);
+        		//System.out.print(indexCompMap.get(outIndex) + " (" + outIndex + ") " + lastPropagatedValue + " " + Integer.toBinaryString(lastVal) + " " + newVal + " " + Integer.toBinaryString(newValue));
+        		//printOutputs(outIndex);
+        		if (newVal != lastPropagatedValue) {
+        			q.add(Pair.of(outIndex, newVal));
         		}
         	}
+        	//System.out.println();
+        	//propNet.renderToFile("kIter" + ++kIter + ".dot", components);
     	}
 
     }
@@ -280,25 +383,33 @@ public class XStateMachine extends XMachine {
     		List<Move> moves = new ArrayList<Move>();
     		int roleIndex = rolesIndexMap.get(i);
     		int nextRoleIndex = rolesIndexMap.get(i + 1);
-    		//System.out.println(roleIndex + ", " + nextRoleIndex);
+    		/*System.out.println(roleIndex + ", " + nextRoleIndex);
+    		System.out.println(roles[i]);
+    		System.out.print("   ");*/
     		for (int j = roleIndex; j < nextRoleIndex; ++j) {
     			if (s.fastGet(j)) {
     				//System.out.println(roles[i] + " " + legalArray[j]);
     				moves.add(legalArray[j]);
+    				//System.out.print(" " + legalArray[j] + " (" + (legalOffset + j) + ")");
     			}
     		}
+    		//System.out.println();
     		legalMap.put(roles[i], moves);
     	}
     	int start = rolesIndexMap.get(size);
     	int end = legalArray.length;
     	//System.out.println(start + ", " + end);
     	List<Move> moves = new ArrayList<Move>();
+    	//System.out.println(roles[size]);
+    	//System.out.print("   ");
     	for(int i = start; i < end; ++i) {
     		if (s.fastGet(i)) {
     			//System.out.println(roles[size] + " " + legalArray[i]);
     			moves.add(legalArray[i]);
+    			//System.out.print(" " + legalArray[i] + " (" + (legalOffset + i) + ")");
     		}
     	}
+    	//System.out.println();
     	legalMap.put(roles[size], moves);
     	return legalMap;
     }
@@ -318,96 +429,140 @@ public class XStateMachine extends XMachine {
     	return propNet;
     }
 
+    int kLegal = 0;
     @Override
     public List<Move> getLegalMoves(OpenBitSet state, Role role)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
-    	//System.out.println("getLegalMoves");
+    	//System.out.println("getLegalMoves" + ++kLegal);
 
-    	propNet.renderToFile("preLegal.dot", components);
-    	int thread_id = main_ind;
+    	//propNet.renderToFile("preLegal" + kLegal + ".dot", components);
 
-    	setState(state, null, thread_id);
-    	propNet.renderToFile("postLegal.dot", components);
 
-    	int size = currLegals.getBits().length;
-    	for(int i = 0; i < size; ++i) {
-    		System.out.println(Long.toBinaryString(currLegals.getBits()[i]));
-    	}
+    	setState(state, null);
+
+
+    	//propNet.renderToFile("postLegal" + kLegal + ".dot", components);
+
+    	//System.out.println("New Legals: " + Long.toBinaryString(currLegals.getBits()[0]));
+    	//System.out.println("nextState: " + Long.toBinaryString(nextState.getBits()[0]));
+    	//System.out.println(toGdl(nextState).toString());
+
+    	//setLegals();
     	currentLegalMoves = getLegals(currLegals);
+    	//System.out.println();
 
+    	//if (kLegal == 2) System.exit(0);
     	return currentLegalMoves.get(role);
     }
 
 
-	protected void setBases(OpenBitSet state, Queue<Integer> q, int thread_id) {
+
+	protected void setBases(OpenBitSet state, Queue<Pair<Integer, Boolean>> q) {
     	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
 
+    	//System.out.println("CurrentState: " + Long.toBinaryString(currentState.getBits()[0]));
+    	//System.out.println(toGdl(currentState).toString());
+    	//System.out.println("State: " + Long.toBinaryString(state.getBits()[0]));
+    	//System.out.println(toGdl(state).toString());
+
     	OpenBitSet temp = (OpenBitSet) state.clone();
-    	nextState = (OpenBitSet) currentState.clone();
+    	//nextState = (OpenBitSet) currentState.clone();
     	state.xor(currentState);
     	currentState = temp;
+    	//System.out.println("xor: " + Long.toBinaryString(state.getBits()[0]));
 
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
-    		boolean val = state.fastGet(i);
+    		boolean val = temp.fastGet(i);
     		if (val) components[baseOffset + i] += 1;
     		else components[baseOffset + i] -= 1;
+    		//System.out.println(gdlSentenceMap.get(baseOffset + i) + " " + val);
 
     		long comp = compInfo[baseOffset + i];
     		int num_outputs = numOutputs(comp);
         	int outputsIndex = outputsOffset(comp);
 
+        	//System.out.println("    Outputs:");
         	for (int j = 0; j < num_outputs; ++j) {
         		int outIndex = connecTable[outputsIndex + j];
         		int outValue = components[outIndex];
         		boolean lastPropagatedValue = get_current_value(outValue);
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
-        		if (get_current_value(components[outIndex]) != lastPropagatedValue) {
-        			q.add(outIndex);
+        		//System.out.print(indexCompMap.get(outIndex) + " (" + outIndex + ") " + lastPropagatedValue + " " + get_current_value(components[outIndex]) + " ");
+        		//printOutputs(outIndex);
+        		boolean newVal = get_current_value(components[outIndex]);
+        		if (newVal != lastPropagatedValue) {
+        			q.add(Pair.of(outIndex, newVal));
         		}
         	}
+        	//System.out.println();
     	}
+
     }
 
 
-	protected void setActions(OpenBitSet moves, Queue<Integer> q, int thread_id) {
+	protected void printOutputs(int index) {
+		long comp = compInfo[index];
+		int num_outputs = numOutputs(comp);
+    	int outputsIndex = outputsOffset(comp);
+
+    	System.out.print("\n                   Outputs2: ");
+    	for (int j = 0; j < num_outputs; ++j) {
+    		int outIndex = connecTable[outputsIndex + j];
+
+    		int outValue = components[outIndex];
+    		boolean lastPropagatedValue = get_current_value(outValue);
+
+    		System.out.print(indexCompMap.get(outIndex) + " (" + outIndex + ") " + " " + lastPropagatedValue + " " + get_current_value(components[outIndex]) + " ");
+    	}
+    	System.out.println();
+	}
+
+	protected void setActions(OpenBitSet moves, Queue<Pair<Integer, Boolean>> q) {
     	if(moves == null) return;
 
     	int[] inputs = propNet.getInputPropositions();
     	int size = inputs.length;
 
+    	/*System.out.println("currInputs: ");
+    	for (int i = 0; i < currInputs.getBits().length; ++i) System.out.println(Long.toBinaryString(currInputs.getBits()[i]));
+    	System.out.println("nextInputs: ");
+    	for (int i = 0; i < moves.getBits().length; ++i) System.out.println(Long.toBinaryString(moves.getBits()[i]));
+*/
     	OpenBitSet tempInputs = (OpenBitSet) moves.clone();
     	moves.xor(currInputs);
     	currInputs = tempInputs;
-
-
-    	/*System.out.println("currInputs: " + Long.toBinaryString(currInputs.getBits()[0]));
-    	OpenBitSet nextInputs = moves;
-    	System.out.println("nextInputs: " + Long.toBinaryString(nextInputs.getBits()[0]));
-    	currInputs.xor(nextInputs);
-    	System.out.println("xor: " + Long.toBinaryString(currInputs.getBits()[0]));*/
+    	//System.out.println("xor: ");
+    	//for (int i = 0; i < moves.getBits().length; ++i) System.out.println(Long.toBinaryString(moves.getBits()[i]));
 
     	for (int i = moves.nextSetBit(0); i != -1; i = moves.nextSetBit(i + 1)) {
     		boolean val = currInputs.fastGet(i);
     		int inputIndex = inputOffset + i;
     		if (val) components[inputIndex] += 1;
     		else components[inputIndex] -= 1;
+    		//System.out.println(indexCompMap.get(inputIndex) + " " + val);
 
     		long comp = compInfo[inputIndex];
     		int num_outputs = numOutputs(comp);
         	int outputsIndex = outputsOffset(comp);
 
+        	//System.out.println("    Outputs:");
         	for (int j = 0; j < num_outputs; ++j) {
         		int outIndex = connecTable[outputsIndex + j];
+
         		int outValue = components[outIndex];
         		boolean lastPropagatedValue = get_current_value(outValue);
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
-        		if (get_current_value(components[outIndex]) != lastPropagatedValue) {
-        			q.add(outIndex);
+        		//System.out.print(indexCompMap.get(outIndex) + " (" + outIndex + ") " + " " + lastPropagatedValue + " " + get_current_value(components[outIndex]) + " ");
+        		//printOutputs(outIndex);
+        		boolean newVal = get_current_value(components[outIndex]);
+        		if (newVal != lastPropagatedValue) {
+        			q.add(Pair.of(outIndex, newVal));
         		}
+        		//System.out.println();
         	}
     	}
 
@@ -427,43 +582,57 @@ public class XStateMachine extends XMachine {
 		return movesSet;
 	}
 
-    protected void setState(OpenBitSet state, List<Move> moves, int thread_id) {
-    	Queue<Integer> q = new LinkedList<Integer>();
-    	/*System.out.println("SetState");
-    	System.out.println("State: " + Long.toBinaryString(state.getBits()[0]));
-    	System.out.println("CurrentState: " + Long.toBinaryString(currentState.getBits()[0]));*/
-    	setBases((OpenBitSet)state.clone(), q, thread_id);
-    	setActions(movesToBit(moves), q, thread_id);
-    	propagate(q, thread_id);
+    protected void setState(OpenBitSet state, List<Move> moves) {
+    	Queue<Pair<Integer, Boolean>> q = new LinkedList<Pair<Integer, Boolean>>();
+    	//System.out.println("SetState");
+    	setBases((OpenBitSet)state.clone(), q);
+    	//propNet.renderToFile("postBases.dot", components);
+    	setActions(movesToBit(moves), q);
+    	//propNet.renderToFile("postActions.dot", components);
+    	propagate(q);
+    	//propNet.renderToFile("postProp.dot", components);
     }
 
+   /* protected void setState(OpenBitSet state, List<Move> moves, Queue<Integer> q, int thread_id) {
+    	System.out.println("SetState");
+    	setBases((OpenBitSet)state.clone(), q, thread_id);
+    	propNet.renderToFile("postBases.dot", components);
+    	setActions(movesToBit(moves), q, thread_id);
+    	propNet.renderToFile("postActions.dot", components);
+    	propagate(q, thread_id);
+    	propNet.renderToFile("postProp.dot", components);
+    }*/
+
+    int kNext = 0;
     @Override
 	public OpenBitSet getNextState(OpenBitSet state, List<Move> moves) {
-    	int thread_id = main_ind;
     	long td = Thread.currentThread().getId();
 
-    	//System.out.println("getNextState");
-    	for (int i = 0; i < roles.length; ++i) System.out.println(moves.get(i));
-    	propNet.renderToFile("preNext.dot", components);
+    	/*System.out.println("getNextState" + ++kNext);
+    	for (int i = 0; i < roles.length; ++i) System.out.print(roles[i] + " " + moves.get(i) + " ");
+    	System.out.println();*/
+    	//propNet.renderToFile("preNext" + kNext + ".dot", components);
 
-    	setState(state, moves, thread_id);
-    	propNet.renderToFile("postNextState.dot", components);
+    	setState(state, moves);
 
-    	//System.out.println(Long.toBinaryString(currentState.getBits()[0]));
-    	//System.exit(0);
-    	return (OpenBitSet) currentState.clone();
+    	//propNet.renderToFile("postNextState" + kNext + ".dot", components);
+
+    	/*System.out.println("nextState: " + Long.toBinaryString(nextState.getBits()[0]));
+    	System.out.println(toGdl(nextState).toString());
+    	System.out.println();*/
+
+    	//if (kNext == 3) System.exit(0);
+    	return (OpenBitSet) nextState.clone();
     }
 
-
-
-    protected void clearPropNet(int thread_id) {
+    protected void clearPropNet() {
     	components = propNet.getComponents();
     }
 
     @Override
     public boolean isTerminal(OpenBitSet state) {
-    	int thread_id = main_ind;
-    	setState(state, null, thread_id);
+    	//System.out.println("isTerminal");
+    	setState(state, null);
     	int term = propNet.getTerminalProposition();
     	return get_current_value(components[term]);
     }
@@ -474,21 +643,26 @@ public class XStateMachine extends XMachine {
     private static final long GOAL_MASK = 0x7F_0000_0000_000000L;
     private static final int GOAL_SHIFT = TYPE_SHIFT;
     protected int getGoalValue(long value) {//inline
-    	return (int) (value & GOAL_MASK) >> TYPE_SHIFT;
+    	//System.out.println("Value: " + (int)((value & GOAL_MASK) >> TYPE_SHIFT));
+    	return (int) ((value & GOAL_MASK) >> TYPE_SHIFT);
     }
 
     @Override
     public int getGoal(OpenBitSet state, Role role)
             throws GoalDefinitionException {
-    	int thread_id = main_ind;
-    	setState(state, null, thread_id);
+    	//System.out.println("getGoal");
+    	setState(state, null);
         int[] rewards = propNet.getGoalPropositions().get(role);
         int size = rewards.length;
         for(int i = 0; i < size; ++i) {
         	int rewardIndex = rewards[i];
         	int value = components[rewardIndex];
-        	if (get_current_value(value))
-        		return getGoalValue(compInfo[rewardIndex]);
+        	if (get_current_value(value)) {
+        		int goalVal = getGoalValue(compInfo[rewardIndex]);
+        		//System.out.println("GoalVal: " + goalVal);
+        		return goalVal;
+        	}
+
         }
         System.out.println("ERROR! Reward not defined in state " + state.toString());
         System.exit(0);
@@ -503,12 +677,9 @@ public class XStateMachine extends XMachine {
         return rs;
     }
 
-
-
     @Override
 	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
-    	int[] baseProps = propNet.getBasePropositions();
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
     		bases.add(gdlSentenceMap.get(baseOffset + i));
     	}
@@ -525,6 +696,12 @@ public class XStateMachine extends XMachine {
     	}
     	return bitSet;
     }
+
+	@Override
+	public MachineState getMachineStateFromBitSet(OpenBitSet contents) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 
 }

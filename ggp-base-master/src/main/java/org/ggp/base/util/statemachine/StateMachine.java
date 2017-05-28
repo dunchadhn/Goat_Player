@@ -479,9 +479,4 @@ public abstract class StateMachine
             avgScores[j] /= repetitions;
         }
     }
-
-	public Object getPropNet() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }

@@ -1,10 +1,9 @@
-package org.ggp.base.player.gamer;
+package org.ggp.base.player.gamer.statemachine;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
-import org.apache.lucene.util.OpenBitSet;
+import org.ggp.base.player.gamer.Gamer;
 import org.ggp.base.player.gamer.exception.AbortingException;
 import org.ggp.base.player.gamer.exception.MetaGamingException;
 import org.ggp.base.player.gamer.exception.MoveSelectionException;
@@ -14,10 +13,12 @@ import org.ggp.base.util.logging.GamerLogger;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
-import org.ggp.base.util.statemachine.XStateMachine;
+import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.cache.CachedStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
+import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 
 /**
@@ -31,7 +32,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
  * @author evancox
  * @author Sam
  */
-public abstract class XStateMachineGamer extends Gamer
+public abstract class StateMachineGamer extends Gamer
 {
     // =====================================================================
     // First, the abstract methods which need to be overridden by subclasses.
@@ -42,7 +43,7 @@ public abstract class XStateMachineGamer extends Gamer
      * Defines which state machine this gamer will use.
      * @return
      */
-    public abstract XStateMachine getInitialStateMachine();
+    public abstract StateMachine getInitialStateMachine();
 
     /**
      * Defines the metagaming action taken by a player during the START_CLOCK
@@ -50,9 +51,8 @@ public abstract class XStateMachineGamer extends Gamer
      * @throws TransitionDefinitionException
      * @throws MoveDefinitionException
      * @throws GoalDefinitionException
-     * @throws ExecutionException
      */
-    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException;
+    public abstract void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException;
 
     /**
      * Defines the algorithm that the player uses to select their move.
@@ -61,9 +61,8 @@ public abstract class XStateMachineGamer extends Gamer
      * @throws TransitionDefinitionException
      * @throws MoveDefinitionException
      * @throws GoalDefinitionException
-     * @throws ExecutionException
      */
-    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException;
+    public abstract Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException;
 
     /**
      * Defines any actions that the player takes upon the game cleanly ending.
@@ -82,7 +81,7 @@ public abstract class XStateMachineGamer extends Gamer
 	/**
 	 * Returns the current state of the game.
 	 */
-	public final OpenBitSet getCurrentState()
+	public final MachineState getCurrentState()
 	{
 		return currentState;
 	}
@@ -99,7 +98,7 @@ public abstract class XStateMachineGamer extends Gamer
 	 * Returns the state machine.  This is used for calculating the next state and other operations, such as computing
 	 * the legal moves for all players, whether states are terminal, and the goal values of terminal states.
 	 */
-	public final XStateMachine getStateMachine()
+	public final StateMachine getStateMachine()
 	{
 		return stateMachine;
 	}
@@ -128,7 +127,7 @@ public abstract class XStateMachineGamer extends Gamer
      *
      * @param newStateMachine the new state machine
      */
-   /* protected final void switchStateMachine(StateMachine newStateMachine) {
+    protected final void switchStateMachine(StateMachine newStateMachine) {
         try {
             MachineState newCurrentState = newStateMachine.getInitialState();
             Role newRole = newStateMachine.getRoleFromConstant(getRoleName());
@@ -150,19 +149,19 @@ public abstract class XStateMachineGamer extends Gamer
             GamerLogger.log("GamePlayer", "Caught an exception while switching state machine!");
             GamerLogger.logStackTrace("GamePlayer", e);
         }
-    }*/
+    }
 
     /**
      * A function that can be used when deserializing gamers, to bring a
      * state machine gamer back to the internal state that it has when it
      * arrives at a particular game state.
      */
-	/*public final void resetStateFromMatch() {
+	public final void resetStateFromMatch() {
         stateMachine = getInitialStateMachine();
         stateMachine.initialize(getMatch().getGame().getRules());
         currentState = stateMachine.getMachineStateFromSentenceList(getMatch().getMostRecentState());
         role = stateMachine.getRoleFromConstant(getRoleName());
-	}*/
+	}
 
     // =====================================================================
     // Finally, methods which are overridden with proper state-machine-based
@@ -184,9 +183,9 @@ public abstract class XStateMachineGamer extends Gamer
 			stateMachine = getInitialStateMachine();
 			stateMachine.initialize(getMatch().getGame().getRules());
 			currentState = stateMachine.getInitialState();
-			MachineState convertedState = stateMachine.toGdl(currentState);
+
 			role = stateMachine.getRoleFromConstant(getRoleName());
-			getMatch().appendState(convertedState.getContents());
+			getMatch().appendState(currentState.getContents());
 
 			stateMachineMetaGame(timeout);
 		}
@@ -220,7 +219,7 @@ public abstract class XStateMachineGamer extends Gamer
 				}
 
 				currentState = stateMachine.getNextState(currentState, moves);
-				getMatch().appendState(stateMachine.toGdl(currentState).getContents());
+				getMatch().appendState(currentState.getContents());
 			}
 
 			return stateMachineSelectMove(timeout).getContents();
@@ -247,7 +246,7 @@ public abstract class XStateMachineGamer extends Gamer
 				}
 
 				currentState = stateMachine.getNextState(currentState, moves);
-				getMatch().appendState(stateMachine.toGdl(currentState).getContents());
+				getMatch().appendState(currentState.getContents());
 				getMatch().markCompleted(stateMachine.getGoals(currentState));
 			}
 
@@ -274,6 +273,6 @@ public abstract class XStateMachineGamer extends Gamer
 
     // Internal state about the current state of the state machine.
     private Role role;
-    private OpenBitSet currentState;
-    private XStateMachine stateMachine;
+    private MachineState currentState;
+    private StateMachine stateMachine;
 }

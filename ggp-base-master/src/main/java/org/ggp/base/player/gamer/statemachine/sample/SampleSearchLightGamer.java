@@ -7,9 +7,9 @@ import java.util.Random;
 
 import org.ggp.base.apps.player.detail.DetailPanel;
 import org.ggp.base.apps.player.detail.SimpleDetailPanel;
-import org.ggp.base.player.gamer.StateMachineGamer;
 import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
+import org.ggp.base.player.gamer.statemachine.StateMachineGamer;
 import org.ggp.base.util.game.Game;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;

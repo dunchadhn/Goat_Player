@@ -255,7 +255,7 @@ public final class PropNetConverter
 		List<Proposition> fixList = new ArrayList<Proposition>();
 		for ( Proposition proposition : propositions.values() )
 		{
-			if ( proposition.getInputs_set().size() > 1 )
+			if ( proposition.getInputs().size() > 1 )
 			{
 				fixList.add(proposition);
 			}
@@ -265,7 +265,7 @@ public final class PropNetConverter
 		{
 			Or or = new Or();
 			int i = 0;
-			for ( Component input : fixItem.getInputs_set() )
+			for ( Component input : fixItem.getInputs() )
 			{
 			    i++;
 
@@ -281,7 +281,7 @@ public final class PropNetConverter
 					disjunct = new Proposition(GdlPool.getRelation(GdlPool.getConstant(relation.getName().getValue() + "-" + i), relation.getBody()));
 				}
 
-				input.getOutputs_set().clear();
+				input.getOutputs().clear();
 
 				link(input, disjunct);
 				link(disjunct, or);
@@ -289,7 +289,7 @@ public final class PropNetConverter
 				components.add(disjunct);
 			}
 
-			fixItem.getInputs_set().clear();
+			fixItem.getInputs().clear();
 			link(or, fixItem);
 
 			components.add(or);

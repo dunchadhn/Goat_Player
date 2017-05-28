@@ -397,7 +397,7 @@ public class OptimizingPropNetFactory {
 		for(Entry<GdlSentence, Component> entry : components.entrySet()) {
 			if(entry.getKey().getName() == TRUE) {
 				Component comp = entry.getValue();
-				if(comp.getInputs_set().size() == 0) {
+				if(comp.getInputs().size() == 0) {
 					comp.addInput(falseComponent);
 					falseComponent.addOutput(comp);
 					changedSomething = true;
@@ -491,7 +491,7 @@ public class OptimizingPropNetFactory {
 			if(realComp == null) {
 				realComp = falseComponent;
 			}
-			for(Component output : tempComp.getOutputs_set()) {
+			for(Component output : tempComp.getOutputs()) {
 				//Disconnect
 				output.removeInput(tempComp);
 				//tempComp.removeOutput(output); //do at end
@@ -542,7 +542,7 @@ public class OptimizingPropNetFactory {
 			Component falseComponent) {
         assert((components != null && negations != null) || pn != null);
         assert((components == null && negations == null) || pn == null);
-        for (Component output : Lists.newArrayList(falseComponent.getOutputs_set())) {
+        for (Component output : Lists.newArrayList(falseComponent.getOutputs())) {
         	if (isEssentialProposition(output) || output instanceof Transition) {
         		//Since this is the false constant, there are a few "essential" types
         		//we don't actually want to keep around.
@@ -552,7 +552,7 @@ public class OptimizingPropNetFactory {
 	    	}
 			if(output instanceof Proposition) {
 				//Move its outputs to be outputs of false
-				for(Component child : output.getOutputs_set()) {
+				for(Component child : output.getOutputs()) {
 					//Disconnect
 					child.removeInput(output);
 					//output.removeOutput(child); //do at end
@@ -578,14 +578,14 @@ public class OptimizingPropNetFactory {
 			} else if(output instanceof And) {
 				And and = (And) output;
 				//Attach children of and to falseComponent
-				for(Component child : and.getOutputs_set()) {
+				for(Component child : and.getOutputs()) {
 					child.addInput(falseComponent);
 					falseComponent.addOutput(child);
 					child.removeInput(and);
 				}
 				//Disconnect and completely
 				and.removeAllOutputs();
-				for(Component parent : and.getInputs_set())
+				for(Component parent : and.getInputs())
 					parent.removeOutput(and);
 				and.removeAllInputs();
 				if(pn != null)
@@ -596,11 +596,11 @@ public class OptimizingPropNetFactory {
 				or.removeInput(falseComponent);
 				falseComponent.removeOutput(or);
 				//If or has only one input, remove it
-				if(or.getInputs_set().size() == 1) {
-					Component in = or.getSingleInput_set();
+				if(or.getInputs().size() == 1) {
+					Component in = or.getSingleInput();
 					or.removeInput(in);
 					in.removeOutput(or);
-					for(Component out : or.getOutputs_set()) {
+					for(Component out : or.getOutputs()) {
 						//Disconnect from and
 						out.removeInput(or);
 						//or.removeOutput(out); //do at end
@@ -612,7 +612,7 @@ public class OptimizingPropNetFactory {
 					if (pn != null) {
 					    pn.removeComponent(or);
 					}
-				} else if (or.getInputs_set().size() == 0) {
+				} else if (or.getInputs().size() == 0) {
 					if (pn != null) {
 						pn.removeComponent(or);
 					}
@@ -623,7 +623,7 @@ public class OptimizingPropNetFactory {
 				not.removeInput(falseComponent);
 				falseComponent.removeOutput(not);
 				//Connect all children of the not to trueComponent
-				for(Component child : not.getOutputs_set()) {
+				for(Component child : not.getOutputs()) {
 					//Disconnect
 					child.removeInput(not);
 					//not.removeOutput(child); //Do at end
@@ -656,13 +656,13 @@ public class OptimizingPropNetFactory {
 			Map<GdlSentence, Component> components, Map<GdlSentence, Component> negations, PropNet pn, Component trueComponent,
 			Component falseComponent) {
 	    assert((components != null && negations != null) || pn != null);
-	    for (Component output : Lists.newArrayList(trueComponent.getOutputs_set())) {
+	    for (Component output : Lists.newArrayList(trueComponent.getOutputs())) {
 	    	if (isEssentialProposition(output) || output instanceof Transition) {
 	    		continue;
 	    	}
 			if(output instanceof Proposition) {
 				//Move its outputs to be outputs of true
-				for(Component child : output.getOutputs_set()) {
+				for(Component child : output.getOutputs()) {
 					//Disconnect
 					child.removeInput(output);
 					//output.removeOutput(child); //do at end
@@ -688,14 +688,14 @@ public class OptimizingPropNetFactory {
 			} else if(output instanceof Or) {
 				Or or = (Or) output;
 				//Attach children of or to trueComponent
-				for(Component child : or.getOutputs_set()) {
+				for(Component child : or.getOutputs()) {
 					child.addInput(trueComponent);
 					trueComponent.addOutput(child);
 					child.removeInput(or);
 				}
 				//Disconnect or completely
 				or.removeAllOutputs();
-				for(Component parent : or.getInputs_set())
+				for(Component parent : or.getInputs())
 					parent.removeOutput(or);
 				or.removeAllInputs();
 				if(pn != null)
@@ -706,11 +706,11 @@ public class OptimizingPropNetFactory {
 				and.removeInput(trueComponent);
 				trueComponent.removeOutput(and);
 				//If and has only one input, remove it
-				if(and.getInputs_set().size() == 1) {
-					Component in = and.getSingleInput_set();
+				if(and.getInputs().size() == 1) {
+					Component in = and.getSingleInput();
 					and.removeInput(in);
 					in.removeOutput(and);
-					for(Component out : and.getOutputs_set()) {
+					for(Component out : and.getOutputs()) {
 						//Disconnect from and
 						out.removeInput(and);
 						//and.removeOutput(out); //do at end
@@ -722,7 +722,7 @@ public class OptimizingPropNetFactory {
 					if (pn != null) {
 					    pn.removeComponent(and);
 					}
-				} else if (and.getInputs_set().size() == 0) {
+				} else if (and.getInputs().size() == 0) {
 					if (pn != null) {
 						pn.removeComponent(and);
 					}
@@ -733,7 +733,7 @@ public class OptimizingPropNetFactory {
 				not.removeInput(trueComponent);
 				trueComponent.removeOutput(not);
 				//Connect all children of the not to falseComponent
-				for(Component child : not.getOutputs_set()) {
+				for(Component child : not.getOutputs()) {
 					//Disconnect
 					child.removeInput(not);
 					//not.removeOutput(child); //Do at end
@@ -753,13 +753,13 @@ public class OptimizingPropNetFactory {
 
 
 	private static boolean hasNonessentialChildren(Component trueComponent) {
-		for(Component child : trueComponent.getOutputs_set()) {
+		for(Component child : trueComponent.getOutputs()) {
 			if(child instanceof Transition)
 				continue;
 			if(!isEssentialProposition(child))
 				return true;
 			//We don't want any grandchildren, either
-			if(!child.getOutputs_set().isEmpty())
+			if(!child.getOutputs().isEmpty())
 				return true;
 		}
 		return false;
@@ -786,11 +786,11 @@ public class OptimizingPropNetFactory {
 		Set<Component> componentsToTry = new HashSet<Component>(componentSet);
 		while(!componentsToTry.isEmpty()) {
 			for(Component c : componentsToTry) {
-				for(Component out : c.getOutputs_set()) {
+				for(Component out : c.getOutputs()) {
 					if(!componentSet.contains(out))
 						newComponents.add(out);
 				}
-				for(Component in : c.getInputs_set()) {
+				for(Component in : c.getInputs()) {
 					if(!componentSet.contains(in))
 						newComponents.add(in);
 				}
@@ -840,7 +840,7 @@ public class OptimizingPropNetFactory {
 					GdlSentence trueSentence = GdlPool.getRelation(TRUE, entry.getKey().getBody());
 					//System.out.println("True sentence from init: " + trueSentence);
 					Component trueSentenceComponent = components.get(trueSentence);
-					if(trueSentenceComponent.getInputs_set().isEmpty()) {
+					if(trueSentenceComponent.getInputs().isEmpty()) {
 						//Case where there is no transition input
 						//Add the transition input, connect to init, continue loop
 						Transition transition = new Transition();
@@ -852,11 +852,11 @@ public class OptimizingPropNetFactory {
 						transition.addOutput(trueSentenceComponent);
 					} else {
 						//The transition already exists
-						Component transition = trueSentenceComponent.getSingleInput_set();
+						Component transition = trueSentenceComponent.getSingleInput();
 
 						//We want to add init as a thing that precedes the transition
 						//Disconnect existing input
-						Component input = transition.getSingleInput_set();
+						Component input = transition.getSingleInput();
 						//input and init go into or, or goes into transition
 						input.removeOutput(transition);
 						transition.removeInput(input);
@@ -880,7 +880,7 @@ public class OptimizingPropNetFactory {
 
 		//Special case: An input is the true constant
 		for(Component in : inputs) {
-			if(in instanceof Constant && in.getCurrentValue()) {
+			if(in instanceof Constant && in.getValue()) {
 				//True constant: connect that to the component, done
 				in.addOutput(output);
 				output.addInput(in);
@@ -901,15 +901,15 @@ public class OptimizingPropNetFactory {
 			}
 		}
 		//What if they're all false? (Or inputs is empty?) Then no inputs at this point...
-		if(or.getInputs_set().isEmpty()) {
+		if(or.getInputs().isEmpty()) {
 			//Hook up to "false"
 			falseProp.addOutput(output);
 			output.addInput(falseProp);
 			return;
 		}
 		//If there's just one, on the other hand, don't use the or gate
-		if(or.getInputs_set().size() == 1) {
-			Component in = or.getSingleInput_set();
+		if(or.getInputs().size() == 1) {
+			Component in = or.getSingleInput();
 			in.removeOutput(or);
 			or.removeInput(in);
 			in.addOutput(output);
@@ -1199,11 +1199,11 @@ public class OptimizingPropNetFactory {
 			Set<Component> inputs = entry.getValue();
 			Set<Component> realInputs = new HashSet<Component>();
 			for(Component input : inputs) {
-				if(input instanceof Constant || input.getInputs_set().size() == 0) {
+				if(input instanceof Constant || input.getInputs().size() == 0) {
 					realInputs.add(input);
 				} else {
-					realInputs.add(input.getSingleInput_set());
-					input.getSingleInput_set().removeOutput(input);
+					realInputs.add(input.getSingleInput());
+					input.getSingleInput().removeOutput(input);
 					input.removeAllInputs();
 				}
 			}
@@ -1249,12 +1249,12 @@ public class OptimizingPropNetFactory {
 	private static boolean isThisConstant(Component conj, Constant constantComponent) {
 		if(conj == constantComponent)
 			return true;
-		return (conj instanceof Proposition && conj.getInputs_set().size() == 1 && conj.getSingleInput_set() == constantComponent);
+		return (conj instanceof Proposition && conj.getInputs().size() == 1 && conj.getSingleInput() == constantComponent);
 	}
 
 
 	private static Not getNotOutput(Component positive) {
-		for(Component c : positive.getOutputs_set()) {
+		for(Component c : positive.getOutputs()) {
 			if(c instanceof Not) {
 				return (Not) c;
 			}
@@ -1271,7 +1271,7 @@ public class OptimizingPropNetFactory {
 	private static void andify(List<Component> inputs, Component output, Constant trueProp) {
 		//Special case: If the inputs include false, connect false to thisComponent
 		for(Component c : inputs) {
-			if(c instanceof Constant && !c.getCurrentValue()) {
+			if(c instanceof Constant && !c.getValue()) {
 				//Connect false (c) to the output
 				output.addInput(c);
 				c.addOutput(output);
@@ -1288,15 +1288,15 @@ public class OptimizingPropNetFactory {
 			}
 		}
 		//What if they're all true? (Or inputs is empty?) Then no inputs at this point...
-		if(and.getInputs_set().isEmpty()) {
+		if(and.getInputs().isEmpty()) {
 			//Hook up to "true"
 			trueProp.addOutput(output);
 			output.addInput(trueProp);
 			return;
 		}
 		//If there's just one, on the other hand, don't use the and gate
-		if(and.getInputs_set().size() == 1) {
-			Component in = and.getSingleInput_set();
+		if(and.getInputs().size() == 1) {
+			Component in = and.getSingleInput();
 			in.removeOutput(and);
 			and.removeInput(in);
 			in.addOutput(output);
@@ -1424,7 +1424,7 @@ public class OptimizingPropNetFactory {
 		for (Component c : pn.getComponents()) {
 			ConcurrencyUtils.checkForInterruption();
 			if (c instanceof Constant) {
-				if (c.getCurrentValue()) {
+				if (c.getValue()) {
 					toAdd.add(Pair.of(c, Type.TRUE));
 				} else {
 					toAdd.add(Pair.of(c, Type.FALSE));
@@ -1475,7 +1475,7 @@ public class OptimizingPropNetFactory {
     		} else if (curComp instanceof And) {
     			if (newInputType.hasTrue) {
     				numTrueInputs.add(curComp);
-    				if (numTrueInputs.count(curComp) == curComp.getInputs_set().size()) {
+    				if (numTrueInputs.count(curComp) == curComp.getInputs().size()) {
     					typeToAdd = Type.TRUE;
     				}
     			}
@@ -1485,7 +1485,7 @@ public class OptimizingPropNetFactory {
     		} else if (curComp instanceof Or) {
     			if (newInputType.hasFalse) {
     				numFalseInputs.add(curComp);
-    				if (numFalseInputs.count(curComp) == curComp.getInputs_set().size()) {
+    				if (numFalseInputs.count(curComp) == curComp.getInputs().size()) {
     					typeToAdd = Type.FALSE;
     				}
     			}
@@ -1507,7 +1507,7 @@ public class OptimizingPropNetFactory {
     		}
 
     		//Add all our children to the stack
-    		for (Component output : curComp.getOutputs_set()) {
+    		for (Component output : curComp.getOutputs()) {
     			toAdd.add(Pair.of(output, typeToAdd));
     		}
 			if (legalsToInputs.containsKey(curComp)) {
@@ -1533,7 +1533,7 @@ public class OptimizingPropNetFactory {
 	            	continue;
 	            }
 	            //Disconnect from inputs
-	            for(Component input : c.getInputs_set()) {
+	            for(Component input : c.getInputs()) {
 	                input.removeOutput(c);
 	            }
 	            c.removeAllInputs();
@@ -1576,7 +1576,7 @@ public class OptimizingPropNetFactory {
 				//We've already added it
 				continue;
 			usefulComponents.add(curComp);
-			toAdd.addAll(curComp.getInputs_set());
+			toAdd.addAll(curComp.getInputs());
 		}
 
 		//Remove the components not marked as useful
@@ -1622,7 +1622,7 @@ public class OptimizingPropNetFactory {
 		List<Proposition> toReplaceWithFalse = new ArrayList<Proposition>();
 		for(Proposition p : pn.getPropositions()) {
 			//If it's important, continue to the next proposition
-			if(p.getInputs_set().size() == 1 && p.getSingleInput_set() instanceof Transition)
+			if(p.getInputs().size() == 1 && p.getSingleInput() instanceof Transition)
 				//It's a base proposition
 				continue;
 			GdlSentence sentence = p.getName();
@@ -1636,14 +1636,14 @@ public class OptimizingPropNetFactory {
 						|| name == INIT)
 					continue;
 			}
-			if(p.getInputs_set().size() < 1) {
+			if(p.getInputs().size() < 1) {
 				//Needs to be handled separately...
 				//because this is an always-false true proposition
 				//and it might have and gates as outputs
 				toReplaceWithFalse.add(p);
 				continue;
 			}
-			if(p.getInputs_set().size() != 1)
+			if(p.getInputs().size() != 1)
 				System.err.println("Might have falsely declared " + p.getName() + " to be unimportant?");
 			//Not important
 			//System.out.println("Removing " + p);
@@ -1651,8 +1651,8 @@ public class OptimizingPropNetFactory {
 		}
 		for(Proposition p : toSplice) {
 			//Get the inputs and outputs...
-			Set<Component> inputs = p.getInputs_set();
-			Set<Component> outputs = p.getOutputs_set();
+			Set<Component> inputs = p.getInputs();
+			Set<Component> outputs = p.getOutputs();
 			//Remove the proposition...
 			pn.removeComponent(p);
 			//And splice the inputs and outputs back together
