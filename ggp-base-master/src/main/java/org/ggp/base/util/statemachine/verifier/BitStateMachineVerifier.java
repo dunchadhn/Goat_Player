@@ -108,12 +108,12 @@ public class BitStateMachineVerifier {
                             diff.removeAll(subjMoves);
                             HashMap<Integer, Component> indexCompMap = theSubject.getPropNet().indexCompMap();
                             HashMap<Component, Integer> compIndexMap = theSubject.getPropNet().compIndexMap();
-                            int[] components = theSubject.components;
+                            int[] components = theSubject.components[0];
                             for (Move m : diff) {
                             	Pair<Role, Move> p = Pair.of(theRole, m);
                             	int index = legalMoveMap.get(p);
                             	Component c = indexCompMap.get(index);
-                            	printInputs(c, compIndexMap, components, 1, 17, theSubject.connecTable, theSubject.compInfo, theSubject.getPropNet().outputMap);
+                            	printInputs(c, compIndexMap, components, 1, 17, theSubject.connecTable[0], theSubject.compInfo[0], theSubject.getPropNet().outputMap);
 
                             }
                             return false;
