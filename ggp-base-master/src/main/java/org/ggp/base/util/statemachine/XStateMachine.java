@@ -25,7 +25,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 @SuppressWarnings("unused")
 public class XStateMachine extends XMachine {
 
-	private int num_threads = 2;
+	private int num_threads = 49;
 	private int main_id = num_threads - 1;
 	private long main_thread;
 
@@ -130,12 +130,14 @@ public class XStateMachine extends XMachine {
     	return (value & CURR_VAL_MASK) != 0;
     }
 
+    public void setMainThreadId() {
+    	main_thread = Thread.currentThread().getId();
+    }
 
 
     @Override
     public OpenBitSet getInitialState() {//Do initialization in initialize
     	ArrayDeque<Pair<Integer, Boolean>> q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo[0].length);
-    	main_thread = Thread.currentThread().getId();
     	resetPropNet();
 
     	setInit(true,q);
@@ -633,9 +635,7 @@ public class XStateMachine extends XMachine {
     		currentState[i] = new OpenBitSet(numBases);
     		currLegals[i] = new OpenBitSet(numLegals);
     		nextState[i] = new OpenBitSet(numBases);
-    		for(int j = 0; j < num_threads; ++j) {
-    			components[j] = propNet.getComponents();
-    		}
+    		components[i] = propNet.getComponents();
     	}
     }
 
