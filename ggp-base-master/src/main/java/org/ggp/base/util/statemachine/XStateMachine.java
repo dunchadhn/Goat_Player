@@ -25,10 +25,14 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 @SuppressWarnings("unused")
 public class XStateMachine extends XMachine {
 
+	private int num_threads = 2;
+	private int main_id = num_threads - 1;
+	private long main_thread;
+
     private XPropNet propNet;
     private Role[] roles;
 
-    private OpenBitSet currentState, nextState, currInputs, currLegals;
+    private OpenBitSet[] currentState, nextState, currInputs, currLegals;
     private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
 
     private HashMap<Role, List<Move>> actions;
@@ -37,16 +41,15 @@ public class XStateMachine extends XMachine {
     private Move[] legalArray;
     private HashMap< Pair<Role, Move>, Integer> roleMoves;
 
-    public int[] components;
-    public long[] compInfo;
-    public int[] connecTable;
+    public int[][] components;
+    public long[][] compInfo;
+    public int[][] connecTable;
 
     private int[][] goalPropositions;
 
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<Integer, Component> indexCompMap;
 
-    private ArrayDeque<Pair<Integer, Boolean>> q;
     private Random rand;
 
 
@@ -55,8 +58,18 @@ public class XStateMachine extends XMachine {
         try {
         	System.out.println("Initialized");
             propNet = new XPropNet(OptimizingPropNetFactory.create(description));
-            compInfo = propNet.getCompInfo();
-            connecTable = propNet.getConnecTable();
+            compInfo = new long[num_threads][];
+            components = new int[num_threads][];
+            connecTable = new int[num_threads][];
+            currentState = new OpenBitSet[num_threads];
+            nextState = new OpenBitSet[num_threads];
+            currInputs = new OpenBitSet[num_threads];
+            currLegals = new OpenBitSet[num_threads];
+
+            for(int i = 0; i < num_threads; ++i) {
+            	compInfo[i] = propNet.getCompInfo();
+            	connecTable[i] = propNet.getConnecTable();
+            }
             roles = propNet.getRoles();
 
             numBases = propNet.numBases();
@@ -72,8 +85,6 @@ public class XStateMachine extends XMachine {
             roleMoves = propNet.getRoleMoves();
 
             gdlSentenceMap = propNet.getGdlSentenceMap();
-            indexCompMap = propNet.indexCompMap();
-            q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo.length);
             rand = new Random();
 
             goalPropositions = propNet.getGoalPropositions();
@@ -123,39 +134,49 @@ public class XStateMachine extends XMachine {
 
     @Override
     public OpenBitSet getInitialState() {//Do initialization in initialize
+    	ArrayDeque<Pair<Integer, Boolean>> q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo[0].length);
+    	main_thread = Thread.currentThread().getId();
     	resetPropNet();
 
-    	setInit(true);
+    	setInit(true,q);
     	initBases();
-    	OpenBitSet state = (OpenBitSet) currentState.clone();
+    	OpenBitSet[] state = currentState.clone();
     	setConstants();
 
-    	rawPropagate();
+    	rawPropagate(q);
 
-    	setInit(false);
-    	propagate(q);
+    	setInit(false,q);
+    	propagateAll(q);
 
     	currentState = state;
-        return (OpenBitSet) state.clone();//necessary to clone?
+        return (OpenBitSet) state[0].clone();//necessary to clone?
     }
 
-    protected void setInit(boolean val) {
+    protected void setInit(boolean val, ArrayDeque<Pair<Integer, Boolean>> q) {
     	int initId = propNet.getInitProposition();
     	if (initId == -1) return;
 
-    	if (!val) components[initId] -= 1;
-    	long comp = compInfo[initId];
+    	if (!val) {
+    		for(int i = 0; i < num_threads; ++i) {
+    			components[i][initId] -= 1;
+    		}
+    	}
+    	long comp = compInfo[0][initId];
     	int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
     	int outputsIndex = (int) (comp & OFFSET_MASK);
 
     	for (int j = 0; j < num_outputs; ++j) {
-    		int outIndex = connecTable[outputsIndex + j];
+    		int outIndex = connecTable[0][outputsIndex + j];
     		if (val) {
-    			components[outIndex] += 1;
+    			for(int i = 0; i < num_threads; ++i) {
+    				components[i][outIndex] += 1;
+    			}
     		} else {
-    			boolean lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK) != 0;
-    			components[outIndex] -= 1;
-    			boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+    			boolean lastPropagatedValue = (components[0][outIndex] & CURR_VAL_MASK) != 0;
+    			for(int i = 0; i < num_threads; ++i) {
+    				components[i][outIndex] -= 1;
+    			}
+    			boolean newVal = (components[0][outIndex] & CURR_VAL_MASK) != 0;
     			if (newVal != lastPropagatedValue) {
     				q.add(Pair.of(outIndex, newVal));
     			}
@@ -171,16 +192,20 @@ public class XStateMachine extends XMachine {
     	if (initBases != null) {
     		for (int i = 0; i < initBases.length; ++i) {
         		int bIndex = initBases[i];
-        		components[bIndex] += 1;
-        		currentState.fastSet(bIndex - baseOffset);
+        		for(int j = 0; j < num_threads; ++j) {
+        			components[j][bIndex] += 1;
+        			currentState[j].fastSet(bIndex - baseOffset);
+        		}
 
-        		long comp = compInfo[bIndex];
+        		long comp = compInfo[0][bIndex];
             	int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
             	int outputsIndex = (int) (comp & OFFSET_MASK);
 
             	for (int j = 0; j < num_outputs; ++j) {
-            		int outIndex = connecTable[outputsIndex + j];
-            		components[outIndex] += 1;
+            		int outIndex = connecTable[0][outputsIndex + j];
+            		for (int k = 0; k < num_threads; ++k) {
+            			components[k][outIndex] += 1;
+            		}
             	}
         	}
     	}
@@ -192,14 +217,18 @@ public class XStateMachine extends XMachine {
     	if (constants == null) return;
 
     	for (int c = 0; c < constants.length; ++c) {
-    		long comp = compInfo[constants[c]];
+    		long comp = compInfo[0][constants[c]];
         	int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
-        	boolean val = (components[constants[c]] & CURR_VAL_MASK) != 0;
+        	boolean val = (components[0][constants[c]] & CURR_VAL_MASK) != 0;
         	for (int i = 0; i < num_outputs; ++i) {
-        		int outIndex = connecTable[outputsIndex + i];
-        		if (val) components[outIndex] += 1;
+        		int outIndex = connecTable[0][outputsIndex + i];
+        		if (val) {
+        			for(int j = 0; j < num_threads; ++j) {
+        				components[j][outIndex] += 1;
+        			}
+        		}
         	}
     	}
     }
@@ -218,27 +247,43 @@ public class XStateMachine extends XMachine {
 
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
-    protected void rawPropagate() {//compute ordering
+    protected void rawPropagate(ArrayDeque<Pair<Integer, Boolean>> q) {//compute ordering
     	Stack<Integer> ordering = propNet.getOrdering();
 
     	while (!ordering.isEmpty()) {
     		int compId = ordering.pop();
-    		int value = components[compId];
+    		int value = components[0][compId];
     		boolean val = (value & CURR_VAL_MASK) != 0;
-    		long comp = compInfo[compId];
+    		long comp = compInfo[0][compId];
 
     		if ((comp & TRIGGER_MASK) != 0) {
     			if ((comp & TRANSITION_MASK) != 0) {
     				int outputIndex = (int) (comp & OFFSET_MASK);
-    				int baseIndex = connecTable[outputIndex] - baseOffset;
-    				if (val) nextState.fastSet(baseIndex);
-    				else nextState.clear(baseIndex);
+    				int baseIndex = connecTable[0][outputIndex] - baseOffset;
+    				if (val) {
+    					for(int j = 0; j < num_threads; ++j) {
+    						nextState[j].fastSet(baseIndex);
+    					}
+    				}
+    				else {
+    					for(int j = 0; j < num_threads; ++j) {
+    						nextState[j].clear(baseIndex);
+    					}
+    				}
     				continue;
 
     			} else {
     				int legalIndex = compId - legalOffset;
-    				if (val) currLegals.fastSet(legalIndex);
-    				else currLegals.clear(legalIndex);
+    				if (val) {
+    					for(int j = 0; j < num_threads; ++j) {
+    						currLegals[j].fastSet(legalIndex);
+    					}
+    				}
+    				else {
+    					for(int j = 0; j < num_threads; ++j) {
+    						currLegals[j].clear(legalIndex);
+    					}
+    				}
     			}
     		}
 
@@ -246,31 +291,35 @@ public class XStateMachine extends XMachine {
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
         	for (int i = 0; i < num_outputs; ++i) {
-        		int outIndex = connecTable[outputsIndex + i];
-        		if (val) components[outIndex] += 1;
+        		int outIndex = connecTable[0][outputsIndex + i];
+        		if (val) {
+        			for(int j = 0; j < num_threads; ++j) {
+        				components[j][outIndex] += 1;
+        			}
+        		}
         	}
     	}
     }
 
-    protected void propagate(ArrayDeque<Pair<Integer, Boolean>> q) {
+    protected void propagate(ArrayDeque<Pair<Integer, Boolean>> q, int thread_id) {
 
     	while(!q.isEmpty()) {
     		Pair<Integer, Boolean> p = q.remove();
     		int compId = p.left;
     		boolean val = p.right;
 
-    		long comp = compInfo[compId];
+    		long comp = compInfo[thread_id][compId];
     		if ((comp & TRIGGER_MASK) != 0) {
     			if ((comp & TRANSITION_MASK) != 0) {
     				int outputIndex = (int) (comp & OFFSET_MASK);
-    				int baseIndex = connecTable[outputIndex] - baseOffset;
-    				if (val) nextState.fastSet(baseIndex);
-    				else nextState.clear(baseIndex);
+    				int baseIndex = connecTable[thread_id][outputIndex] - baseOffset;
+    				if (val) nextState[thread_id].fastSet(baseIndex);
+    				else nextState[thread_id].clear(baseIndex);
     				continue;
     			} else {
     				int legalIndex = compId - legalOffset;
-    				if (val) currLegals.fastSet(legalIndex);
-    				else currLegals.clear(legalIndex);
+    				if (val) currLegals[thread_id].fastSet(legalIndex);
+    				else currLegals[thread_id].clear(legalIndex);
     			}
     		}
 
@@ -278,14 +327,80 @@ public class XStateMachine extends XMachine {
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
         	for (int i = 0; i < num_outputs; ++i) {
-        		int outIndex = connecTable[outputsIndex + i];
-        		int outValue = components[outIndex];
+        		int outIndex = connecTable[thread_id][outputsIndex + i];
+        		int outValue = components[thread_id][outIndex];
         		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
 
-        		if (val) components[outIndex] += 1;
-        		else components[outIndex] -= 1;
+        		if (val) components[thread_id][outIndex] += 1;
+        		else components[thread_id][outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		boolean newVal = (components[thread_id][outIndex] & CURR_VAL_MASK) != 0;
+
+        		if (newVal != lastPropagatedValue) {
+        			q.add(Pair.of(outIndex, newVal));
+        		}
+        	}
+    	}
+    }
+
+    protected void propagateAll(ArrayDeque<Pair<Integer, Boolean>> q) {
+
+    	while(!q.isEmpty()) {
+    		Pair<Integer, Boolean> p = q.remove();
+    		int compId = p.left;
+    		boolean val = p.right;
+
+    		long comp = compInfo[0][compId];
+    		if ((comp & TRIGGER_MASK) != 0) {
+    			if ((comp & TRANSITION_MASK) != 0) {
+    				int outputIndex = (int) (comp & OFFSET_MASK);
+    				int baseIndex = connecTable[0][outputIndex] - baseOffset;
+    				if (val) {
+    					for (int i = 0; i < num_threads; ++i) {
+    						nextState[i].fastSet(baseIndex);
+    					}
+    				}
+    				else {
+    					for (int i = 0; i < num_threads; ++i) {
+    						nextState[i].clear(baseIndex);
+    					}
+    				}
+    				continue;
+    			} else {
+    				int legalIndex = compId - legalOffset;
+    				if (val) {
+    					for (int i = 0; i < num_threads; ++i) {
+    						currLegals[i].fastSet(legalIndex);
+    					}
+    				}
+    				else {
+    					for (int i = 0; i < num_threads; ++i) {
+    						currLegals[i].clear(legalIndex);
+    					}
+    				}
+    			}
+    		}
+
+        	int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
+        	int outputsIndex = (int) (comp & OFFSET_MASK);
+
+        	for (int i = 0; i < num_outputs; ++i) {
+        		int outIndex = connecTable[0][outputsIndex + i];
+        		int outValue = components[0][outIndex];
+        		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
+
+        		if (val) {
+        			for (int j = 0; j < num_threads; ++j) {
+        				components[j][outIndex] += 1;
+        			}
+        		}
+        		else {
+        			for (int j = 0; j < num_threads; ++j) {
+        				components[j][outIndex] -= 1;
+        			}
+        		}
+
+        		boolean newVal = (components[0][outIndex] & CURR_VAL_MASK) != 0;
 
         		if (newVal != lastPropagatedValue) {
         			q.add(Pair.of(outIndex, newVal));
@@ -296,7 +411,12 @@ public class XStateMachine extends XMachine {
 
     @Override
 	public List<List<Move>> getLegalJointMoves(OpenBitSet state) throws MoveDefinitionException {
-    	setState(state, null);
+    	int thread_id = main_id;
+    	long td = Thread.currentThread().getId();
+    	if(td != main_thread) {
+    		thread_id = (int) td % num_threads;
+    	}
+    	setState(state, null, thread_id);
 
         List<List<Move>> jointMoves = new ArrayList<List<Move>>();
 
@@ -307,7 +427,7 @@ public class XStateMachine extends XMachine {
     		int nextRoleIndex = rolesIndexMap.get(i + 1);
 
     		for (int j = roleIndex; j < nextRoleIndex; ++j) {
-    			if (currLegals.fastGet(j)) {
+    			if (currLegals[thread_id].fastGet(j)) {
     				moves.add(legalArray[j]);
     			}
     		}
@@ -318,7 +438,7 @@ public class XStateMachine extends XMachine {
     	int end = legalArray.length;
     	List<Move> moves = new ArrayList<Move>();
     	for(int i = start; i < end; ++i) {
-    		if (currLegals.fastGet(i)) {
+    		if (currLegals[thread_id].fastGet(i)) {
     			moves.add(legalArray[i]);
     		}
     	}
@@ -381,14 +501,19 @@ public class XStateMachine extends XMachine {
 
     public List<Move> getLegalMoves(OpenBitSet state, int rIndex)//Change such that we don't have to keep updating legal moves
             throws MoveDefinitionException {
+    	int thread_id = main_id;
+    	long td = Thread.currentThread().getId();
+    	if(td != main_thread) {
+    		thread_id = (int) td % num_threads;
+    	}
 
-    	setState(state, null);
+    	setState(state, null, thread_id);
 
     	List<Move> moves = new ArrayList<Move>();
     	int roleIndex = rolesIndexMap.get(rIndex);
     	int nextRoleIndex = (rIndex == (roles.length - 1) ? legalArray.length : rolesIndexMap.get(rIndex + 1));
     	for (int i = roleIndex; i < nextRoleIndex; ++i) {
-			if (currLegals.fastGet(i)) {
+			if (currLegals[thread_id].fastGet(i)) {
 				moves.add(legalArray[i]);
 			}
 		}
@@ -398,32 +523,32 @@ public class XStateMachine extends XMachine {
 
 
 
-	protected void setBases(OpenBitSet state, ArrayDeque<Pair<Integer, Boolean>> q) {
+	protected void setBases(OpenBitSet state, ArrayDeque<Pair<Integer, Boolean>> q, int thread_id) {
     	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
 
     	OpenBitSet temp = (OpenBitSet) state.clone();
-    	state.xor(currentState);
-    	currentState = temp;
+    	state.xor(currentState[thread_id]);
+    	currentState[thread_id] = temp;
 
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
     		boolean val = temp.fastGet(i);
-    		if (val) components[baseOffset + i] += 1;
-    		else components[baseOffset + i] -= 1;
+    		if (val) components[thread_id][baseOffset + i] += 1;
+    		else components[thread_id][baseOffset + i] -= 1;
 
-    		long comp = compInfo[baseOffset + i];
+    		long comp = compInfo[thread_id][baseOffset + i];
     		int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
         	for (int j = 0; j < num_outputs; ++j) {
-        		int outIndex = connecTable[outputsIndex + j];
-        		int outValue = components[outIndex];
+        		int outIndex = connecTable[thread_id][outputsIndex + j];
+        		int outValue = components[thread_id][outIndex];
         		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
-        		if (val) components[outIndex] += 1;
-        		else components[outIndex] -= 1;
+        		if (val) components[thread_id][outIndex] += 1;
+        		else components[thread_id][outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		boolean newVal = (components[thread_id][outIndex] & CURR_VAL_MASK) != 0;
         		if (newVal != lastPropagatedValue) {
         			q.add(Pair.of(outIndex, newVal));
         		}
@@ -433,34 +558,34 @@ public class XStateMachine extends XMachine {
     }
 
 
-	protected void setActions(OpenBitSet moves, ArrayDeque<Pair<Integer, Boolean>> q) {
+	protected void setActions(OpenBitSet moves, ArrayDeque<Pair<Integer, Boolean>> q, int thread_id) {
     	if(moves == null) return;
 
     	int[] inputs = propNet.getInputPropositions();
     	int size = inputs.length;
 
     	OpenBitSet tempInputs = (OpenBitSet) moves.clone();
-    	moves.xor(currInputs);
-    	currInputs = tempInputs;
+    	moves.xor(currInputs[thread_id]);
+    	currInputs[thread_id] = tempInputs;
 
     	for (int i = moves.nextSetBit(0); i != -1; i = moves.nextSetBit(i + 1)) {
-    		boolean val = currInputs.fastGet(i);
+    		boolean val = currInputs[thread_id].fastGet(i);
     		int inputIndex = inputOffset + i;
-    		if (val) components[inputIndex] += 1;
-    		else components[inputIndex] -= 1;
+    		if (val) components[thread_id][inputIndex] += 1;
+    		else components[thread_id][inputIndex] -= 1;
 
-    		long comp = compInfo[inputIndex];
+    		long comp = compInfo[thread_id][inputIndex];
     		int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
         	for (int j = 0; j < num_outputs; ++j) {
-        		int outIndex = connecTable[outputsIndex + j];
+        		int outIndex = connecTable[thread_id][outputsIndex + j];
 
-        		boolean lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK) != 0;
-        		if (val) components[outIndex] += 1;
-        		else components[outIndex] -= 1;
+        		boolean lastPropagatedValue = (components[thread_id][outIndex] & CURR_VAL_MASK) != 0;
+        		if (val) components[thread_id][outIndex] += 1;
+        		else components[thread_id][outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		boolean newVal = (components[thread_id][outIndex] & CURR_VAL_MASK) != 0;
         		if (newVal != lastPropagatedValue) {
         			q.add(Pair.of(outIndex, newVal));
         		}
@@ -481,33 +606,48 @@ public class XStateMachine extends XMachine {
 		return movesSet;
 	}
 
-    protected void setState(OpenBitSet state, List<Move> moves) {
-    	setBases((OpenBitSet)state.clone(), q);
-    	setActions(movesToBit(moves), q);
-    	propagate(q);
+    protected void setState(OpenBitSet state, List<Move> moves, int thread_id) {
+    	ArrayDeque<Pair<Integer, Boolean>> q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo[0].length);
+    	setBases((OpenBitSet)state.clone(), q, thread_id);
+    	setActions(movesToBit(moves), q, thread_id);
+    	propagate(q, thread_id);
     }
 
 
     @Override
 	public OpenBitSet getNextState(OpenBitSet state, List<Move> moves) {
+    	int thread_id = main_id;
+    	long td = Thread.currentThread().getId();
+    	if(td != main_thread) {
+    		thread_id = (int) td % num_threads;
+    	}
 
-    	setState(state, moves);
+    	setState(state, moves, thread_id);
 
-    	return (OpenBitSet) nextState.clone();
+    	return (OpenBitSet) nextState[thread_id].clone();
     }
 
     protected void resetPropNet() {
-    	currInputs = new OpenBitSet(numInputs);
-    	currentState = new OpenBitSet(numBases);
-    	currLegals = new OpenBitSet(numLegals);
-    	nextState = new OpenBitSet(numBases);
-    	components = propNet.getComponents();
+    	for (int i = 0; i < num_threads; ++i) {
+    		currInputs[i] = new OpenBitSet(numInputs);
+    		currentState[i] = new OpenBitSet(numBases);
+    		currLegals[i] = new OpenBitSet(numLegals);
+    		nextState[i] = new OpenBitSet(numBases);
+    		for(int j = 0; j < num_threads; ++j) {
+    			components[j] = propNet.getComponents();
+    		}
+    	}
     }
 
     @Override
     public boolean isTerminal(OpenBitSet state) {
-    	setState(state, null);
-    	return (components[propNet.getTerminalProposition()] & CURR_VAL_MASK) != 0;
+    	int thread_id = main_id;
+    	long td = Thread.currentThread().getId();
+    	if(td != main_thread) {
+    		thread_id = (int) td % num_threads;
+    	}
+    	setState(state, null, thread_id);
+    	return (components[thread_id][propNet.getTerminalProposition()] & CURR_VAL_MASK) != 0;
     }
 
     //goal Propositions will never be Trigger components, so we
@@ -530,16 +670,21 @@ public class XStateMachine extends XMachine {
 
     public int getGoal(OpenBitSet state, int rIndex)
             throws GoalDefinitionException {
+    	int thread_id = main_id;
+    	long td = Thread.currentThread().getId();
+    	if(td != main_thread) {
+    		thread_id = (int) td % num_threads;
+    	}
 
-    	setState(state, null);
+    	setState(state, null, thread_id);
         int[] rewards = goalPropositions[rIndex];
         int size = rewards.length;
 
         for(int i = 0; i < size; ++i) {
         	int rewardIndex = rewards[i];
-        	int value = components[rewardIndex];
+        	int value = components[thread_id][rewardIndex];
         	if ((value & CURR_VAL_MASK) != 0) {
-        		int goalVal = (int) ((compInfo[rewardIndex] & GOAL_MASK) >> TYPE_SHIFT);
+        		int goalVal = (int) ((compInfo[thread_id][rewardIndex] & GOAL_MASK) >> TYPE_SHIFT);
         		return goalVal;
         	}
 
