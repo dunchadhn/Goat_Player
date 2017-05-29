@@ -3,9 +3,11 @@ package org.ggp.base.util.propnet.architecture;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -84,6 +86,10 @@ public final class XPropNet
 	public XPropNet(PropNet prop)
 	{
 		System.out.println("XPropNet initializing...");
+		prop.renderToFile("preOpt.dot");
+		optimizeProp(prop);
+		prop.renderToFile("postOpt.dot");
+		//System.exit(0);
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
 	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
@@ -692,6 +698,108 @@ public final class XPropNet
             GamerLogger.logStackTrace("StateMachine", e);
         }
         //oldProp.renderToFile("old" + filename);
+    }
+
+    protected void clearQ(ArrayDeque<Component> toRemove, PropNet prop) {
+    	while (!toRemove.isEmpty()) {
+    		Component c = toRemove.pop();
+    		prop.removeComponent(c);
+    	}
+    }
+
+    protected void optimizeProp(PropNet prop) {
+
+    	int initSize = prop.getComponents().size();
+    	ArrayDeque<Component> toRemove = new ArrayDeque<Component>();
+    	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
+    		Component c = it.next();
+    		if (c instanceof And) {
+    			And a = (And)c;
+    			Set<Component> inputs = a.getInputs();
+    			for (Component in : inputs) {
+    				if (in instanceof And) {
+    					System.out.println("Here");
+    					And a2 = (And)in;
+    					a.removeInput(a2);
+    					Set<Component> inputs2 = a2.getInputs();
+    					for (Component in2 : inputs2) {
+    						a.addInput(in2);
+    						in2.addOutput(a);
+    					}
+    					toRemove.add(a2);
+    				}
+
+    			}
+    		}
+    	}
+
+    	clearQ(toRemove, prop);
+
+
+    	HashMap<Proposition, Proposition> legalInputMap = new HashMap<Proposition, Proposition>(prop.getLegalInputMap());
+    //Remove all propositions with a single input (except base props)
+
+    	/*for (Iterator<Proposition> it = prop.getPropositions().iterator(); it.hasNext();)  {
+    		Proposition p = it.next();
+    		if (legalInputMap.containsKey(p)) continue;
+    		Set<Component> inputs = p.getInputs();
+    		Set<Component> outputs = p.getOutputs();
+    		if (inputs.size() == 1 && !outputs.isEmpty()) {
+    			Component in = inputs.iterator().next();
+    			if (in instanceof Transition) continue;
+
+    			int presize = prop.getComponents().size();
+    			it.remove();
+    			prop.removeComponent(p);
+    			for (Component out : outputs) {
+    				in.addOutput(out);
+    			}
+    			int postsize = prop.getComponents().size();
+    			if (presize == postsize) {
+    				System.out.println("presize == postsize");
+    				System.exit(0);
+    			}
+    		}
+    	}*/
+
+
+    //Remove all constants except for a single true and false
+    	Component t = null;
+    	Component f = null;
+    	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
+    		Component c = it.next();
+    		if (c instanceof Constant) {
+    			if (c.getValue()) {
+    				if (t == null) {
+    					t = c;
+    				} else {
+    					Set<Component> outputs = c.getOutputs();
+    					it.remove();
+    					prop.removeComponent(c);
+    					for (Component out : outputs) {
+    						t.addOutput(out);
+    						out.addInput(t);
+    					}
+    				}
+    			} else {
+    				if (f == null) {
+    					f = c;
+    				} else {
+    					Set<Component> outputs = c.getOutputs();
+    					it.remove();
+    					prop.removeComponent(c);
+    					for (Component out : outputs) {
+    						f.addOutput(out);
+    						out.addInput(f);
+    					}
+    				}
+    			}
+    		}
+    	}
+
+    	int postSize = prop.getComponents().size();
+    	System.out.println("NumComponentsInitial: " + initSize + " NumComponentFinal: " + postSize);
+    	System.out.println("Savings: " + (100 * (initSize - postSize) / ((double)postSize)) + "%");
     }
 
 }
