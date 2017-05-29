@@ -256,11 +256,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected void Backpropogate(double val, List<XNode> path) {
-		XNode nod = path.get(path.size() - 1);
+		int size = path.size();
+		XNode nod = path.get(size - 1);
 		if (machine.isTerminal(nod.state)) {
 			nod.isTerminal = true;
 		}
-		for (int i = path.size() - 1; i >= 0; --i) {
+		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
 			nod.visits += num_threads;
@@ -363,14 +364,14 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	@SuppressWarnings("deprecation")
 	@Override
 	public void stateMachineStop() {
-		//thread.stop();
+		thread.stop();
 	}
 
 	@SuppressWarnings("deprecation")
 	@Override
 	public void stateMachineAbort() {
 		// TODO Auto-generated method stub
-		//thread.stop();
+		thread.stop();
 	}
 
 

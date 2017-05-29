@@ -416,7 +416,7 @@ public class XStateMachine extends XMachine {
     	int thread_id = main_id;
     	long td = Thread.currentThread().getId();
     	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
+    		thread_id = (int) td % (num_threads-1);
     	}
     	setState(state, null, thread_id);
 
@@ -506,7 +506,7 @@ public class XStateMachine extends XMachine {
     	int thread_id = main_id;
     	long td = Thread.currentThread().getId();
     	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
+    		thread_id = (int) td % (num_threads-1);
     	}
 
     	setState(state, null, thread_id);
@@ -621,7 +621,7 @@ public class XStateMachine extends XMachine {
     	int thread_id = main_id;
     	long td = Thread.currentThread().getId();
     	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
+    		thread_id = (int) td % (num_threads-1);
     	}
 
     	setState(state, moves, thread_id);
@@ -644,7 +644,7 @@ public class XStateMachine extends XMachine {
     	int thread_id = main_id;
     	long td = Thread.currentThread().getId();
     	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
+    		thread_id = (int) td % (num_threads-1);
     	}
     	setState(state, null, thread_id);
     	return (components[thread_id][propNet.getTerminalProposition()] & CURR_VAL_MASK) != 0;
@@ -673,7 +673,7 @@ public class XStateMachine extends XMachine {
     	int thread_id = main_id;
     	long td = Thread.currentThread().getId();
     	if(td != main_thread) {
-    		thread_id = (int) td % num_threads;
+    		thread_id = (int) td % (num_threads-1);
     	}
 
     	setState(state, null, thread_id);
