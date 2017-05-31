@@ -35,8 +35,10 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private CompletionService<Struct> executor;
 	private ThreadPoolExecutor thread_pool;
 	private Thread thread;
+	private Thread solver;
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
+	private ThreadStateMachine solver_machine;
 	private int num_charges = 4;
 
 	private static final double C_CONST = 50;
@@ -81,11 +83,14 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			thread_machines[i] = new ThreadStateMachine(machine);
 		}
 		background_machine = new ThreadStateMachine(machine);
+		solver_machine = new ThreadStateMachine(machine);
 		Expand(root);
 		thread = new Thread(new runMCTS());
+		solver = new Thread(new solver());
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
+		solver.start();
 
 		finishBy = timeout - 2500;
 		System.out.println("NumThreads: " + num_threads);
@@ -130,48 +135,44 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		return m;
 	}
 
-	protected void doMCTS() {
-		double avg_loop = 0;
-		int num_loops = 0;
-		double total_time = 0;
-		while (System.currentTimeMillis() + avg_loop < finishBy) {
-			double start = System.currentTimeMillis();
-			path = new ArrayList<XNode>();
-			path.add(root);
-			try {
-				Select(root, path);
-			} catch (MoveDefinitionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			XNode n = path.get(path.size() - 1);
-			try {
-				Expand(n, path);
-			} catch (MoveDefinitionException | TransitionDefinitionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			// spawn off multiple threads
-			executor.submit(new RunMe(n, path));
-			while(true) {
-				Future<Struct> f = null;
-				f = executor.poll();
-				if (f == null) break;
-				Struct s = null;
-		        try {
-					s = f.get();
-				} catch (InterruptedException | ExecutionException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		        Backpropogate(s.v,s.p);
-		        ++depthCharges;
-		        ++last_depthCharges;
-		    }
-			total_time += System.currentTimeMillis() - start;
-			++num_loops;
-			avg_loop = total_time / num_loops;
+	public class solver implements Runnable {
+		@Override
+		public void run() {
+
 		}
+	}
+
+	protected int alphabeta(int player, OpenBitSet state, int alpha, int beta) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
+		if (solver_machine.isTerminal(state))
+			return solver_machine.getGoal(state, roles.get(self_index));
+
+		List<List<Move>> jointMoves = solver_machine.getLegalJointMoves(state);
+		int score = 100;
+		if (player == self_index) score = 0;
+		int nextPlayer = player + 1;
+
+		if (player == self_index) {
+			for (List<Move> jointMove: jointMoves) {
+				OpenBitSet nextState = solver_machine.getNextState(state, jointMove);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta);
+				if (result == 100 ||  result >= beta) return 100;
+				if (result > alpha) alpha = result;
+				if (result > score) score = result;
+				if(System.currentTimeMillis() > finishBy) return 0;
+			}
+		} else {
+			for (List<Move> jointMove: jointMoves) {
+				OpenBitSet nextState = solver_machine.getNextState(state, jointMove);
+				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta);
+				if (result == 0 || score <= alpha) return 0;
+				if (result < beta) beta = result;
+				if (result < score) score = result;
+				if(System.currentTimeMillis() > finishBy) return 0;
+			}
+		}
+
+		return score;
+
 	}
 
 
