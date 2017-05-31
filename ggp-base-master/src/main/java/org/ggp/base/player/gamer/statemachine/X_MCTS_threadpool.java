@@ -2,7 +2,9 @@ package org.ggp.base.player.gamer.statemachine;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -41,6 +43,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
 	private int num_charges;
+	private Map<OpenBitSet, XNode> graph;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
 	//private volatile double total_playout = 0;
@@ -92,12 +95,13 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected void initialize(long timeout) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
+		graph = new HashMap<OpenBitSet, XNode>();
 		machine = getStateMachine();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(getRole());
 		root = new XNode(getCurrentState());
 
-		num_charges = Runtime.getRuntime().availableProcessors();
+		num_charges = 4;//Runtime.getRuntime().availableProcessors();
 		num_threads = Runtime.getRuntime().availableProcessors() * 8;
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
 		executor = new ExecutorCompletionService<Struct>(thread_pool);
@@ -156,6 +160,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS();
 		thread_pool.getQueue().clear();
+		graph.clear();
 		Thread.sleep(finishBy - System.currentTimeMillis());
 		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);
@@ -397,7 +402,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: background_machine.getLegalJointMoves(n.state)) {
-				XNode child = new XNode(background_machine.getNextState(n.state, jointMove));
+				OpenBitSet state = background_machine.getNextState(n.state, jointMove);
+				XNode child = graph.get(state);
+				if(child == null) {
+					child = new XNode(state);
+					graph.put(state, child);
+				}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -417,7 +427,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				XNode child = new XNode(machine.getNextState(n.state, jointMove));
+				OpenBitSet state = background_machine.getNextState(n.state, jointMove);
+				XNode child = graph.get(state);
+				if(child == null) {
+					child = new XNode(state);
+					graph.put(state, child);
+				}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
