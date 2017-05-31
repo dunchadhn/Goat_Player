@@ -2,7 +2,6 @@ package org.ggp.base.player.gamer.statemachine.sample;
 
 import java.util.List;
 
-import org.ggp.base.player.gamer.event.GamerSelectedMoveEvent;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
@@ -29,7 +28,7 @@ public final class SampleLegalGamer extends SampleGamer
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
 	{
 		// We get the current start time
-		long start = System.currentTimeMillis();
+		//long start = System.currentTimeMillis();
 
 		/**
 		 * We put in memory the list of legal moves from the
@@ -44,7 +43,7 @@ public final class SampleLegalGamer extends SampleGamer
 
 		// We get the end time
 		// It is mandatory that stop<timeout
-		long stop = System.currentTimeMillis();
+		//long stop = System.currentTimeMillis();
 
 		/**
 		 * These are functions used by other parts of the GGP codebase
@@ -52,7 +51,7 @@ public final class SampleLegalGamer extends SampleGamer
 		 * moves, selection, stop and start defined in the same way as
 		 * this example, and copy-paste these two lines in your player
 		 */
-		notifyObservers(new GamerSelectedMoveEvent(moves, selection, stop - start));
+		//notifyObservers(new GamerSelectedMoveEvent(moves, selection, stop - start));
 		return selection;
 	}
 }

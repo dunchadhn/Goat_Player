@@ -41,12 +41,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
 	private int num_charges = 4;
-	private volatile double total_select = 0;
-	private volatile double total_expand = 0;
-	private volatile double total_playout = 0;
+	//private volatile double total_select = 0;
+	//private volatile double total_expand = 0;
+	//private volatile double total_playout = 0;
 	private volatile int loops = 0;
-	private volatile double total_backpropagate = 0;
-	private volatile int play_loops = 0;
+	//private volatile double total_backpropagate = 0;
+	//private volatile int play_loops = 0;
 
 	private static final double C_CONST = 50;
 
@@ -84,10 +84,10 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		//doMCTS();
 		Thread.sleep(finishBy - System.currentTimeMillis());
 		System.out.println("Depth Charges: " + depthCharges);
-		System.out.println("Avg Select: " + total_select/loops);
+		/*System.out.println("Avg Select: " + total_select/loops);
 		System.out.println("Avg Expand: " + total_expand/loops);
 		System.out.println("Avg Backprop: " + total_backpropagate/depthCharges);
-		System.out.println("Avg Playout: " + total_playout/play_loops);
+		System.out.println("Avg Playout: " + total_playout/play_loops);*/
 		last_depthCharges = 0;
 	}
 
@@ -125,12 +125,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
 		depthCharges = 0;
-		total_select = 0;
-		total_expand = 0;
-		total_playout = 0;
+		//total_select = 0;
+		//total_expand = 0;
+		//total_playout = 0;
 		loops = 0;
-		total_backpropagate = 0;
-		play_loops = 0;
+		//total_backpropagate = 0;
+		//play_loops = 0;
 		System.out.println("Background Depth Charges: " + last_depthCharges);
 		finishBy = timeout - 2500;
 		return MCTS();
@@ -159,10 +159,10 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);
 		System.out.println("Number of Select/Expand Loops " + loops);
-		System.out.println("Avg Select: " + total_select/loops);
+		/*System.out.println("Avg Select: " + total_select/loops);
 		System.out.println("Avg Expand: " + total_expand/loops);
 		System.out.println("Avg Backprop: " + total_backpropagate/depthCharges);
-		System.out.println("Avg Playout: " + total_playout/play_loops);
+		System.out.println("Avg Playout: " + total_playout/play_loops);*/
 		last_depthCharges = 0;
 		Move m = bestMove(root);
 		return m;
@@ -217,23 +217,23 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				root_thread = root;
 				path = new ArrayList<XNode>();
 				path.add(root_thread);
-				double select_start = System.currentTimeMillis();
+				//double select_start = System.currentTimeMillis();
 				try {
 					Select(root_thread, path);
 				} catch (MoveDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				total_select += (System.currentTimeMillis() - select_start);
+				//total_select += (System.currentTimeMillis() - select_start);
 				XNode n = path.get(path.size() - 1);
-				double expand_start = System.currentTimeMillis();
+				//double expand_start = System.currentTimeMillis();
 				try {
 					Expand(n, path);
 				} catch (MoveDefinitionException | TransitionDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				total_expand += (System.currentTimeMillis() - expand_start);
+				//total_expand += (System.currentTimeMillis() - expand_start);
 				++loops;
 				// spawn off multiple threads
 				for(int i = 0; i < num_charges; ++i) {
@@ -249,9 +249,9 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-			        double back_start = System.currentTimeMillis();
+			        //double back_start = System.currentTimeMillis();
 			        Backpropogate(s.v,s.p);
-			        total_backpropagate += (System.currentTimeMillis() - back_start);
+			        //total_backpropagate += (System.currentTimeMillis() - back_start);
 			        ++depthCharges;
 			        ++last_depthCharges;
 			    }
@@ -323,15 +323,15 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		double start = System.currentTimeMillis();
+		//double start = System.currentTimeMillis();
 		int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
 		ThreadStateMachine mac = thread_machines[thread_ind];
 		OpenBitSet state = n.state;
 		while(!mac.isTerminal(state)) {
 			state = mac.getRandomNextState(state);
 		}
-		++play_loops;
-		total_playout += (System.currentTimeMillis() - start);
+		//++play_loops;
+		//total_playout += (System.currentTimeMillis() - start);
 		return mac.getGoal(state, self_index);
 	}
 
