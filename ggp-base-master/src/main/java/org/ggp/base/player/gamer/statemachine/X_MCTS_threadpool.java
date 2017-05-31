@@ -40,7 +40,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
-	private int num_charges = 4;
+	private int num_charges;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
 	//private volatile double total_playout = 0;
@@ -97,6 +97,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		self_index = roles.indexOf(getRole());
 		root = new XNode(getCurrentState());
 
+		num_charges = Runtime.getRuntime().availableProcessors();
 		num_threads = Runtime.getRuntime().availableProcessors() * 8;
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
 		executor = new ExecutorCompletionService<Struct>(thread_pool);
