@@ -19,11 +19,11 @@ public class XNode {
 		this.visits = 0;
 		++nodeCount;
 	}
-	public OpenBitSet state;
-	public double utility;
-	public double visits;
-	public Move[] legalMoves;
-	public HashMap<List<Move>, XNode> children;
-	public HashMap<Move, List<List<Move>>> legalJointMoves;
-	public boolean isTerminal;
+	public volatile OpenBitSet state;
+	public volatile double utility;
+	public volatile double visits;
+	public volatile Move[] legalMoves;
+	public volatile HashMap<List<Move>, XNode> children;
+	public volatile HashMap<Move, List<List<Move>>> legalJointMoves;
+	public volatile boolean isTerminal;
 }

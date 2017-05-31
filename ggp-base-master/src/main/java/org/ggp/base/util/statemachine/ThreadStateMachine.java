@@ -22,7 +22,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 @SuppressWarnings("unused")
 public class ThreadStateMachine extends XMachine {
-    private OpenBitSet currentState, nextState, currInputs, currLegals;
+    private OpenBitSet currentState, nextState, currInputs, currLegals, initState;
 
     public int[] components;
     public long[] compInfo;
@@ -35,6 +35,7 @@ public class ThreadStateMachine extends XMachine {
     public ThreadStateMachine(XStateMachine x) {
     	this.machine = x;
     	this.currentState = (OpenBitSet) x.getCurrentState().clone();
+    	this.initState = (OpenBitSet) x.getCurrentState().clone();
     	this.nextState = (OpenBitSet) x.getNextState().clone();
     	this.currInputs = (OpenBitSet) x.getCurrInputs().clone();
     	this.currLegals = (OpenBitSet) x.getCurrLegals().clone();
@@ -60,7 +61,7 @@ public class ThreadStateMachine extends XMachine {
 
     @Override
     public OpenBitSet getInitialState() {
-    	return this.currentState;
+    	return this.initState;
     }
 
 

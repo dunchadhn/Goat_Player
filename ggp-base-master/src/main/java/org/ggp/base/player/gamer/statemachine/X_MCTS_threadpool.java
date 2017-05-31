@@ -29,8 +29,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private List<Role> roles;
 	private int self_index, num_threads, depthCharges, last_depthCharges;
 	private long finishBy;
-	private XNode root;
-	private XNode root_thread;
+	private volatile XNode root;
 	private List<XNode> path;
 	private CompletionService<Double> executor;
 	private Thread thread;
@@ -61,7 +60,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		root = new XNode(machine.getInitialState());
 		root = new XNode(getCurrentState());
 
-		num_threads = Runtime.getRuntime().availableProcessors() * 12;
+		num_threads = Runtime.getRuntime().availableProcessors() * 1;
 		executor = new ExecutorCompletionService<Double>(Executors.newFixedThreadPool(num_threads));
 		thread_machines = new ThreadStateMachine[num_threads];
 		for (int i = 0; i < num_threads; ++i) {
@@ -107,15 +106,15 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
-		thread.suspend();
+		//thread.suspend();
 		initializeMCTS();
-		thread.resume();
+		//thread.resume();
 		Thread.sleep(finishBy - System.currentTimeMillis());
 		System.out.println("Depth Charges: " + depthCharges);
 		last_depthCharges = 0;
-		thread.suspend();
+		//thread.suspend();
 		Move m = bestMove(root);
-		thread.resume();
+		//thread.resume();
 		return m;
 	}
 
@@ -123,6 +122,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	public class runMCTS implements Runnable {
 		@Override
 		public void run() {
+			XNode root_thread;
 			while (true) {
 				root_thread = root;
 				path = new ArrayList<XNode>();
