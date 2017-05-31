@@ -16,6 +16,7 @@ import org.ggp.base.player.gamer.exception.GamePreviewException;
 import org.ggp.base.util.game.Game;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
+import org.ggp.base.util.statemachine.ThreadStateMachine;
 import org.ggp.base.util.statemachine.XStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
@@ -29,9 +30,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private int self_index, num_threads, depthCharges, last_depthCharges;
 	private long finishBy;
 	private XNode root;
+	private XNode root_thread;
 	private List<XNode> path;
 	private CompletionService<Double> executor;
 	private Thread thread;
+	private ThreadStateMachine[] thread_machines;
+	private ThreadStateMachine background_machine;
 
 	private static final double C_CONST = 50;
 
@@ -46,22 +50,25 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
 		Thread.sleep(finishBy - System.currentTimeMillis());
-		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);
 		last_depthCharges = 0;
-		bestMove(root);
 	}
 
 	protected void initialize(long timeout) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		machine = getStateMachine();
-		machine.setMainThreadId();
 		roles = machine.getRoles();
 		self_index = roles.indexOf(getRole());
 		root = new XNode(machine.getInitialState());
 		root = new XNode(getCurrentState());
-		Expand(root);
+
 		num_threads = Runtime.getRuntime().availableProcessors() * 12;
 		executor = new ExecutorCompletionService<Double>(Executors.newFixedThreadPool(num_threads));
+		thread_machines = new ThreadStateMachine[num_threads];
+		for (int i = 0; i < num_threads; ++i) {
+			thread_machines[i] = new ThreadStateMachine(machine);
+		}
+		background_machine = new ThreadStateMachine(machine);
+		Expand(root);
 		thread = new Thread(new runMCTS());
 		depthCharges = 0;
 		last_depthCharges = 0;
@@ -100,70 +107,22 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+		thread.suspend();
 		initializeMCTS();
+		thread.resume();
 		Thread.sleep(finishBy - System.currentTimeMillis());
 		System.out.println("Depth Charges: " + depthCharges);
 		last_depthCharges = 0;
-		//doMCTS();
-		return bestMove(root);
-	}
-
-	public void doMCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		depthCharges = 0;
-		double selectAvg = 0;
-		double expandAvg = 0;
-		double playoutAvg = 0;
-		double backpropAvg = 0;
-		while (System.currentTimeMillis() < finishBy) {
-			path = new ArrayList<XNode>();
-			path.add(root);
-			Long t1 = System.currentTimeMillis();
-			Select(root, path);
-			Long t2 = System.currentTimeMillis();
-			selectAvg += (t2 - t1);
-			XNode n = path.get(path.size() - 1);
-			Expand(n, path);
-			Long t3 = System.currentTimeMillis();
-			expandAvg += (t3 - t2);
-			// spawn off multiple threads
-			for(int i = 0; i < num_threads; ++i) {
-				executor.submit(new RunMe(n));
-			}
-			//double val = Playout(n);
-			Long t4 = System.currentTimeMillis();
-			playoutAvg += (t4 - t3);
-			double sum = 0;
-			for (int i = 0; i < num_threads; ++i) {
-				Future<Double> f = null;
-		        try {
-					f = executor.take();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		        try {
-					sum += f.get();
-				} catch (InterruptedException | ExecutionException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		    }
-			Backpropogate(sum, path);
-			backpropAvg += (System.currentTimeMillis() - t4);
-			depthCharges += num_threads;
-			//System.out.println(depthCharges);
-		}
-		selectAvg /= depthCharges; expandAvg /= depthCharges; playoutAvg /= depthCharges; backpropAvg /= depthCharges;
-		System.out.println("Select: " + selectAvg + " Expand: " + expandAvg + " Playout: " + playoutAvg + " BackProp: " + backpropAvg);
-		System.out.println("Depth Charges: " + depthCharges);
+		thread.suspend();
+		Move m = bestMove(root);
+		thread.resume();
+		return m;
 	}
 
 
 	public class runMCTS implements Runnable {
 		@Override
 		public void run() {
-			machine.setMainThreadId();
-			XNode root_thread;
 			while (true) {
 				root_thread = root;
 				path = new ArrayList<XNode>();
@@ -269,15 +228,17 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
+		ThreadStateMachine mac = thread_machines[thread_ind];
 		OpenBitSet state = n.state;
-		while(!machine.isTerminal(state)) {
-			state = machine.getRandomNextState(state);
+		while(!mac.isTerminal(state)) {
+			state = mac.getRandomNextState(state);
 		}
-		return machine.getGoal(state, self_index);
+		return mac.getGoal(state, self_index);
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
-		if (machine.isTerminal(n.state)) return;
+		if (background_machine.isTerminal(n.state)) return;
 		if (n.children.isEmpty()) return;
 		double maxValue = Double.NEGATIVE_INFINITY;
 		XNode maxChild = null;
@@ -320,8 +281,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	}
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
-		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
-			List<Move> moves = machine.getLegalMoves(n.state, self_index);
+		if (n.children.isEmpty() && !background_machine.isTerminal(n.state)) {
+			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			if (size < 1) {
 				System.out.println("Size less than 1!!!!!!!!!!");
@@ -331,13 +292,13 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
-			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				XNode child = new XNode(machine.getNextState(n.state, jointMove));
+			for (List<Move> jointMove: background_machine.getLegalJointMoves(n.state)) {
+				XNode child = new XNode(background_machine.getNextState(n.state, jointMove));
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
-			path.add(n.children.get(machine.getRandomJointMove(n.state)));
-		} else if (!machine.isTerminal(n.state)) {
+			path.add(n.children.get(background_machine.getRandomJointMove(n.state)));
+		} else if (!background_machine.isTerminal(n.state)) {
 			System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
 	}

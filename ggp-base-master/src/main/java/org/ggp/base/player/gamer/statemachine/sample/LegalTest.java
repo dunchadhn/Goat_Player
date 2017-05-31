@@ -12,6 +12,7 @@ import org.ggp.base.util.game.Game;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.StateMachine;
+import org.ggp.base.util.statemachine.ThreadStateMachine;
 import org.ggp.base.util.statemachine.XStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
@@ -24,6 +25,7 @@ public class LegalTest extends XStateMachineGamer {
 	Player p;
 	private List<Role> roles;
 	private int self_index;
+	private ThreadStateMachine machine;
 
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException
@@ -32,7 +34,7 @@ public class LegalTest extends XStateMachineGamer {
 		long start = System.currentTimeMillis();
 
 		Move selection = null;
-		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), self_index);
+		List<Move> moves = machine.getLegalMoves(getCurrentState(), self_index);
 		/*for (Move m : moves) {
 			if (m.getContents().toString().equals("h")) {
 				selection = m;
@@ -71,7 +73,8 @@ public class LegalTest extends XStateMachineGamer {
 		prover.initialize(getMatch().getGame().getRules());
 		roles = getStateMachine().getRoles();
 		self_index = roles.indexOf(getRole());
-		if (!BitStateMachineVerifier.checkMachineConsistency(prover, getStateMachine(), timeout - System.currentTimeMillis())) {
+		machine = new ThreadStateMachine(getStateMachine());
+		if (!BitStateMachineVerifier.checkMachineConsistency(prover, machine, timeout - System.currentTimeMillis())) {
 			System.out.println("FAILURE");
 			System.exit(0);
 		}

@@ -13,7 +13,7 @@ import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.StateMachine;
-import org.ggp.base.util.statemachine.XStateMachine;
+import org.ggp.base.util.statemachine.ThreadStateMachine;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 
 
@@ -56,7 +56,7 @@ public class BitStateMachineVerifier {
     	}
 	}
 
-    public static boolean checkMachineConsistency(StateMachine theReference, XStateMachine theSubject, long timeToSpend) throws MoveDefinitionException {
+    public static boolean checkMachineConsistency(StateMachine theReference, ThreadStateMachine theSubject, long timeToSpend) throws MoveDefinitionException {
         long startTime = System.currentTimeMillis();
 
         GamerLogger.log("StateMachine", "Performing automatic consistency testing on " + theSubject.getClass().getName() + " using " + theReference.getClass().getName() + " as a reference.");
@@ -108,12 +108,12 @@ public class BitStateMachineVerifier {
                             diff.removeAll(subjMoves);
                             HashMap<Integer, Component> indexCompMap = theSubject.getPropNet().indexCompMap();
                             HashMap<Component, Integer> compIndexMap = theSubject.getPropNet().compIndexMap();
-                            int[] components = theSubject.components[0];
+                            int[] components = theSubject.components;
                             for (Move m : diff) {
                             	Pair<Role, Move> p = Pair.of(theRole, m);
                             	int index = legalMoveMap.get(p);
                             	Component c = indexCompMap.get(index);
-                            	printInputs(c, compIndexMap, components, 1, 17, theSubject.connecTable[0], theSubject.compInfo[0], theSubject.getPropNet().outputMap);
+                            	printInputs(c, compIndexMap, components, 1, 17, theSubject.connecTable, theSubject.compInfo, theSubject.getPropNet().outputMap);
 
                             }
                             return false;
