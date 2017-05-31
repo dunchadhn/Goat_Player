@@ -24,23 +24,22 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class X_MCTS_threadpool extends XStateMachineGamer {
+public class Blocking_MCTS_threadpool extends XStateMachineGamer {
 	protected Player p;
 	private XStateMachine machine;
 	private List<Role> roles;
 	private int self_index, num_threads;
 	private volatile int depthCharges, last_depthCharges;
 	private long finishBy;
-	private volatile XNode root;
+	private volatile XNode root, n;
 	private List<XNode> path;
-	private CompletionService<Struct> executor;
+	private CompletionService<Double> executor;
 	private ThreadPoolExecutor thread_pool;
 	private Thread thread;
 	private Thread solver;
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
-	private int num_charges = 4;
 	private volatile double total_select = 0;
 	private volatile double total_expand = 0;
 	private volatile double total_playout = 0;
@@ -99,7 +98,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 
 		num_threads = Runtime.getRuntime().availableProcessors() * 8;
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
-		executor = new ExecutorCompletionService<Struct>(thread_pool);
+		executor = new ExecutorCompletionService<Double>(thread_pool);
 		thread_machines = new ThreadStateMachine[num_threads];
 		for (int i = 0; i < num_threads; ++i) {
 			thread_machines[i] = new ThreadStateMachine(machine);
@@ -154,7 +153,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 
 	protected Move MCTS() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS();
-		thread_pool.getQueue().clear();
 		Thread.sleep(finishBy - System.currentTimeMillis());
 		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);
@@ -225,7 +223,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 					e.printStackTrace();
 				}
 				total_select += (System.currentTimeMillis() - select_start);
-				XNode n = path.get(path.size() - 1);
+				n = path.get(path.size() - 1);
 				double expand_start = System.currentTimeMillis();
 				try {
 					Expand(n, path);
@@ -236,48 +234,47 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				total_expand += (System.currentTimeMillis() - expand_start);
 				++loops;
 				// spawn off multiple threads
-				for(int i = 0; i < num_charges; ++i) {
-					executor.submit(new RunMe(n, path));
+				for(int i = 0; i < num_threads; ++i) {
+					executor.submit(new RunMe());
 				}
-				while(true) {
-					Future<Struct> f = executor.poll();
-					if (f == null) break;
-					Struct s = null;
-			        try {
-						s = f.get();
+				double sum = 0;
+				for (int i = 0; i < num_threads; ++i) {
+					Future<Double> f = null;
+					try {
+						f = executor.take();
+					} catch (InterruptedException e1) {
+						break;
+					}
+					try {
+						sum += f.get();
 					} catch (InterruptedException | ExecutionException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						break;
 					}
-			        double back_start = System.currentTimeMillis();
-			        Backpropogate(s.v,s.p);
-			        total_backpropagate += (System.currentTimeMillis() - back_start);
-			        ++depthCharges;
-			        ++last_depthCharges;
 			    }
+				double back_start = System.currentTimeMillis();
+				Backpropogate(sum,path);
+				total_backpropagate += (System.currentTimeMillis() - back_start);
+				depthCharges += num_threads;
+		        last_depthCharges += num_threads;
 			}
 		}
 	}
 
-	public class RunMe implements Callable<Struct> {
-		private XNode node;
-		private List<XNode> p;
-
-		public RunMe(XNode n, List<XNode> arr) {
-			this.node = n;
-			this.p = arr;
-		}
+	public class RunMe implements Callable<Double> {
 		@Override
-		public Struct call() {
+		public Double call() {
 	    	double val = 0;
+	    	double start = System.currentTimeMillis();
 			try {
-				val = Playout(node);
+				val = Playout(n);
 			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			Struct s = new Struct(val, p);
-			return s;
+			++play_loops;
+			total_playout += (System.currentTimeMillis() - start);
+			return val;
 	    }
 	}
 
@@ -291,10 +288,10 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				XNode succNode = n.children.get(jointMove);
-				if (succNode.updates != 0) {
-					double nodeValue = succNode.utility / succNode.updates;
+				if (succNode.visits != 0) {
+					double nodeValue = succNode.utility / succNode.visits;
 					if (nodeValue < minValue) {
-						visits = succNode.updates;
+						visits = succNode.visits;
 						minValue = nodeValue;
 					}
 				}
@@ -318,26 +315,22 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
-			++nod.updates;
+			nod.visits += num_threads;
 		}
 	}
 
 	protected double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		double start = System.currentTimeMillis();
 		int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
 		ThreadStateMachine mac = thread_machines[thread_ind];
 		OpenBitSet state = n.state;
 		while(!mac.isTerminal(state)) {
 			state = mac.getRandomNextState(state);
 		}
-		++play_loops;
-		total_playout += (System.currentTimeMillis() - start);
 		return mac.getGoal(state, self_index);
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
 		while(true) {
-			n.visits += num_charges;
 			if (background_machine.isTerminal(n.state)) return;
 			if (n.children.isEmpty()) return;
 			double maxValue = Double.NEGATIVE_INFINITY;
@@ -351,7 +344,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 					XNode succNode = n.children.get(jointMove);
 					if (succNode.visits == 0) {
-						succNode.visits += num_charges;
 						path.add(succNode);
 						return;
 					}
@@ -442,7 +434,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	@Override
 	public String getName() {
 		// TODO Auto-generated method stub
-		return "X_MCTS_threadpool Player";
+		return "Blocking_MCTS_threadpool Player";
 	}
 
 	@Override
@@ -455,6 +447,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 
 
 }
+
 
 
 
