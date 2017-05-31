@@ -86,9 +86,9 @@ public final class XPropNet
 	public XPropNet(PropNet prop)
 	{
 		System.out.println("XPropNet initializing...");
-		prop.renderToFile("preOpt.dot");
+		//prop.renderToFile("preOpt.dot");
 		optimizeProp(prop);
-		prop.renderToFile("postOpt.dot");
+		//prop.renderToFile("postOpt.dot");
 		//System.exit(0);
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
@@ -713,6 +713,9 @@ public final class XPropNet
     	ArrayDeque<Component> toRemove = new ArrayDeque<Component>();
     	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
     		Component c = it.next();
+    		/*if (c instanceof Not) {
+    			Not n =
+    		}*/
     		if (c instanceof And) {
     			And a = (And)c;
     			Set<Component> inputs = a.getInputs();
@@ -739,11 +742,13 @@ public final class XPropNet
     	HashMap<Proposition, Proposition> legalInputMap = new HashMap<Proposition, Proposition>(prop.getLegalInputMap());
     //Remove all propositions with a single input (except base props)
 
-    	/*for (Iterator<Proposition> it = prop.getPropositions().iterator(); it.hasNext();)  {
+    	for (Iterator<Proposition> it = prop.getPropositions().iterator(); it.hasNext();)  {
     		Proposition p = it.next();
     		if (legalInputMap.containsKey(p)) continue;
+
     		Set<Component> inputs = p.getInputs();
     		Set<Component> outputs = p.getOutputs();
+
     		if (inputs.size() == 1 && !outputs.isEmpty()) {
     			Component in = inputs.iterator().next();
     			if (in instanceof Transition) continue;
@@ -752,6 +757,7 @@ public final class XPropNet
     			it.remove();
     			prop.removeComponent(p);
     			for (Component out : outputs) {
+    				out.addInput(in);
     				in.addOutput(out);
     			}
     			int postsize = prop.getComponents().size();
@@ -760,7 +766,7 @@ public final class XPropNet
     				System.exit(0);
     			}
     		}
-    	}*/
+    	}
 
 
     //Remove all constants except for a single true and false
