@@ -27,6 +27,7 @@ public class XStateMachine extends XMachine {
     public XPropNet propNet;
     public Role[] roles;
 
+    private ArrayDeque<Integer> q;
     private OpenBitSet currentState, nextState, currInputs, currLegals;
     public int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
 
@@ -103,6 +104,8 @@ public class XStateMachine extends XMachine {
 
             goalPropositions = propNet.getGoalPropositions();
 
+            q = new ArrayDeque<Integer>(compInfo.length);
+
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -147,24 +150,23 @@ public class XStateMachine extends XMachine {
 
     @Override
     public OpenBitSet getInitialState() {//Do initialization in initialize
-    	ArrayDeque<Integer> q = new ArrayDeque<Integer>(compInfo.length);
     	resetPropNet();
 
-    	setInit(true,q);
+    	setInit(true);
     	initBases();
     	OpenBitSet state = (OpenBitSet) currentState.clone();
     	setConstants();
 
     	rawPropagate();
 
-    	setInit(false,q);
-    	propagate(q);
+    	setInit(false);
+    	propagate();
 
     	currentState = state;
         return (OpenBitSet) state.clone();//necessary to clone?
     }
 
-    protected void setInit(boolean val, ArrayDeque<Integer> q) {
+    protected void setInit(boolean val) {
     	int initId = propNet.getInitProposition();
     	if (initId == -1) return;
 
@@ -287,7 +289,7 @@ public class XStateMachine extends XMachine {
     	return (NOT_CURR_VAL_MASK & value);
     }
 
-    protected void propagate(ArrayDeque<Integer> q) {
+    protected void propagate() {
 
     	while(!q.isEmpty()) {
     		int value = q.remove();
@@ -435,7 +437,7 @@ public class XStateMachine extends XMachine {
 
 
 
-	protected void setBases(OpenBitSet state, ArrayDeque<Integer> q) {
+	protected void setBases(OpenBitSet state) {
     	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
@@ -470,7 +472,7 @@ public class XStateMachine extends XMachine {
     }
 
 
-	protected void setActions(OpenBitSet moves, ArrayDeque<Integer> q) {
+	protected void setActions(OpenBitSet moves) {
     	if(moves == null) return;
 
     	int[] inputs = propNet.getInputPropositions();
@@ -519,10 +521,9 @@ public class XStateMachine extends XMachine {
 	}
 
     protected void setState(OpenBitSet state, List<Move> moves) {
-    	ArrayDeque<Integer> q = new ArrayDeque<Integer>(compInfo.length);
-    	setBases((OpenBitSet)state.clone(), q);
-    	setActions(movesToBit(moves), q);
-    	propagate(q);
+    	setBases((OpenBitSet)state.clone());
+    	setActions(movesToBit(moves));
+    	propagate();
     }
 
 

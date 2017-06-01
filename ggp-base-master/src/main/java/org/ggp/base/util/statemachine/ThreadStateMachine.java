@@ -24,6 +24,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class ThreadStateMachine extends XMachine {
     private OpenBitSet currentState, nextState, currInputs, currLegals, initState;
 
+    private ArrayDeque<Integer> q;
     public int[] components;
     public long[] compInfo;
     public int[] connecTable;
@@ -43,6 +44,7 @@ public class ThreadStateMachine extends XMachine {
     	this.compInfo = Arrays.copyOf(x.getCompInfo(), x.getCompInfo().length);
     	this.connecTable = Arrays.copyOf(x.getConnecTable(),x.getConnecTable().length);
     	this.rand = new Random();
+    	this.q = new ArrayDeque<Integer>(compInfo.length);
     }
 
     private static final int NUM_TYPE_BITS = 8;
@@ -105,7 +107,7 @@ public class ThreadStateMachine extends XMachine {
     	return (NOT_CURR_VAL_MASK & value);
     }
 
-	protected void propagate(ArrayDeque<Integer> q) {
+	protected void propagate() {
 
     	while(!q.isEmpty()) {
     		int value = q.remove();
@@ -252,7 +254,7 @@ public class ThreadStateMachine extends XMachine {
 
 
 
-	protected void setBases(OpenBitSet state, ArrayDeque<Integer> q) {
+	protected void setBases(OpenBitSet state) {
     	if (state == null) return;
     	int[] bases = machine.propNet.getBasePropositions();
     	int size = bases.length;
@@ -287,7 +289,7 @@ public class ThreadStateMachine extends XMachine {
     }
 
 
-	protected void setActions(OpenBitSet moves, ArrayDeque<Integer> q) {
+	protected void setActions(OpenBitSet moves) {
     	if(moves == null) return;
 
     	int[] inputs = machine.propNet.getInputPropositions();
@@ -336,10 +338,9 @@ public class ThreadStateMachine extends XMachine {
 	}
 
 	protected void setState(OpenBitSet state, List<Move> moves) {
-    	ArrayDeque<Integer> q = new ArrayDeque<Integer>(compInfo.length);
-    	setBases((OpenBitSet)state.clone(), q);
-    	setActions(movesToBit(moves), q);
-    	propagate(q);
+    	setBases((OpenBitSet)state.clone());
+    	setActions(movesToBit(moves));
+    	propagate();
     }
 
 

@@ -42,7 +42,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
-	private int num_charges;
+	private int num_charges, num_per;
 	private Map<OpenBitSet, XNode> graph;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
@@ -101,8 +101,9 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		self_index = roles.indexOf(getRole());
 		root = new XNode(getCurrentState());
 
-		num_charges = 4;//Runtime.getRuntime().availableProcessors();
-		num_threads = Runtime.getRuntime().availableProcessors() * 8;
+		num_charges = 1;//Runtime.getRuntime().availableProcessors();
+		num_per = 4;
+		num_threads = Runtime.getRuntime().availableProcessors() * 4;
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
 		executor = new ExecutorCompletionService<Struct>(thread_pool);
 		thread_machines = new ThreadStateMachine[num_threads];
@@ -242,9 +243,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				++loops;
 				// spawn off multiple threads
-				for(int i = 0; i < num_charges; ++i) {
-					executor.submit(new RunMe(n, path));
-				}
+
+				executor.submit(new RunMe(n, path));
 				while(true) {
 					Future<Struct> f = executor.poll();
 					if (f == null) break;
@@ -258,8 +258,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			        //double back_start = System.currentTimeMillis();
 			        Backpropogate(s.v,s.p);
 			        //total_backpropagate += (System.currentTimeMillis() - back_start);
-			        ++depthCharges;
-			        ++last_depthCharges;
+			        depthCharges += num_per;
+			        last_depthCharges += num_per;
 			    }
 			}
 		}
@@ -276,11 +276,13 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		@Override
 		public Struct call() {
 	    	double val = 0;
-			try {
-				val = Playout(node);
-			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+	    	for (int i = 0; i < num_per; ++i) {
+	    		try {
+	    			val += Playout(node);
+	    		} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+	    			// TODO Auto-generated catch block
+	    			e.printStackTrace();
+	    		}
 			}
 			Struct s = new Struct(val, p);
 			return s;
@@ -324,7 +326,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
-			++nod.updates;
+			nod.updates += num_per;
 		}
 	}
 
