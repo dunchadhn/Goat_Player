@@ -101,12 +101,17 @@ public class ThreadStateMachine extends XMachine {
     	return (comp & TRANSITION_MASK) != 0;
     }
 
-	protected void propagate(ArrayDeque<Pair<Integer, Boolean>> q) {
+    private static final int getId(int value) {
+    	return (NOT_CURR_VAL_MASK & value);
+    }
+
+	protected void propagate(ArrayDeque<Integer> q) {
 
     	while(!q.isEmpty()) {
-    		Pair<Integer, Boolean> p = q.remove();
-    		int compId = p.left;
-    		boolean val = p.right;
+    		int value = q.remove();
+    		int compId = getId(value);
+
+    		boolean val = get_current_value(value);
 
     		long comp = compInfo[compId];
     		if ((comp & TRIGGER_MASK) != 0) {
@@ -129,15 +134,15 @@ public class ThreadStateMachine extends XMachine {
         	for (int i = 0; i < num_outputs; ++i) {
         		int outIndex = connecTable[outputsIndex + i];
         		int outValue = components[outIndex];
-        		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
+        		int lastPropagatedValue = (outValue & CURR_VAL_MASK);
 
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int newVal = (components[outIndex] & CURR_VAL_MASK);
 
         		if (newVal != lastPropagatedValue) {
-        			q.add(Pair.of(outIndex, newVal));
+        			q.add(newVal | outIndex);
         		}
         	}
     	}
@@ -247,7 +252,7 @@ public class ThreadStateMachine extends XMachine {
 
 
 
-	protected void setBases(OpenBitSet state, ArrayDeque<Pair<Integer, Boolean>> q) {
+	protected void setBases(OpenBitSet state, ArrayDeque<Integer> q) {
     	if (state == null) return;
     	int[] bases = machine.propNet.getBasePropositions();
     	int size = bases.length;
@@ -268,13 +273,13 @@ public class ThreadStateMachine extends XMachine {
         	for (int j = 0; j < num_outputs; ++j) {
         		int outIndex = connecTable[outputsIndex + j];
         		int outValue = components[outIndex];
-        		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
+        		int lastPropagatedValue = (outValue & CURR_VAL_MASK);
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int newVal = (components[outIndex] & CURR_VAL_MASK);
         		if (newVal != lastPropagatedValue) {
-        			q.add(Pair.of(outIndex, newVal));
+        			q.add(newVal | outIndex);
         		}
         	}
     	}
@@ -282,7 +287,7 @@ public class ThreadStateMachine extends XMachine {
     }
 
 
-	protected void setActions(OpenBitSet moves, ArrayDeque<Pair<Integer, Boolean>> q) {
+	protected void setActions(OpenBitSet moves, ArrayDeque<Integer> q) {
     	if(moves == null) return;
 
     	int[] inputs = machine.propNet.getInputPropositions();
@@ -305,13 +310,13 @@ public class ThreadStateMachine extends XMachine {
         	for (int j = 0; j < num_outputs; ++j) {
         		int outIndex = connecTable[outputsIndex + j];
 
-        		boolean lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK);
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int newVal = (components[outIndex] & CURR_VAL_MASK);
         		if (newVal != lastPropagatedValue) {
-        			q.add(Pair.of(outIndex, newVal));
+        			q.add(newVal | outIndex);
         		}
         	}
     	}
@@ -331,7 +336,7 @@ public class ThreadStateMachine extends XMachine {
 	}
 
 	protected void setState(OpenBitSet state, List<Move> moves) {
-    	ArrayDeque<Pair<Integer, Boolean>> q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo.length);
+    	ArrayDeque<Integer> q = new ArrayDeque<Integer>(compInfo.length);
     	setBases((OpenBitSet)state.clone(), q);
     	setActions(movesToBit(moves), q);
     	propagate(q);

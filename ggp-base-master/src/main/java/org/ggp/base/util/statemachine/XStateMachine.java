@@ -147,7 +147,7 @@ public class XStateMachine extends XMachine {
 
     @Override
     public OpenBitSet getInitialState() {//Do initialization in initialize
-    	ArrayDeque<Pair<Integer, Boolean>> q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo.length);
+    	ArrayDeque<Integer> q = new ArrayDeque<Integer>(compInfo.length);
     	resetPropNet();
 
     	setInit(true,q);
@@ -155,7 +155,7 @@ public class XStateMachine extends XMachine {
     	OpenBitSet state = (OpenBitSet) currentState.clone();
     	setConstants();
 
-    	rawPropagate(q);
+    	rawPropagate();
 
     	setInit(false,q);
     	propagate(q);
@@ -164,7 +164,7 @@ public class XStateMachine extends XMachine {
         return (OpenBitSet) state.clone();//necessary to clone?
     }
 
-    protected void setInit(boolean val, ArrayDeque<Pair<Integer, Boolean>> q) {
+    protected void setInit(boolean val, ArrayDeque<Integer> q) {
     	int initId = propNet.getInitProposition();
     	if (initId == -1) return;
 
@@ -178,11 +178,11 @@ public class XStateMachine extends XMachine {
     		if (val)  {
     			components[outIndex] += 1;
     		} else {
-    			boolean lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK) != 0;
+    			int lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK);
     			components[outIndex] -= 1;
-    			boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+    			int newVal = (components[outIndex] & CURR_VAL_MASK);
     			if (newVal != lastPropagatedValue) {
-    				q.add(Pair.of(outIndex, newVal));
+    				q.add(newVal | outIndex);
     			}
     		}
     	}
@@ -243,7 +243,7 @@ public class XStateMachine extends XMachine {
 
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
-    protected void rawPropagate(ArrayDeque<Pair<Integer, Boolean>> q) {//compute ordering
+    protected void rawPropagate() {//compute ordering
     	Stack<Integer> ordering = propNet.getOrdering();
 
     	while (!ordering.isEmpty()) {
@@ -283,12 +283,17 @@ public class XStateMachine extends XMachine {
     	}
     }
 
-    protected void propagate(ArrayDeque<Pair<Integer, Boolean>> q) {
+    private static final int getId(int value) {
+    	return (NOT_CURR_VAL_MASK & value);
+    }
+
+    protected void propagate(ArrayDeque<Integer> q) {
 
     	while(!q.isEmpty()) {
-    		Pair<Integer, Boolean> p = q.remove();
-    		int compId = p.left;
-    		boolean val = p.right;
+    		int value = q.remove();
+    		int compId = getId(value);
+    		boolean val = get_current_value(value);
+
 
     		long comp = compInfo[compId];
     		if ((comp & TRIGGER_MASK) != 0) {
@@ -311,15 +316,15 @@ public class XStateMachine extends XMachine {
         	for (int i = 0; i < num_outputs; ++i) {
         		int outIndex = connecTable[outputsIndex + i];
         		int outValue = components[outIndex];
-        		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
+        		int lastPropagatedValue = (outValue & CURR_VAL_MASK);
 
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int newVal = (components[outIndex] & CURR_VAL_MASK);
 
         		if (newVal != lastPropagatedValue) {
-        			q.add(Pair.of(outIndex, newVal));
+        			q.add(newVal | outIndex);
         		}
         	}
     	}
@@ -430,7 +435,7 @@ public class XStateMachine extends XMachine {
 
 
 
-	protected void setBases(OpenBitSet state, ArrayDeque<Pair<Integer, Boolean>> q) {
+	protected void setBases(OpenBitSet state, ArrayDeque<Integer> q) {
     	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
@@ -451,13 +456,13 @@ public class XStateMachine extends XMachine {
         	for (int j = 0; j < num_outputs; ++j) {
         		int outIndex = connecTable[outputsIndex + j];
         		int outValue = components[outIndex];
-        		boolean lastPropagatedValue = (outValue & CURR_VAL_MASK) != 0;
+        		int lastPropagatedValue = (outValue & CURR_VAL_MASK);
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int newVal = (components[outIndex] & CURR_VAL_MASK);
         		if (newVal != lastPropagatedValue) {
-        			q.add(Pair.of(outIndex, newVal));
+        			q.add(newVal | outIndex);
         		}
         	}
     	}
@@ -465,7 +470,7 @@ public class XStateMachine extends XMachine {
     }
 
 
-	protected void setActions(OpenBitSet moves, ArrayDeque<Pair<Integer, Boolean>> q) {
+	protected void setActions(OpenBitSet moves, ArrayDeque<Integer> q) {
     	if(moves == null) return;
 
     	int[] inputs = propNet.getInputPropositions();
@@ -488,13 +493,13 @@ public class XStateMachine extends XMachine {
         	for (int j = 0; j < num_outputs; ++j) {
         		int outIndex = connecTable[outputsIndex + j];
 
-        		boolean lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int lastPropagatedValue = (components[outIndex] & CURR_VAL_MASK);
         		if (val) components[outIndex] += 1;
         		else components[outIndex] -= 1;
 
-        		boolean newVal = (components[outIndex] & CURR_VAL_MASK) != 0;
+        		int newVal = (components[outIndex] & CURR_VAL_MASK);
         		if (newVal != lastPropagatedValue) {
-        			q.add(Pair.of(outIndex, newVal));
+        			q.add(newVal | outIndex);
         		}
         	}
     	}
@@ -514,7 +519,7 @@ public class XStateMachine extends XMachine {
 	}
 
     protected void setState(OpenBitSet state, List<Move> moves) {
-    	ArrayDeque<Pair<Integer, Boolean>> q = new ArrayDeque<Pair<Integer, Boolean>>(compInfo.length);
+    	ArrayDeque<Integer> q = new ArrayDeque<Integer>(compInfo.length);
     	setBases((OpenBitSet)state.clone(), q);
     	setActions(movesToBit(moves), q);
     	propagate(q);
