@@ -26,7 +26,7 @@ public class XStateMachine extends XMachine {
     public XPropNet propNet;
     public Role[] roles;
 
-    private ArrayDeque<Integer> q;
+    private IntQueue q;
     private OpenBitSet currentState, nextState, currInputs, currLegals;
     public int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
 
@@ -102,7 +102,7 @@ public class XStateMachine extends XMachine {
 
             goalPropositions = propNet.getGoalPropositions();
 
-            q = new ArrayDeque<Integer>(compInfo.length);
+            q = new IntQueue(compInfo.length);
 
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -329,6 +329,7 @@ public class XStateMachine extends XMachine {
         		}
         	}
     	}
+    	q.clear();
     }
 
 

@@ -94,12 +94,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			Thread.sleep(1000);
 			double avg = total_playout/play_loops;
 			num_per = (int) (2/avg);
-			if (num_per == 0) {
-				num_per = 1;
-				num_charges = 2;
-			} else {
-				num_charges = 1;
-			}
+			if (num_per < 3) num_per = 3;
 		}
 		System.out.println("Depth Charges: " + depthCharges);
 		//System.out.println("Avg Select: " + total_select/loops);
@@ -187,12 +182,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			Thread.sleep(1000);
 			double avg = total_playout/play_loops;
 			num_per = (int) (2/avg);
-			if (num_per == 0) {
-				num_per = 1;
-				num_charges = 2;
-			} else {
-				num_charges = 1;
-			}
+			if (num_per < 3) num_per = 3;
 		}
 		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);

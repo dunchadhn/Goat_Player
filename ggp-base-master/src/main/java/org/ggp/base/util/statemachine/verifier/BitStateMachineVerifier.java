@@ -16,6 +16,8 @@ import org.ggp.base.util.statemachine.StateMachine;
 import org.ggp.base.util.statemachine.ThreadStateMachine;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 
+import cern.colt.map.OpenIntObjectHashMap;
+
 
 public class BitStateMachineVerifier {
 	 private static final int CURR_VAL_MASK = 0x8000_0000;
@@ -106,13 +108,13 @@ public class BitStateMachineVerifier {
                             HashMap<Pair<Role, Move>, Integer> legalMoveMap = theSubject.getPropNet().getLegalMoveMap();
                             HashSet<Move> diff = (new HashSet<Move>(refMoves));
                             diff.removeAll(subjMoves);
-                            HashMap<Integer, Component> indexCompMap = theSubject.getPropNet().indexCompMap();
+                            OpenIntObjectHashMap indexCompMap = theSubject.getPropNet().indexCompMap();
                             HashMap<Component, Integer> compIndexMap = theSubject.getPropNet().compIndexMap();
                             int[] components = theSubject.components;
                             for (Move m : diff) {
                             	Pair<Role, Move> p = Pair.of(theRole, m);
                             	int index = legalMoveMap.get(p);
-                            	Component c = indexCompMap.get(index);
+                            	Component c = (Component) indexCompMap.get(index);
                             	printInputs(c, compIndexMap, components, 1, 17, theSubject.connecTable, theSubject.compInfo, theSubject.getPropNet().outputMap);
 
                             }

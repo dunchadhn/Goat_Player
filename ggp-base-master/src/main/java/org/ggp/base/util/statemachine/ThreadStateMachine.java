@@ -23,7 +23,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class ThreadStateMachine extends XMachine {
     private OpenBitSet currentState, nextState, currInputs, currLegals, initState;
 
-    private ArrayDeque<Integer> q;
+    private IntQueue q;
     public int[] components;
     public long[] compInfo;
     public int[] connecTable;
@@ -43,7 +43,7 @@ public class ThreadStateMachine extends XMachine {
     	this.compInfo = Arrays.copyOf(x.getCompInfo(), x.getCompInfo().length);
     	this.connecTable = Arrays.copyOf(x.getConnecTable(),x.getConnecTable().length);
     	this.rand = new Random();
-    	this.q = new ArrayDeque<Integer>(compInfo.length);
+    	this.q = new IntQueue(compInfo.length);
     }
 
     private static final int NUM_TYPE_BITS = 8;
@@ -147,6 +147,7 @@ public class ThreadStateMachine extends XMachine {
         		}
         	}
     	}
+    	q.clear();
     }
 
 
