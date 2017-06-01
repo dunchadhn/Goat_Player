@@ -329,7 +329,7 @@ public class XStateMachine extends XMachine {
         		}
         	}
     	}
-    	q.clear();
+    	//q.clear();
     }
 
 
