@@ -418,7 +418,7 @@ public class ThreadStateMachine extends XMachine {
 	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
-    		bases.add(machine.gdlSentenceMap.get(machine.baseOffset + i));
+    		bases.add((GdlSentence) machine.gdlSentenceMap.get(machine.baseOffset + i));
     	}
     	return new MachineState(bases);
     }

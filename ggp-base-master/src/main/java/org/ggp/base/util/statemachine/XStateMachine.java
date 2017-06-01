@@ -7,17 +7,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
-import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.XPropNet;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
+
+import cern.colt.map.OpenIntObjectHashMap;
 
 
 
@@ -42,8 +42,7 @@ public class XStateMachine extends XMachine {
 
     public int[][] goalPropositions;
 
-    public HashMap<Integer, GdlSentence> gdlSentenceMap;
-    public HashMap<Integer, Component> indexCompMap;
+    public OpenIntObjectHashMap gdlSentenceMap;
 
     private Random rand;
 
@@ -245,10 +244,11 @@ public class XStateMachine extends XMachine {
   //Propagates normally (ignoring lastPropagatedOutputValue). This version of propagate
     //is only called during getInitialState()
     protected void rawPropagate() {//compute ordering
-    	Stack<Integer> ordering = propNet.getOrdering();
+    	int[] ordering = propNet.getOrdering();
+    	int size = ordering.length;
 
-    	while (!ordering.isEmpty()) {
-    		int compId = ordering.pop();
+    	for(int i = 0; i < size; ++i) {
+    		int compId = ordering[i];
     		int value = components[compId];
     		boolean val = (value & CURR_VAL_MASK) != 0;
     		long comp = compInfo[compId];
@@ -277,8 +277,8 @@ public class XStateMachine extends XMachine {
         	int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
-        	for (int i = 0; i < num_outputs; ++i) {
-        		int outIndex = connecTable[outputsIndex + i];
+        	for (int j = 0; j < num_outputs; ++j) {
+        		int outIndex = connecTable[outputsIndex + j];
         		if (val) components[outIndex] += 1;
         	}
     	}
@@ -599,7 +599,7 @@ public class XStateMachine extends XMachine {
 	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
-    		bases.add(gdlSentenceMap.get(baseOffset + i));
+    		bases.add((GdlSentence) gdlSentenceMap.get(baseOffset + i));
     	}
     	return new MachineState(bases);
     }

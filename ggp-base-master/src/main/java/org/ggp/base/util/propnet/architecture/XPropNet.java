@@ -28,6 +28,8 @@ import org.ggp.base.util.propnet.architecture.components.Transition;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 
+import cern.colt.map.OpenIntObjectHashMap;
+
 
 
 public final class XPropNet
@@ -64,14 +66,15 @@ public final class XPropNet
     private int[] connecTable;
     private int[][] goalPropositions;
     private HashMap<Role, List<Move>> actionsMap;
-    private HashMap<Integer, GdlSentence> gdlSentenceMap;
+    private OpenIntObjectHashMap gdlSentenceMap;
+    //private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<GdlSentence, Integer> basesMap;
     private int[] rolesIndexMap;
     private HashMap<Integer, Component> indexCompMap;
     private HashMap<Pair<Role, Move>, Integer> legalMoveMap;
     private Move[] legalArray;
     private HashMap<Move, int[]> roleMoves;
-    private Stack<Integer> ordering;
+    private int[] ordering;
 
     public HashMap<Component, List<Component>> outputMap;
     PropNet oldProp;
@@ -116,7 +119,7 @@ public final class XPropNet
  */
 		List<Proposition> bases = new ArrayList<Proposition>();
 		numBases = 0; baseOffset = 0;
-		gdlSentenceMap = new HashMap<Integer, GdlSentence>();//Mapping from compId to GdlSentence for bases
+		gdlSentenceMap = new OpenIntObjectHashMap();//Mapping from compId to GdlSentence for bases
 		basesMap = new HashMap<GdlSentence, Integer>();//Mapping from GdlSentence to compId
 		for (Entry<GdlSentence, Proposition> e : prop.getBasePropositions().entrySet()) {
 			GdlSentence s = e.getKey();
@@ -453,7 +456,7 @@ public final class XPropNet
 /*
  * Compute topological ordering
  */
-		ordering = new Stack<Integer>();
+		Stack<Integer> ord = new Stack<Integer>();
     	HashSet<Component> visited = new HashSet<Component>();
     	Component initP = indexCompMap.get(initProposition);
     	initP = null;
@@ -461,7 +464,7 @@ public final class XPropNet
     		for (Component out : initP.getOutputs()) {
     			if (!visited.contains(out)) {
     				visited.add(out);
-    				topologicalSort(out, ordering, visited);
+    				topologicalSort(out, ord, visited);
     			}
     		}
     	}
@@ -470,7 +473,7 @@ public final class XPropNet
     		for (Component out : b.getOutputs()) {
     			if (!visited.contains(out)) {
     				visited.add(out);
-    				topologicalSort(out, ordering, visited);
+    				topologicalSort(out, ord, visited);
     			}
     		}
     	}
@@ -479,7 +482,7 @@ public final class XPropNet
     		for (Component out : i.getOutputs()) {
     			if (!visited.contains(out)) {
     				visited.add(out);
-    				topologicalSort(out, ordering, visited);
+    				topologicalSort(out, ord, visited);
     			}
     		}
     	}
@@ -489,10 +492,17 @@ public final class XPropNet
     		for (Component out : c.getOutputs()) {
     			if (!visited.contains(out)) {
     				visited.add(out);
-    				topologicalSort(out, ordering, visited);
+    				topologicalSort(out, ord, visited);
     			}
     		}
     	}
+
+    	size = ord.size();
+    	ordering = new int[size];
+        for (int i = 0; i < size; ++i) {
+        	int val = ord.pop().intValue();
+            ordering[i] = val;
+        }
 
 	}
 
@@ -578,7 +588,7 @@ public final class XPropNet
 		return constants;
 	}
 
-	public HashMap<Integer, GdlSentence> getGdlSentenceMap() {
+	public OpenIntObjectHashMap getGdlSentenceMap() {
 		return gdlSentenceMap;
 	}
 
@@ -670,8 +680,8 @@ public final class XPropNet
     }
 
     @SuppressWarnings("unchecked")
-	public Stack<Integer> getOrdering() {
-    	return (Stack<Integer>) ordering.clone();
+	public int[] getOrdering() {
+    	return ordering;
     }
 
 
