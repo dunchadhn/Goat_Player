@@ -10,7 +10,6 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
-import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.XPropNet;
@@ -160,8 +159,8 @@ public class ThreadStateMachine extends XMachine {
         int size = machine.roles.length - 1;
     	for (int i = 0; i < size; ++i) {
     		List<Move> moves = new ArrayList<Move>();
-    		int roleIndex = machine.rolesIndexMap.get(i);
-    		int nextRoleIndex = machine.rolesIndexMap.get(i + 1);
+    		int roleIndex = machine.rolesIndexMap[i];
+    		int nextRoleIndex = machine.rolesIndexMap[i + 1];
 
     		for (int j = roleIndex; j < nextRoleIndex; ++j) {
     			if (currLegals.fastGet(j)) {
@@ -171,7 +170,7 @@ public class ThreadStateMachine extends XMachine {
     		jointMoves.add(moves);
     	}
 
-    	int start = machine.rolesIndexMap.get(size);
+    	int start = machine.rolesIndexMap[size];
     	int end = machine.legalArray.length;
     	List<Move> moves = new ArrayList<Move>();
     	for(int i = start; i < end; ++i) {
@@ -241,8 +240,8 @@ public class ThreadStateMachine extends XMachine {
     	setState(state, null);
 
     	List<Move> moves = new ArrayList<Move>();
-    	int roleIndex = machine.rolesIndexMap.get(rIndex);
-    	int nextRoleIndex = (rIndex == (machine.roles.length - 1) ? machine.legalArray.length : machine.rolesIndexMap.get(rIndex + 1));
+    	int roleIndex = machine.rolesIndexMap[rIndex];
+    	int nextRoleIndex = (rIndex == (machine.roles.length - 1) ? machine.legalArray.length : machine.rolesIndexMap[rIndex + 1]);
     	for (int i = roleIndex; i < nextRoleIndex; ++i) {
 			if (currLegals.fastGet(i)) {
 				moves.add(machine.legalArray[i]);
@@ -330,7 +329,7 @@ public class ThreadStateMachine extends XMachine {
 
 		OpenBitSet movesSet = new OpenBitSet(machine.numInputs);
 		for (int i = 0; i < machine.roles.length; ++i) {
-			int index = machine.roleMoves.get(Pair.of(machine.roles[i], moves.get(i)));
+			int index = machine.roleMoves.get(moves.get(i))[i];
 			movesSet.fastSet(index);
 		}
 

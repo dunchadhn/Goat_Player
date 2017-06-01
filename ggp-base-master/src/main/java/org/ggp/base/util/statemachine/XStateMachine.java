@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.Stack;
 
 import org.apache.lucene.util.OpenBitSet;
-import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
@@ -33,9 +32,9 @@ public class XStateMachine extends XMachine {
 
     public HashMap<Role, List<Move>> actions;
     public HashMap<Role, List<Move>> currentLegalMoves;
-    public HashMap<Integer, Integer> rolesIndexMap;
+    public int[] rolesIndexMap;
     public Move[] legalArray;
-    public HashMap< Pair<Role, Move>, Integer> roleMoves;
+    public HashMap<Move, int[]> roleMoves;
 
     public int[] components;
     public long[] compInfo;
@@ -337,13 +336,13 @@ public class XStateMachine extends XMachine {
 	public List<List<Move>> getLegalJointMoves(OpenBitSet state) throws MoveDefinitionException {
     	setState(state, null);
 
+    	int size = roles.length - 1;
         List<List<Move>> jointMoves = new ArrayList<List<Move>>();
 
-        int size = roles.length - 1;
     	for (int i = 0; i < size; ++i) {
     		List<Move> moves = new ArrayList<Move>();
-    		int roleIndex = rolesIndexMap.get(i);
-    		int nextRoleIndex = rolesIndexMap.get(i + 1);
+    		int roleIndex = rolesIndexMap[i];
+    		int nextRoleIndex = rolesIndexMap[i + 1];
 
     		for (int j = roleIndex; j < nextRoleIndex; ++j) {
     			if (currLegals.fastGet(j)) {
@@ -353,7 +352,7 @@ public class XStateMachine extends XMachine {
     		jointMoves.add(moves);
     	}
 
-    	int start = rolesIndexMap.get(size);
+    	int start = rolesIndexMap[size];
     	int end = legalArray.length;
     	List<Move> moves = new ArrayList<Move>();
     	for(int i = start; i < end; ++i) {
@@ -424,8 +423,8 @@ public class XStateMachine extends XMachine {
     	setState(state, null);
 
     	List<Move> moves = new ArrayList<Move>();
-    	int roleIndex = rolesIndexMap.get(rIndex);
-    	int nextRoleIndex = (rIndex == (roles.length - 1) ? legalArray.length : rolesIndexMap.get(rIndex + 1));
+    	int roleIndex = rolesIndexMap[rIndex];
+    	int nextRoleIndex = (rIndex == (roles.length - 1) ? legalArray.length : rolesIndexMap[rIndex + 1]);
     	for (int i = roleIndex; i < nextRoleIndex; ++i) {
 			if (currLegals.fastGet(i)) {
 				moves.add(legalArray[i]);
@@ -513,7 +512,7 @@ public class XStateMachine extends XMachine {
 
 		OpenBitSet movesSet = new OpenBitSet(numInputs);
 		for (int i = 0; i < roles.length; ++i) {
-			int index = roleMoves.get(Pair.of(roles[i], moves.get(i)));
+			int index = roleMoves.get(moves.get(i))[i];
 			movesSet.fastSet(index);
 		}
 

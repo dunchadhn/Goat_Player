@@ -53,6 +53,7 @@ public final class XPropNet
 
 	private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
 	private final Role[] roles;
+	private HashMap<Role, Integer> roleMap;
 	private int initProposition, terminalProposition;
     private int[] basePropositions;
     private int[] inputPropositions;
@@ -65,11 +66,11 @@ public final class XPropNet
     private HashMap<Role, List<Move>> actionsMap;
     private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<GdlSentence, Integer> basesMap;
-    private HashMap<Integer, Integer> rolesIndexMap;
+    private int[] rolesIndexMap;
     private HashMap<Integer, Component> indexCompMap;
     private HashMap<Pair<Role, Move>, Integer> legalMoveMap;
     private Move[] legalArray;
-    private HashMap<Pair<Role, Move>, Integer> roleMoves;
+    private HashMap<Move, int[]> roleMoves;
     private Stack<Integer> ordering;
 
     public HashMap<Component, List<Component>> outputMap;
@@ -93,6 +94,11 @@ public final class XPropNet
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
 	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
+	    int size = roles.length;
+	    roleMap = new HashMap<Role, Integer>();
+	    for (int i = 0; i < size; ++i) {
+	    	roleMap.put(roles[i], i);
+	    }
 
 		Map<Role, Set<Proposition>> moveMap = prop.getLegalPropositions();
 		//Mapping from component to component ID
@@ -134,11 +140,11 @@ public final class XPropNet
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
 		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
 		actionsMap = new HashMap<Role, List<Move>>();
-		rolesIndexMap = new HashMap<Integer, Integer>();
+		rolesIndexMap = new int[roles.length];
 		numLegals = 0; legalOffset = compId;
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> rLegals = new ArrayList<Proposition>(moveMap.get(roles[i]));
-			rolesIndexMap.put(i, compId - legalOffset);
+			rolesIndexMap[i] = compId - legalOffset;
 			List<Move> rMoves = new ArrayList<Move>();
 
 			for (Proposition l : rLegals) {
@@ -290,13 +296,18 @@ public final class XPropNet
 			}
 		}
 
-		roleMoves = new HashMap<Pair<Role, Move>, Integer>();
+		roleMoves = new HashMap<Move, int[]>();
 		for (Proposition i : inputs) {
 
 			List<GdlTerm> iGdl = i.getName().getBody();
-			Pair<Role, Move> p = Pair.of(new Role((GdlConstant) iGdl.get(0)), new Move(iGdl.get(1)));
+			Move m = new Move(iGdl.get(1));
+			Role r = new Role((GdlConstant) iGdl.get(0));
+			if(!roleMoves.containsKey(m)) {
+				roleMoves.put(m, new int[roles.length]);
+			}
+
 			int inIndex = compIndices.get(i) - inputOffset;
-			roleMoves.put(p, inIndex);
+			roleMoves.get(m)[roleMap.get(r)] = inIndex;
 
 			long type = NOT_TRIGGER;
 			long num_inputs = ((long)i.getInputs().size()) << INPUT_SHIFT;
@@ -575,11 +586,11 @@ public final class XPropNet
 		return basesMap;
 	}
 
-	public HashMap<Integer, Integer> getRolesIndexMap() {
+	public int[] getRolesIndexMap() {
 		return rolesIndexMap;
 	}
 
-	public HashMap< Pair<Role, Move>, Integer> getRoleMoves() {
+	public HashMap<Move, int[]> getRoleMoves() {
 		return roleMoves;
 	}
 
