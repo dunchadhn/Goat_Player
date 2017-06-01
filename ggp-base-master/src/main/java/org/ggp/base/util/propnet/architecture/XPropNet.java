@@ -56,6 +56,7 @@ public final class XPropNet
 	private int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
 	private final Role[] roles;
 	private HashMap<Role, Integer> roleMap;
+	//private TCustomHashMap<Role,int> roleMap;
 	private int initProposition, terminalProposition;
     private int[] basePropositions;
     private int[] inputPropositions;
@@ -70,7 +71,7 @@ public final class XPropNet
     //private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<GdlSentence, Integer> basesMap;
     private int[] rolesIndexMap;
-    private HashMap<Integer, Component> indexCompMap;
+    private OpenIntObjectHashMap indexCompMap;
     private HashMap<Pair<Role, Move>, Integer> legalMoveMap;
     private Move[] legalArray;
     private HashMap<Move, int[]> roleMoves;
@@ -208,8 +209,8 @@ public final class XPropNet
 		}
 
 		compIndexMap = compIndices;
-		indexCompMap = new HashMap<Integer, Component>();
-		for (Component c : compIndexMap.keySet()) indexCompMap.put(compIndexMap.get(c), c);
+		indexCompMap = new OpenIntObjectHashMap();
+		for (Component c : compIndexMap.keySet()) indexCompMap.put(compIndexMap.get(c).intValue(), c);
 
 
 //Add bases, inputs, legals to props
@@ -458,7 +459,7 @@ public final class XPropNet
  */
 		Stack<Integer> ord = new Stack<Integer>();
     	HashSet<Component> visited = new HashSet<Component>();
-    	Component initP = indexCompMap.get(initProposition);
+    	Component initP = (Component) indexCompMap.get(initProposition);
     	initP = null;
     	if (initP != null) {
     		for (Component out : initP.getOutputs()) {
@@ -488,7 +489,7 @@ public final class XPropNet
     	}
 
     	for (int i = 0; i < constants.length; ++i) {
-    		Component c = indexCompMap.get(constants[i]);
+    		Component c = (Component) indexCompMap.get(constants[i]);
     		for (Component out : c.getOutputs()) {
     			if (!visited.contains(out)) {
     				visited.add(out);
@@ -604,7 +605,7 @@ public final class XPropNet
 		return roleMoves;
 	}
 
-	public HashMap<Integer, Component> indexCompMap() {
+	public OpenIntObjectHashMap indexCompMap() {
 		return indexCompMap;
 	}
 
