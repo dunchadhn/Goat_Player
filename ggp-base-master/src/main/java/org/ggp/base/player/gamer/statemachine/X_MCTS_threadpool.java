@@ -76,7 +76,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
 		/*OpenBitSet state = machine.getInitialState();
-		OpenBitSet next = state;
 		double time = 0;
 		double runs = 0;
 		while(System.currentTimeMillis() < finishBy) {
