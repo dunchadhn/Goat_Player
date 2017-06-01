@@ -86,14 +86,14 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		}
 		System.out.println("Avg Playout: " + time/runs);*/
 		//doMCTS();
-		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 100);
+		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
 		if (num_rests < 0) {
 			return;
 		}
 		for (int i = 0; i < num_rests; ++i) {
-			Thread.sleep(100);
+			Thread.sleep(1000);
 			double avg = total_playout/play_loops;
-			num_per = (int) (3/avg);
+			num_per = (int) (2/avg);
 			if (num_per == 0) {
 				num_per = 1;
 				num_charges = 2;
@@ -179,14 +179,14 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		initializeMCTS();
 		thread_pool.getQueue().clear();
 		graph.clear();
-		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 100);
+		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
 		if (num_rests < 0) {
 			return bestMove(root);
 		}
 		for (int i = 0; i < num_rests; ++i) {
-			Thread.sleep(100);
+			Thread.sleep(1000);
 			double avg = total_playout/play_loops;
-			num_per = (int) (3/avg);
+			num_per = (int) (2/avg);
 			if (num_per == 0) {
 				num_per = 1;
 				num_charges = 2;
