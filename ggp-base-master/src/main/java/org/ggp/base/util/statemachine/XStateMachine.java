@@ -371,8 +371,35 @@ public class XStateMachine extends XMachine {
     @Override
 	public List<Move> getRandomJointMove(OpenBitSet state) throws MoveDefinitionException
     {
-        List<List<Move>> jointMoves = getLegalJointMoves(state);
-        return jointMoves.get(rand.nextInt(jointMoves.size()));
+    	setState(state, null);
+
+    	int size = roles.length - 1;
+    	List<Move> randomJointMove = new ArrayList<Move>();
+    	List<Move> moves;
+
+    	for (int i = 0; i < size; ++i) {
+    		moves = new ArrayList<Move>();
+    		int roleIndex = rolesIndexMap[i];
+    		int nextRoleIndex = rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(legalArray[j]);
+    			}
+    		}
+    		randomJointMove.add(moves.get(rand.nextInt(moves.size())));
+    	}
+
+    	int start = rolesIndexMap[size];
+    	int end = legalArray.length;
+    	moves = new ArrayList<Move>();
+    	for(int i = start; i < end; ++i) {
+    		if (currLegals.fastGet(i)) {
+    			moves.add(legalArray[i]);
+    		}
+    	}
+    	randomJointMove.add(moves.get(rand.nextInt(moves.size())));
+        return randomJointMove;
 
     }
 
