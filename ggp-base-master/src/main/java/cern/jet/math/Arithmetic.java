@@ -1,9 +1,9 @@
 /*
-Copyright © 1999 CERN - European Organization for Nuclear Research.
-Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose 
-is hereby granted without fee, provided that the above copyright notice appear in all copies and 
-that both that copyright notice and this permission notice appear in supporting documentation. 
-CERN makes no representations about the suitability of this software for any purpose. 
+Copyright  1999 CERN - European Organization for Nuclear Research.
+Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose
+is hereby granted without fee, provided that the above copyright notice appear in all copies and
+that both that copyright notice and this permission notice appear in supporting documentation.
+CERN makes no representations about the suitability of this software for any purpose.
 It is provided "as is" without expressed or implied warranty.
 */
 package cern.jet.math;
@@ -13,7 +13,7 @@ package cern.jet.math;
  */
 public class Arithmetic extends Constants {
 	// for method stirlingCorrection(...)
-	private static final double[] stirlingCorrection =  {   
+	private static final double[] stirlingCorrection =  {
 		 0.0,
 	     8.106146679532726e-02, 4.134069595540929e-02,
 	     2.767792568499834e-02, 2.079067210376509e-02,
@@ -225,7 +225,7 @@ public class Arithmetic extends Constants {
 		4.2690680090047056E304,
 		7.257415615308004E306
 	};
-	
+
 /**
  * Makes this class non instantiable, but still let's others inherit from it.
  */
@@ -245,7 +245,7 @@ public static double binomial(double n, long k) {
 	if (k<0) return 0;
 	if (k==0) return 1;
 	if (k==1) return n;
-	
+
 	// binomial(n,k) = (n * n-1 * ... * n-k+1 ) / ( 1 * 2 * ... * k )
 	double a = n-k+1;
 	double b = 1;
@@ -270,7 +270,7 @@ public static double binomial(long n, long k) {
 	if (k<0) return 0;
 	if (k==0 || k==n) return 1;
 	if (k==1 || k==n-1) return n;
-	
+
 	// try quick version and see whether we get numeric overflows.
 	// factorial(..) is O(1); requires no loop; only a table lookup.
 	if (n>k) {
@@ -287,7 +287,7 @@ public static double binomial(long n, long k) {
 		}
 		if (k > n/2) k = n-k; // quicker
 	}
-	
+
 	// binomial(n,k) = (n * n-1 * ... * n-k+1 ) / ( 1 * 2 * ... * k )
 	long a = n-k+1;
 	long b = 1;
@@ -365,10 +365,10 @@ static private long fac1(int j) {
 	long i = j;
 	if(j < 0) i = Math.abs(j);
 	if (i>longFactorials.length) throw new IllegalArgumentException("Overflow");
-	
+
 	long d = 1;
 	while (i > 1) d *= i--;
-	
+
 	if (j < 0) return -d;
 	else return d;
 }
@@ -378,10 +378,10 @@ static private long fac1(int j) {
 static private double fac2(int j) {
 	long i = j;
 	if (j < 0) i = Math.abs(j);
-	
+
 	double d = 1.0;
 	while (i > 1) d *= i--;
-	
+
 	if (j < 0) return -d;
 	else return d;
 }
@@ -391,10 +391,10 @@ static private double fac2(int j) {
  */
 static public double factorial(int k) {
 	if (k<0) throw new IllegalArgumentException();
-	
+
 	int length1 = longFactorials.length;
 	if (k<length1) return longFactorials[k];
-	
+
 	int length2 = doubleFactorials.length;
 	if (k<length1+length2) return doubleFactorials[k-length1];
 	else return Double.POSITIVE_INFINITY;
@@ -436,7 +436,7 @@ static public double log2(double value) {
  * For <tt>k>=30</tt> uses stirlings approximation.
  * @param k must hold <tt>k &gt;= 0</tt>.
  */
-public static double logFactorial(int k) {                                               
+public static double logFactorial(int k) {
 	if (k >= 30) {
 		double  r, rr;
 		final double C0 =  9.18938533204672742e-01;
@@ -458,27 +458,27 @@ public static double logFactorial(int k) {
  */
 static public long longFactorial(int k) throws IllegalArgumentException{
 	if (k<0) throw new IllegalArgumentException("Negative k");
-	
+
 	if (k<longFactorials.length) return longFactorials[k];
-	throw new IllegalArgumentException("Overflow");	
+	throw new IllegalArgumentException("Overflow");
 }
 /**
- * Returns the StirlingCorrection.                 
- * <p>                                                                      
+ * Returns the StirlingCorrection.
+ * <p>
  * Correction term of the Stirling approximation for <tt>log(k!)</tt>
- * (series in 1/k, or table values for small k)                         
- * with int parameter k.                                            
- * <p>                                                                                                                              
+ * (series in 1/k, or table values for small k)
+ * with int parameter k.
+ * <p>
  * <tt>
  * log k! = (k + 1/2)log(k + 1) - (k + 1) + (1/2)log(2Pi) +
- *          stirlingCorrection(k + 1)                                    
- * <p>                                                                      
- * log k! = (k + 1/2)log(k)     -  k      + (1/2)log(2Pi) +              
+ *          stirlingCorrection(k + 1)
+ * <p>
+ * log k! = (k + 1/2)log(k)     -  k      + (1/2)log(2Pi) +
  *          stirlingCorrection(k)
  * </tt>
  */
 public static double stirlingCorrection(int k) {
-	final double C1 =  8.33333333333333333e-02;     //  +1/12 
+	final double C1 =  8.33333333333333333e-02;     //  +1/12
 	final double C3 = -2.77777777777777778e-03;     //  -1/360
 	final double C5 =  7.93650793650793651e-04;     //  +1/1260
 	final double C7 = -5.95238095238095238e-04;     //  -1/1680

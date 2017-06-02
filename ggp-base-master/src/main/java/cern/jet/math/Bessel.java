@@ -1,9 +1,9 @@
 /*
-Copyright © 1999 CERN - European Organization for Nuclear Research.
-Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose 
-is hereby granted without fee, provided that the above copyright notice appear in all copies and 
-that both that copyright notice and this permission notice appear in supporting documentation. 
-CERN makes no representations about the suitability of this software for any purpose. 
+Copyright  1999 CERN - European Organization for Nuclear Research.
+Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose
+is hereby granted without fee, provided that the above copyright notice appear in all copies and
+that both that copyright notice and this permission notice appear in supporting documentation.
+CERN makes no representations about the suitability of this software for any purpose.
 It is provided "as is" without expressed or implied warranty.
 */
 package cern.jet.math;
@@ -15,7 +15,7 @@ public class Bessel extends Constants {
 	/****************************************
 	 *    COEFFICIENTS FOR METHODS i0, i0e  *
 	 ****************************************/
-	 
+
 	/**
 	 * Chebyshev coefficients for exp(-x) I0(x)
 	 * in the interval [0,8].
@@ -92,7 +92,7 @@ public class Bessel extends Constants {
 		};
 
 
-	
+
 	/****************************************
 	 *    COEFFICIENTS FOR METHODS i1, i1e  *
 	 ****************************************/
@@ -169,7 +169,7 @@ public class Bessel extends Constants {
 		};
 
 
-	
+
 
 	/****************************************
 	 *    COEFFICIENTS FOR METHODS k0, k0e  *
@@ -177,7 +177,7 @@ public class Bessel extends Constants {
 	/* Chebyshev coefficients for K0(x) + log(x/2) I0(x)
 	 * in the interval [0,2].  The odd order coefficients are all
 	 * zero; only the even order coefficients are listed.
-	 * 
+	 *
 	 * lim(x->0){ K0(x) + log(x/2) I0(x) } = -EUL.
 	 */
 	protected static final double[] A_k0 = {
@@ -195,7 +195,7 @@ public class Bessel extends Constants {
 
 	/* Chebyshev coefficients for exp(x) sqrt(x) K0(x)
 	 * in the inverted interval [2,infinity].
-	 * 
+	 *
 	 * lim(x->inf){ exp(x) sqrt(x) K0(x) } = sqrt(pi/2).
 	 */
 	protected static final double[] B_k0 = {
@@ -227,14 +227,14 @@ public class Bessel extends Constants {
 		};
 
 
-	
-	
+
+
 	/****************************************
 	 *    COEFFICIENTS FOR METHODS k1, k1e  *
 	 ****************************************/
 	/* Chebyshev coefficients for x(K1(x) - log(x/2) I1(x))
 	 * in the interval [0,2].
-	 * 
+	 *
 	 * lim(x->0){ x(K1(x) - log(x/2) I1(x)) } = 1.
 	 */
 	protected static final double[] A_k1 = {
@@ -321,7 +321,7 @@ static public double i0(double x) throws ArithmeticException {
  */
 static public double i0e(double x) throws ArithmeticException {
 	double y;
-	
+
 	if( x < 0 ) x = -x;
 	if( x <= 8.0 ) {
 		y = (x/2.0) - 2.0;
@@ -364,10 +364,10 @@ static public double i1(double x) throws ArithmeticException {
  * of order 1 of the argument.
  * <p>
  * The function is defined as <tt>i1(x) = -i exp(-|x|) j1( ix )</tt>.
- * 
+ *
  * @param x the value to compute the bessel function of.
  */
-static public double i1e(double x) throws ArithmeticException { 
+static public double i1e(double x) throws ArithmeticException {
 double y, z;
 
 z = Math.abs(x);
@@ -400,7 +400,7 @@ static public double j0(double x) throws ArithmeticException {
 
 	   return ans1/ans2;
 
-	} 
+	}
 	else {
 	   double z=8.0/ax;
 	   double y=z*z;
@@ -410,7 +410,7 @@ static public double j0(double x) throws ArithmeticException {
 	   double ans2 = -0.1562499995e-1+y*(0.1430488765e-3
 				   +y*(-0.6911147651e-5+y*(0.7621095161e-6
 				   -y*0.934935152e-7)));
-		   
+
 	   return Math.sqrt(0.636619772/ax)*
 			  (Math.cos(xx)*ans1-z*Math.sin(xx)*ans2);
 	}
@@ -431,7 +431,7 @@ static public double j1(double x) throws ArithmeticException {
 		ans2=144725228442.0+y*(2300535178.0+y*(18583304.74
 		   +y*(99447.43394+y*(376.9991397+y*1.0))));
 		return ans1/ans2;
-	} 
+	}
 	else {
 		double z=8.0/ax;
 		double xx=ax-2.356194491;
@@ -478,7 +478,7 @@ static public double jn(int n, double x) throws ArithmeticException {
 			bj=bjp;
 		}
 		ans=bj;
-	} 
+	}
 	else {
 		tox=2.0/ax;
 		m=2*((n+(int)Math.sqrt(ACC*n))/2);
@@ -523,7 +523,7 @@ static public double k0(double x) throws ArithmeticException {
 		y = Arithmetic.chbevl( y, A_k0, 10 ) - Math.log( 0.5 * x ) * i0(x);
 		return( y );
 	}
-	
+
 	z = 8.0/x - 2.0;
 	y = Math.exp(-x) * Arithmetic.chbevl( z, B_k0, 25 ) / Math.sqrt(x);
 	return(y);
@@ -561,7 +561,7 @@ static public double k1(double x) throws ArithmeticException {
 	double y, z;
 
 	z = 0.5 * x;
-	if( z <= 0.0 ) throw new ArithmeticException();	
+	if( z <= 0.0 ) throw new ArithmeticException();
 	if( x <= 2.0 ) {
 		y = x * x - 2.0;
 		y =  Math.log(z) * i1(x)  +  Arithmetic.chbevl( y, A_k1, 11 ) / x;
@@ -604,7 +604,7 @@ static public double k1e(double x) throws ArithmeticException {
 static public double kn(int nn, double x) throws ArithmeticException {
 /*
 Algorithm for Kn.
-					   n-1 
+					   n-1
 				   -n   -  (n-k-1)!    2   k
 K (x)  =  0.5 (x/2)     >  -------- (-x /4)
  n                      -     k!
@@ -687,7 +687,7 @@ asymptotically, where
 					kf = kf * i;
 					zn *= z;
 					t = nk1f * zn / kf;
-					s += t;   
+					s += t;
 					if( (MAXNUM - Math.abs(t)) < Math.abs(s) ) throw new ArithmeticException("Overflow");
 					if( (tox > 1.0) && ((MAXNUM/tox) < zmn) ) throw new ArithmeticException("Overflow");
 					zmn *= tox;
@@ -776,7 +776,7 @@ static public double y0(double x) throws ArithmeticException {
 			+y*(47447.26470+y*(226.1030244+y*1.0))));
 
 		return (ans1/ans2)+0.636619772*j0(x)*Math.log(x);
-	} 
+	}
 	else {
 		double z=8.0/x;
 		double y=z*z;
@@ -805,7 +805,7 @@ static public double y1(double x) throws ArithmeticException {
 					 +y*(0.3733650367e10+y*(0.2245904002e8
 					 +y*(0.1020426050e6+y*(0.3549632885e3+y)))));
 		return (ans1/ans2)+0.636619772*(j1(x)*Math.log(x)-1.0/x);
-	} 
+	}
 	else {
 		double z=8.0/x;
 		double y=z*z;

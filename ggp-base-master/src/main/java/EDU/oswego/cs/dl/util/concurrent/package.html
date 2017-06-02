@@ -429,20 +429,20 @@ format</a>).
 
 class Random extends java.util.Random {
 
-  public Random() {super() ;}
-  public Random(long l) {super(l) ;}
+ public Random() {super() ;}
+ public Random(long l) {super(l) ;}
 
-  public int nextInt(int i) {
-    int ii = (int)(i * nextDouble()) ;
-    if (ii &gt;= i) {ii = i-1 ;} // should (almost?) never happen...
-    return ii ;
-  }
+ public int nextInt(int i) {
+ int ii = (int)(i * nextDouble()) ;
+ if (ii &gt;= i) {ii = i-1 ;} // should (almost?) never happen...
+ return ii ;
+ }
 
 }
 </pre>
     <p>
 
-    Konstantin Läufer has generously placed a version compiled for JDK1.1 
+    Konstantin Lufer has generously placed a version compiled for JDK1.1 
     at <a href="http://www.cs.luc.edu/%7Elaufer/courses/337/handouts/concurrent11.zip">http://www.cs.luc.edu/~laufer/courses/337/handouts/concurrent11.zip</a>
     </p><p>
 

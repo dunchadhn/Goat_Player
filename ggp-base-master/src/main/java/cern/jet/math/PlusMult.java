@@ -1,9 +1,9 @@
 /*
-Copyright © 1999 CERN - European Organization for Nuclear Research.
-Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose 
-is hereby granted without fee, provided that the above copyright notice appear in all copies and 
-that both that copyright notice and this permission notice appear in supporting documentation. 
-CERN makes no representations about the suitability of this software for any purpose. 
+Copyright  1999 CERN - European Organization for Nuclear Research.
+Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose
+is hereby granted without fee, provided that the above copyright notice appear in all copies and
+that both that copyright notice and this permission notice appear in supporting documentation.
+CERN makes no representations about the suitability of this software for any purpose.
 It is provided "as is" without expressed or implied warranty.
 */
 package cern.jet.math;
@@ -16,7 +16,7 @@ package cern.jet.math;
  * <li><tt>a - b*constant</tt>
  * <li><tt>a + b/constant</tt>
  * <li><tt>a - b/constant</tt>
- * </ul> 
+ * </ul>
  * <tt>a</tt> and <tt>b</tt> are variables, <tt>constant</tt> is fixed, but for performance reasons publicly accessible.
  * Intended to be passed to <tt>matrix.assign(otherMatrix,function)</tt> methods.
  */
@@ -35,6 +35,7 @@ protected PlusMult(final double multiplicator) {
 /**
  * Returns the result of the function evaluation.
  */
+@Override
 public final double apply(double a, double b) {
 	return a + b*multiplicator;
 }

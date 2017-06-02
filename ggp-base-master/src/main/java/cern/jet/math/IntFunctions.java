@@ -1,9 +1,9 @@
 /*
-Copyright � 1999 CERN - European Organization for Nuclear Research.
-Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose 
-is hereby granted without fee, provided that the above copyright notice appear in all copies and 
-that both that copyright notice and this permission notice appear in supporting documentation. 
-CERN makes no representations about the suitability of this software for any purpose. 
+Copyright  1999 CERN - European Organization for Nuclear Research.
+Permission to use, copy, modify, distribute and sell this software and its documentation for any purpose
+is hereby granted without fee, provided that the above copyright notice appear in all copies and
+that both that copyright notice and this permission notice appear in supporting documentation.
+CERN makes no representations about the suitability of this software for any purpose.
 It is provided "as is" without expressed or implied warranty.
 */
 package cern.jet.math;
@@ -12,7 +12,7 @@ import cern.colt.function.IntFunction;
 import cern.colt.function.IntIntFunction;
 import cern.colt.function.IntIntProcedure;
 import cern.colt.function.IntProcedure;
-/** 
+/**
 Integer Function objects to be passed to generic methods.
 Same as {@link Functions} except operating on integers.
 <p>
@@ -36,7 +36,7 @@ public class IntFunctions extends Object {
 	<p>
 	*/
 	public static final IntFunctions intFunctions = new IntFunctions();
-	
+
 	/*****************************
 	 * <H3>Unary functions</H3>
 	 *****************************/
@@ -44,65 +44,74 @@ public class IntFunctions extends Object {
 	 * Function that returns <tt>Math.abs(a) == (a < 0) ? -a : a</tt>.
 	 */
 	public static final IntFunction abs = new IntFunction() {
+		@Override
 		public final int apply(int a) { return (a < 0) ? -a : a; }
-	};		
+	};
 
 	/**
 	 * Function that returns <tt>a--</tt>.
 	 */
 	public static final IntFunction dec = new IntFunction() {
-		public final int apply(int a) { return a--; }   
+		@Override
+		public final int apply(int a) { return a--; }
 	};
 
 	/**
 	 * Function that returns <tt>(int) Arithmetic.factorial(a)</tt>.
 	 */
 	public static final IntFunction factorial = new IntFunction() {
+		@Override
 		public final int apply(int a) { return (int) Arithmetic.factorial(a); }
 	};
-		
+
 	/**
 	 * Function that returns its argument.
 	 */
 	public static final IntFunction identity = new IntFunction() {
-		public final int apply(int a) { return a; }   
+		@Override
+		public final int apply(int a) { return a; }
 	};
 
 	/**
 	 * Function that returns <tt>a++</tt>.
 	 */
 	public static final IntFunction inc = new IntFunction() {
-		public final int apply(int a) { return a++; }   
+		@Override
+		public final int apply(int a) { return a++; }
 	};
 
 	/**
 	 * Function that returns <tt>-a</tt>.
 	 */
 	public static final IntFunction neg = new IntFunction() {
+		@Override
 		public final int apply(int a) { return -a; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>~a</tt>.
 	 */
 	public static final IntFunction not = new IntFunction() {
+		@Override
 		public final int apply(int a) { return ~a; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a < 0 ? -1 : a > 0 ? 1 : 0</tt>.
 	 */
 	public static final IntFunction sign = new IntFunction() {
+		@Override
 		public final int apply(int a) { return a < 0 ? -1 : a > 0 ? 1 : 0; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a * a</tt>.
 	 */
 	public static final IntFunction square = new IntFunction() {
+		@Override
 		public final int apply(int a) { return a * a; }
 	};
-		
+
 
 
 
@@ -111,141 +120,160 @@ public class IntFunctions extends Object {
 	/*****************************
 	 * <H3>Binary functions</H3>
 	 *****************************/
-		
+
 	/**
 	 * Function that returns <tt>a & b</tt>.
 	 */
 	public static final IntIntFunction and = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a & b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a < b ? -1 : a > b ? 1 : 0</tt>.
 	 */
 	public static final IntIntFunction compare = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a < b ? -1 : a > b ? 1 : 0; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a / b</tt>.
 	 */
 	public static final IntIntFunction div = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a / b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a == b ? 1 : 0</tt>.
 	 */
 	public static final IntIntFunction equals = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a == b ? 1 : 0; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a == b</tt>.
 	 */
 	public static final IntIntProcedure isEqual = new IntIntProcedure() {
+		@Override
 		public final boolean apply(int a, int b) { return a == b; }
-	};		
+	};
 
 	/**
 	 * Function that returns <tt>a < b</tt>.
 	 */
 	public static final IntIntProcedure isLess = new IntIntProcedure() {
+		@Override
 		public final boolean apply(int a, int b) { return a < b; }
-	};		
+	};
 
 	/**
 	 * Function that returns <tt>a > b</tt>.
 	 */
 	public static final IntIntProcedure isGreater = new IntIntProcedure() {
+		@Override
 		public final boolean apply(int a, int b) { return a > b; }
-	};		
+	};
 
 	/**
 	 * Function that returns <tt>Math.max(a,b)</tt>.
 	 */
 	public static final IntIntFunction max = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return (a >= b) ? a : b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>Math.min(a,b)</tt>.
 	 */
 	public static final IntIntFunction min = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return (a <= b) ? a : b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a - b</tt>.
 	 */
 	public static final IntIntFunction minus = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a - b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a % b</tt>.
 	 */
 	public static final IntIntFunction mod = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a % b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a * b</tt>.
 	 */
 	public static final IntIntFunction mult = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a * b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a | b</tt>.
 	 */
 	public static final IntIntFunction or = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a | b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a + b</tt>.
 	 */
 	public static final IntIntFunction plus = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a + b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>(int) Math.pow(a,b)</tt>.
 	 */
 	public static final IntIntFunction pow = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return (int) Math.pow(a,b); }
 	};
-	
+
 	/**
 	 * Function that returns <tt>a << b</tt>.
 	 */
 	public static final IntIntFunction shiftLeft = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a << b; }
 	};
-		
-	
+
+
 	/**
 	 * Function that returns <tt>a >> b</tt>.
 	 */
 	public static final IntIntFunction shiftRightSigned = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a >> b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a >>> b</tt>.
 	 */
 	public static final IntIntFunction shiftRightUnsigned = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a >>> b; }
 	};
-		
+
 	/**
 	 * Function that returns <tt>a ^ b</tt>.
 	 */
 	public static final IntIntFunction xor = new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return a ^ b; }
 	};
-		
+
 /**
  * Makes this class non instantiable, but still let's others inherit from it.
  */
@@ -256,6 +284,7 @@ protected IntFunctions() {}
  */
 public static IntFunction and(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a & b; }
 	};
 }
@@ -265,60 +294,65 @@ public static IntFunction and(final int b) {
  */
 public static IntFunction between(final int from, final int to) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return (from<=a && a<=to) ? 1 : 0; }
 	};
 }
 /**
  * Constructs a unary function from a binary function with the first operand (argument) fixed to the given constant <tt>c</tt>.
  * The second operand is variable (free).
- * 
+ *
  * @param function a binary function taking operands in the form <tt>function.apply(c,var)</tt>.
  * @return the unary function <tt>function(c,var)</tt>.
  */
 public static IntFunction bindArg1(final IntIntFunction function, final int c) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int var) { return function.apply(c,var); }
 	};
 }
 /**
  * Constructs a unary function from a binary function with the second operand (argument) fixed to the given constant <tt>c</tt>.
  * The first operand is variable (free).
- * 
+ *
  * @param function a binary function taking operands in the form <tt>function.apply(var,c)</tt>.
  * @return the unary function <tt>function(var,c)</tt>.
  */
 public static IntFunction bindArg2(final IntIntFunction function, final int c) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int var) { return function.apply(var,c); }
 	};
 }
 /**
  * Constructs the function <tt>g( h(a) )</tt>.
- * 
+ *
  * @param g a unary function.
  * @param h a unary function.
  * @return the unary function <tt>g( h(a) )</tt>.
  */
 public static IntFunction chain(final IntFunction g, final IntFunction h) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return g.apply(h.apply(a)); }
 	};
 }
 /**
  * Constructs the function <tt>g( h(a,b) )</tt>.
- * 
+ *
  * @param g a unary function.
  * @param h a binary function.
  * @return the unary function <tt>g( h(a,b) )</tt>.
  */
 public static IntIntFunction chain(final IntFunction g, final IntIntFunction h) {
 	return new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return g.apply(h.apply(a,b)); }
 	};
 }
 /**
  * Constructs the function <tt>f( g(a), h(b) )</tt>.
- * 
+ *
  * @param f a binary function.
  * @param g a unary function.
  * @param h a unary function.
@@ -326,6 +360,7 @@ public static IntIntFunction chain(final IntFunction g, final IntIntFunction h) 
  */
 public static IntIntFunction chain(final IntIntFunction f, final IntFunction g, final IntFunction h) {
 	return new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return f.apply(g.apply(a), h.apply(b)); }
 	};
 }
@@ -335,6 +370,7 @@ public static IntIntFunction chain(final IntIntFunction f, final IntFunction g, 
  */
 public static IntFunction compare(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a < b ? -1 : a > b ? 1 : 0; }
 	};
 }
@@ -343,6 +379,7 @@ public static IntFunction compare(final int b) {
  */
 public static IntFunction constant(final int c) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return c; }
 	};
 }
@@ -352,6 +389,7 @@ public static IntFunction constant(final int c) {
  */
 public static IntFunction div(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a / b; }
 	};
 }
@@ -361,6 +399,7 @@ public static IntFunction div(final int b) {
  */
 public static IntFunction equals(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a == b ? 1 : 0; }
 	};
 }
@@ -370,6 +409,7 @@ public static IntFunction equals(final int b) {
  */
 public static IntProcedure isBetween(final int from, final int to) {
 	return new IntProcedure() {
+		@Override
 		public final boolean apply(int a) { return from<=a && a<=to; }
 	};
 }
@@ -379,6 +419,7 @@ public static IntProcedure isBetween(final int from, final int to) {
  */
 public static IntProcedure isEqual(final int b) {
 	return new IntProcedure() {
+		@Override
 		public final boolean apply(int a) { return a==b; }
 	};
 }
@@ -388,6 +429,7 @@ public static IntProcedure isEqual(final int b) {
  */
 public static IntProcedure isGreater(final int b) {
 	return new IntProcedure() {
+		@Override
 		public final boolean apply(int a) { return a > b; }
 	};
 }
@@ -397,6 +439,7 @@ public static IntProcedure isGreater(final int b) {
  */
 public static IntProcedure isLess(final int b) {
 	return new IntProcedure() {
+		@Override
 		public final boolean apply(int a) { return a < b; }
 	};
 }
@@ -406,6 +449,7 @@ public static IntProcedure isLess(final int b) {
  */
 public static IntFunction max(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return (a >= b) ? a : b; }
 	};
 }
@@ -415,6 +459,7 @@ public static IntFunction max(final int b) {
  */
 public static IntFunction min(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return (a <= b) ? a : b; }
 	};
 }
@@ -424,6 +469,7 @@ public static IntFunction min(final int b) {
  */
 public static IntFunction minus(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a - b; }
 	};
 }
@@ -433,6 +479,7 @@ public static IntFunction minus(final int b) {
  */
 public static IntFunction mod(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a % b; }
 	};
 }
@@ -442,6 +489,7 @@ public static IntFunction mod(final int b) {
  */
 public static IntFunction mult(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a * b; }
 	};
 }
@@ -451,6 +499,7 @@ public static IntFunction mult(final int b) {
  */
 public static IntFunction or(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a | b; }
 	};
 }
@@ -460,6 +509,7 @@ public static IntFunction or(final int b) {
  */
 public static IntFunction plus(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a + b; }
 	};
 }
@@ -469,6 +519,7 @@ public static IntFunction plus(final int b) {
  */
 public static IntFunction pow(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return (int) Math.pow(a,b); }
 	};
 }
@@ -489,6 +540,7 @@ public static IntFunction random() {
  */
 public static IntFunction shiftLeft(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a << b; }
 	};
 }
@@ -498,6 +550,7 @@ public static IntFunction shiftLeft(final int b) {
  */
 public static IntFunction shiftRightSigned(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a >> b; }
 	};
 }
@@ -507,17 +560,19 @@ public static IntFunction shiftRightSigned(final int b) {
  */
 public static IntFunction shiftRightUnsigned(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a >>> b; }
 	};
 }
 /**
  * Constructs a function that returns <tt>function.apply(b,a)</tt>, i.e. applies the function with the first operand as second operand and the second operand as first operand.
- * 
+ *
  * @param function a function taking operands in the form <tt>function.apply(a,b)</tt>.
  * @return the binary function <tt>function(b,a)</tt>.
  */
 public static IntIntFunction swapArgs(final IntIntFunction function) {
 	return new IntIntFunction() {
+		@Override
 		public final int apply(int a, int b) { return function.apply(b,a); }
 	};
 }
@@ -527,6 +582,7 @@ public static IntIntFunction swapArgs(final IntIntFunction function) {
  */
 public static IntFunction xor(final int b) {
 	return new IntFunction() {
+		@Override
 		public final int apply(int a) { return a ^ b; }
 	};
 }
