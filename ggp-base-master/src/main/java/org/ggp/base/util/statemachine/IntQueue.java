@@ -19,10 +19,9 @@ public class IntQueue {
 	}
 
 	public int remove() {
-		int val = arr[next];
 		--num_queued;
 		++next;
-		return val;
+		return arr[next];
 	}
 
 	public boolean isEmpty() {
