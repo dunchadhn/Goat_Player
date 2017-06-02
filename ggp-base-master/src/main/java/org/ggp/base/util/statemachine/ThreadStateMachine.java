@@ -107,11 +107,11 @@ public class ThreadStateMachine extends XMachine {
 
 	protected void propagate() {
 
-    	while(!q.isEmpty()) {
+    	while(!(q.num_queued == 0)) {
     		int value = q.remove();
-    		int compId = getId(value);
+    		int compId = (NOT_CURR_VAL_MASK & value);
 
-    		boolean val = get_current_value(value);
+    		boolean val = (value & CURR_VAL_MASK) != 0;
 
     		long comp = compInfo[compId];
     		if ((comp & TRIGGER_MASK) != 0) {

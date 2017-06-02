@@ -5,7 +5,7 @@ public class IntQueue {
 	private int[] arr;
 	private int curr = 0;
 	private int next = 0;
-	private int num_queued = 0;
+	public int num_queued = 0;
 
 	public IntQueue(int s) {
 		this.size = s;

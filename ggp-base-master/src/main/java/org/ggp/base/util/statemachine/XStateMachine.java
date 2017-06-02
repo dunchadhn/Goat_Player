@@ -289,7 +289,7 @@ public class XStateMachine extends XMachine {
 
     protected void propagate() {
 
-    	while(!q.isEmpty()) {
+    	while(!(q.num_queued == 0)) {
     		int value = q.remove();
     		int compId = (NOT_CURR_VAL_MASK & value);
     		boolean val = (value & CURR_VAL_MASK) != 0;
