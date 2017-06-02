@@ -93,8 +93,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		for (int i = 0; i < num_rests; ++i) {
 			Thread.sleep(1000);
 			double avg = total_playout/play_loops;
-			num_per = (int) (2/avg);
-			if (num_per < 3) num_per = 3;
+			num_per = (int) (Runtime.getRuntime().availableProcessors()/(avg*2));
+			if (num_per < Runtime.getRuntime().availableProcessors()) num_per = Runtime.getRuntime().availableProcessors();
 		}
 		System.out.println("Depth Charges: " + depthCharges);
 		//System.out.println("Avg Select: " + total_select/loops);
@@ -114,7 +114,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		root = new XNode(getCurrentState());
 
 		num_charges = 1;//Runtime.getRuntime().availableProcessors();
-		num_per = 4;
+		num_per = Runtime.getRuntime().availableProcessors();
 		num_threads = Runtime.getRuntime().availableProcessors() * 4;
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
 		executor = new ExecutorCompletionService<Struct>(thread_pool);
@@ -181,8 +181,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		for (int i = 0; i < num_rests; ++i) {
 			Thread.sleep(1000);
 			double avg = total_playout/play_loops;
-			num_per = (int) (2/avg);
-			if (num_per < 3) num_per = 3;
+			num_per = (int) (Runtime.getRuntime().availableProcessors()/(avg*2));
+			if (num_per < Runtime.getRuntime().availableProcessors()) num_per = Runtime.getRuntime().availableProcessors();
 		}
 		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);
