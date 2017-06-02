@@ -151,13 +151,13 @@ public class ThreadStateMachine extends XMachine {
     }
 
 
-    @Override
+	@Override
 	public List<List<Move>> getLegalJointMoves(OpenBitSet state) throws MoveDefinitionException {
     	setState(state, null);
 
+    	int size = machine.roles.length - 1;
         List<List<Move>> jointMoves = new ArrayList<List<Move>>();
 
-        int size = machine.roles.length - 1;
     	for (int i = 0; i < size; ++i) {
     		List<Move> moves = new ArrayList<Move>();
     		int roleIndex = machine.rolesIndexMap[i];
@@ -190,12 +190,39 @@ public class ThreadStateMachine extends XMachine {
     @Override
 	public List<Move> getRandomJointMove(OpenBitSet state) throws MoveDefinitionException
     {
-        List<List<Move>> jointMoves = getLegalJointMoves(state);
-        return jointMoves.get(rand.nextInt(jointMoves.size()));
+    	setState(state, null);
+
+    	int size = machine.roles.length - 1;
+    	List<Move> randomJointMove = new ArrayList<Move>();
+    	List<Move> moves;
+
+    	for (int i = 0; i < size; ++i) {
+    		moves = new ArrayList<Move>();
+    		int roleIndex = machine.rolesIndexMap[i];
+    		int nextRoleIndex = machine.rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(machine.legalArray[j]);
+    			}
+    		}
+    		randomJointMove.add(moves.get(rand.nextInt(moves.size())));
+    	}
+
+    	int start = machine.rolesIndexMap[size];
+    	int end = machine.legalArray.length;
+    	moves = new ArrayList<Move>();
+    	for(int i = start; i < end; ++i) {
+    		if (currLegals.fastGet(i)) {
+    			moves.add(machine.legalArray[i]);
+    		}
+    	}
+    	randomJointMove.add(moves.get(rand.nextInt(moves.size())));
+        return randomJointMove;
 
     }
 
-	public Move getRandomMove(OpenBitSet state, int rIndex) throws MoveDefinitionException
+    public Move getRandomMove(OpenBitSet state, int rIndex) throws MoveDefinitionException
     {
         List<Move> legals = getLegalMoves(state, rIndex);
         return legals.get(rand.nextInt(legals.size()));
@@ -205,7 +232,7 @@ public class ThreadStateMachine extends XMachine {
      * Returns a random joint move from among all the possible joint moves in
      * the given state in which the given role makes the given move. Assumes move is a valid move
      */
-	public List<Move> getRandomJointMove(OpenBitSet state, int rIndex, Move move) throws MoveDefinitionException
+    public List<Move> getRandomJointMove(OpenBitSet state, int rIndex, Move move) throws MoveDefinitionException
     {
     	List<List<Move>> randJointMove = new ArrayList<List<Move>>();
     	for (List<Move> jointMove : getLegalJointMoves(state)) {
