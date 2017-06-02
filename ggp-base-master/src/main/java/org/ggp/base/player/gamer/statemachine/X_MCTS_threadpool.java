@@ -85,7 +85,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			++runs;
 		}
 		System.out.println("Avg Playout: " + time/runs);*/
-		//doMCTS();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
 		if (num_rests < 0) {
 			return;
@@ -184,7 +183,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			num_per = (int) (Runtime.getRuntime().availableProcessors()/(avg*2));
 			if (num_per < Runtime.getRuntime().availableProcessors()) num_per = Runtime.getRuntime().availableProcessors();
 		}
-		//doMCTS();
 		System.out.println("Depth Charges: " + depthCharges);
 		System.out.println("Number of Select/Expand Loops " + loops);
 		/*System.out.println("Avg Select: " + total_select/loops);
@@ -457,7 +455,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-				OpenBitSet state = background_machine.getNextState(n.state, jointMove);
+				OpenBitSet state = machine.getNextState(n.state, jointMove);
 				XNode child = graph.get(state);
 				if(child == null) {
 					child = new XNode(state);

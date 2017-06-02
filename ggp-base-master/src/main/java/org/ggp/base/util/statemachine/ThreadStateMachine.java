@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
@@ -30,7 +29,7 @@ public class ThreadStateMachine extends XMachine {
 
     private XStateMachine machine;
 
-    private Random rand;
+    private XORShiftRandom rand;
 
     public ThreadStateMachine(XStateMachine x) {
     	this.machine = x;
@@ -42,7 +41,7 @@ public class ThreadStateMachine extends XMachine {
     	this.components = Arrays.copyOf(x.getComponents(),x.getComponents().length);
     	this.compInfo = Arrays.copyOf(x.getCompInfo(), x.getCompInfo().length);
     	this.connecTable = Arrays.copyOf(x.getConnecTable(),x.getConnecTable().length);
-    	this.rand = new Random();
+    	this.rand = new XORShiftRandom();
     	this.q = new IntQueue(compInfo.length);
     }
 

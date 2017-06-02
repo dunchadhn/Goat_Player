@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
@@ -44,7 +43,7 @@ public class XStateMachine extends XMachine {
 
     public OpenIntObjectHashMap gdlSentenceMap;
 
-    private Random rand;
+    private XORShiftRandom rand;
 
     public OpenBitSet getCurrentState() {
     	return currentState;
@@ -98,7 +97,7 @@ public class XStateMachine extends XMachine {
             roleMoves = propNet.getRoleMoves();
 
             gdlSentenceMap = propNet.getGdlSentenceMap();
-            rand = new Random();
+            rand = new XORShiftRandom();
 
             goalPropositions = propNet.getGoalPropositions();
 
