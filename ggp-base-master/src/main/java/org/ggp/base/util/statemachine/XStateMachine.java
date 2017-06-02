@@ -197,7 +197,7 @@ public class XStateMachine extends XMachine {
     		for (int i = 0; i < initBases.length; ++i) {
         		int bIndex = initBases[i];
         		components[bIndex] += 1;
-        		currentState.fastSet(bIndex - baseOffset);
+        		currentState.fastSet(bIndex);
 
         		long comp = compInfo[bIndex];
             	int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
@@ -256,7 +256,7 @@ public class XStateMachine extends XMachine {
     		if ((comp & TRIGGER_MASK) != 0) {
     			if ((comp & TRANSITION_MASK) != 0) {
     				int outputIndex = (int) (comp & OFFSET_MASK);
-    				int baseIndex = connecTable[outputIndex] - baseOffset;
+    				int baseIndex = connecTable[outputIndex];
     				if (val) {
     					nextState.fastSet(baseIndex);
     				} else {
@@ -292,15 +292,15 @@ public class XStateMachine extends XMachine {
 
     	while(!q.isEmpty()) {
     		int value = q.remove();
-    		int compId = getId(value);
-    		boolean val = get_current_value(value);
+    		int compId = (NOT_CURR_VAL_MASK & value);
+    		boolean val = (value & CURR_VAL_MASK) != 0;
 
 
     		long comp = compInfo[compId];
     		if ((comp & TRIGGER_MASK) != 0) {
     			if ((comp & TRANSITION_MASK) != 0) {
     				int outputIndex = (int) (comp & OFFSET_MASK);
-    				int baseIndex = connecTable[outputIndex] - baseOffset;
+    				int baseIndex = connecTable[outputIndex];
     				if (val) nextState.fastSet(baseIndex);
     				else nextState.clear(baseIndex);
     				continue;
@@ -465,7 +465,6 @@ public class XStateMachine extends XMachine {
 
 
 	protected void setBases(OpenBitSet state) {
-    	if (state == null) return;
     	int[] bases = propNet.getBasePropositions();
     	int size = bases.length;
 
@@ -475,10 +474,10 @@ public class XStateMachine extends XMachine {
 
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
     		boolean val = temp.fastGet(i);
-    		if (val) components[baseOffset + i] += 1;
-    		else components[baseOffset + i] -= 1;
+    		if (val) components[i] += 1;
+    		else components[i] -= 1;
 
-    		long comp = compInfo[baseOffset + i];
+    		long comp = compInfo[i];
     		int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
@@ -627,7 +626,7 @@ public class XStateMachine extends XMachine {
 	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
-    		bases.add((GdlSentence) gdlSentenceMap.get(baseOffset + i));
+    		bases.add((GdlSentence) gdlSentenceMap.get(i));
     	}
     	return new MachineState(bases);
     }
