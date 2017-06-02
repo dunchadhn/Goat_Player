@@ -94,7 +94,6 @@ public final class XPropNet
 		//prop.renderToFile("preOpt.dot");
 		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
-		//System.exit(0);
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
 	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
@@ -730,6 +729,14 @@ public final class XPropNet
     }
 
     protected void optimizeProp(PropNet prop) {
+    	HashSet<Component> useful = new HashSet<Component>();
+    	useful.addAll(prop.getLegalInputMap().keySet());
+    	for (Entry<Role, Set<Proposition>> e : prop.getGoalPropositions().entrySet()) {
+    		useful.addAll(e.getValue());
+    	}
+    	useful.add(prop.getTerminalProposition());
+    	useful.addAll(prop.getBasePropositions().values());
+    	useful.add(prop.getInitProposition());
 
     	int initSize = prop.getComponents().size();
     	ArrayDeque<Component> toRemove = new ArrayDeque<Component>();
@@ -761,12 +768,10 @@ public final class XPropNet
     	clearQ(toRemove, prop);
 
 
-    	HashMap<Proposition, Proposition> legalInputMap = new HashMap<Proposition, Proposition>(prop.getLegalInputMap());
-    //Remove all propositions with a single input (except base props)
 
     	for (Iterator<Proposition> it = prop.getPropositions().iterator(); it.hasNext();)  {
     		Proposition p = it.next();
-    		if (legalInputMap.containsKey(p)) continue;
+    		if (useful.contains(p)) continue;
 
     		Set<Component> inputs = p.getInputs();
     		Set<Component> outputs = p.getOutputs();
@@ -790,6 +795,8 @@ public final class XPropNet
     		}
     	}
 
+    	int round1size = prop.getComponents().size();
+    	System.out.println("Round1: " + (initSize - round1size));
 
     //Remove all constants except for a single true and false
     	Component t = null;
@@ -797,7 +804,8 @@ public final class XPropNet
     	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
     		Component c = it.next();
     		if (c instanceof Constant) {
-    			if (c.getValue()) {
+    			useful.add(c);
+				if (c.getValue()) {
     				if (t == null) {
     					t = c;
     				} else {
@@ -822,12 +830,46 @@ public final class XPropNet
     					}
     				}
     			}
-    		}
+			}
     	}
+
+    	int round2size = prop.getComponents().size();
+    	System.out.println("Round2: " + (round1size - round2size));
+
+    	ArrayDeque<Component> q = new ArrayDeque<Component>();
+    	for (Component c : prop.getComponents()) if (!useful.contains(c)) q.push(c);
+    	HashSet<Component> removed = new HashSet<Component>();
+    	while (!q.isEmpty()) {
+    		Component c = q.pop();
+    		if (removed.contains(c)) continue;
+    		if (!useful.contains(c)) {
+     			if (c.getOutputs().isEmpty()) {
+     				//System.out.println(c);
+     				for (Component in : c.getInputs()) {
+     					in.getOutputs().remove(c);
+     					q.push(in);
+     				}
+         			prop.removeComponent(c);
+         			removed.add(c);
+         		} else if (c.getInputs().isEmpty()) {
+         			//System.out.println(c);
+         			for (Component out : c.getOutputs()) {
+         				out.getInputs().remove(c);
+         				q.push(out);
+         			}
+         			prop.removeComponent(c);
+         			removed.add(c);
+         		}
+     		}
+    	}
+
+    	int round3size = prop.getComponents().size();
+    	System.out.println("Round3: " + (round2size - round3size));
+
 
     	int postSize = prop.getComponents().size();
     	System.out.println("NumComponentsInitial: " + initSize + " NumComponentFinal: " + postSize);
-    	System.out.println("Savings: " + (100 * (initSize - postSize) / ((double)postSize)) + "%");
+    	System.out.println("Savings: " + (100 * (initSize - postSize) / ((double)initSize)) + "%");
     }
 
 }
