@@ -117,7 +117,7 @@ public class ThreadStateMachine extends XMachine {
     		if ((comp & TRIGGER_MASK) != 0) {
     			if ((comp & TRANSITION_MASK) != 0) {
     				int outputIndex = (int) (comp & OFFSET_MASK);
-    				int baseIndex = connecTable[outputIndex] - machine.baseOffset;
+    				int baseIndex = connecTable[outputIndex];
     				if (val) nextState.fastSet(baseIndex);
     				else nextState.clear(baseIndex);
     				continue;
@@ -291,10 +291,10 @@ public class ThreadStateMachine extends XMachine {
 
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
     		boolean val = temp.fastGet(i);
-    		if (val) components[machine.baseOffset + i] += 1;
-    		else components[machine.baseOffset + i] -= 1;
+    		if (val) components[i] += 1;
+    		else components[i] -= 1;
 
-    		long comp = compInfo[machine.baseOffset + i];
+    		long comp = compInfo[i];
     		int num_outputs = (int) ((comp & OUTPUTS_MASK) >> OUTPUT_SHIFT);
         	int outputsIndex = (int) (comp & OFFSET_MASK);
 
@@ -445,7 +445,7 @@ public class ThreadStateMachine extends XMachine {
 	public MachineState toGdl(OpenBitSet state) {
     	Set<GdlSentence> bases = new HashSet<GdlSentence>();
     	for (int i = state.nextSetBit(0); i != -1; i = state.nextSetBit(i + 1)) {
-    		bases.add((GdlSentence) machine.gdlSentenceMap.get(machine.baseOffset + i));
+    		bases.add((GdlSentence) machine.gdlSentenceMap.get(i));
     	}
     	return new MachineState(bases);
     }

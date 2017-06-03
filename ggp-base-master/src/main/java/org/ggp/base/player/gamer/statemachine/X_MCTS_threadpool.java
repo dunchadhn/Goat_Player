@@ -80,7 +80,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		double runs = 0;
 		while(System.currentTimeMillis() < finishBy) {
 			double start = System.currentTimeMillis();
-			double val = Playout(new XNode(state));
+			Playout(new XNode(state),background_machine);
 			time += (System.currentTimeMillis() - start);
 			++runs;
 		}
@@ -302,10 +302,12 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		@Override
 		public Struct call() throws InterruptedException{
 			double val = 0;
+			int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
+			ThreadStateMachine mac = thread_machines[thread_ind];
 			for (int i = 0; i < num; ++i) {
 				double start = System.currentTimeMillis();
 				try {
-					val += Playout(node);
+					val += Playout(node,mac);
 				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -359,9 +361,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		}
 	}
 
-	protected double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
-		ThreadStateMachine mac = thread_machines[thread_ind];
+	protected double Playout(XNode n, ThreadStateMachine mac) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		OpenBitSet state = n.state;
 		while(!mac.isTerminal(state)) {
 			state = mac.getRandomNextState(state);

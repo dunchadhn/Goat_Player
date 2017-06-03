@@ -429,8 +429,9 @@ public final class XPropNet
 
 			}
 		}
-		constants = (consts.isEmpty() ? null : new int[consts.size()]);
-		for (int i = 0; i < constants.length; ++i) constants[i] = consts.get(i);
+		size = consts.size();
+		constants = (consts.isEmpty() ? null : new int[size]);
+		for (int i = 0; i < size; ++i) constants[i] = consts.get(i);
 
 		checkPropNet();
 
@@ -496,7 +497,7 @@ public final class XPropNet
     		}
     	}
 
-    	for (int i = 0; i < constants.length; ++i) {
+    	for (int i = 0; i < size; ++i) {
     		Component c = (Component) indexCompMap.get(constants[i]);
     		for (Component out : c.getOutputs()) {
     			if (!visited.contains(out)) {
