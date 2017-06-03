@@ -278,10 +278,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				}
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				// spawn off multiple threads
-				int charges = num_charges;
-				for (int i = 0; i < charges; ++i) {
-					executor.submit(new RunMe(n, path, num_per));
-				}
+				executor.submit(new RunMe(n, path, num_per));
 
 				while(true) {
 					Future<Struct> f = executor.poll();
@@ -384,13 +381,16 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			nod.utility += val;
 			nod.updates += num;
 		}
-		double mean = sum_x / n;
-		C_CONST = Math.sqrt((sum_x2 / n) - (mean * mean));
+		double mean_square = sum_x / n;
+		mean_square *= mean_square;
+		double avg_square = sum_x2 / n;
+		if (avg_square > mean_square) C_CONST = Math.sqrt(avg_square - mean_square);
+		if (C_CONST < 50) C_CONST = 50;
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
 		while(true) {
-			n.visits += num_charges;
+			++n.visits;
 			if (background_machine.isTerminal(n.state)) return;
 			if (n.children.isEmpty()) return;
 			double maxValue = Double.NEGATIVE_INFINITY;
@@ -404,7 +404,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 				for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 					XNode succNode = n.children.get(jointMove);
 					if (succNode.visits == 0) {
-						succNode.visits += num_charges;
+						++succNode.visits;
 						path.add(succNode);
 						return;
 					}
