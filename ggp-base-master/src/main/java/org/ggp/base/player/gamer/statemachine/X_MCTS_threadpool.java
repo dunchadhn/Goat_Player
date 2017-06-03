@@ -95,9 +95,9 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			Thread.sleep(1000);
 			double avg_back = total_background/loops;
 			double avg_threadpool = total_threadpool/play_loops;
-			double num = 3*num_threads * (avg_back/avg_threadpool);
+			double num = num_threads * (avg_back/avg_threadpool);
 			num_per = (int) num;
-			if (num_per < (Runtime.getRuntime().availableProcessors() / 4)) num_per = Runtime.getRuntime().availableProcessors() / 4;
+			if (num_per < 1) num_per = 1;
 		}
 		System.out.println("Depth Charges: " + depthCharges);
 		//System.out.println("Avg Select: " + total_select/loops);
@@ -119,7 +119,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 
 		num_charges = 1;//Runtime.getRuntime().availableProcessors();
 		num_per = Runtime.getRuntime().availableProcessors();
-		num_threads = Runtime.getRuntime().availableProcessors() * 4;
+		num_threads = Runtime.getRuntime().availableProcessors();
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
 		executor = new ExecutorCompletionService<Struct>(thread_pool);
 		thread_machines = new ThreadStateMachine[num_threads];
