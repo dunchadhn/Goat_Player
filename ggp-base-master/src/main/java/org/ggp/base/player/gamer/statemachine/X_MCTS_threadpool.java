@@ -119,10 +119,10 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		executor = new ExecutorCompletionService<Struct>(thread_pool);
 		thread_machines = new ThreadStateMachine[num_threads];
 		for (int i = 0; i < num_threads; ++i) {
-			thread_machines[i] = new ThreadStateMachine(machine);
+			thread_machines[i] = new ThreadStateMachine(machine,self_index);
 		}
-		background_machine = new ThreadStateMachine(machine);
-		//solver_machine = new ThreadStateMachine(machine);
+		background_machine = new ThreadStateMachine(machine,self_index);
+		//solver_machine = new ThreadStateMachine(machine,self_index);
 		Expand(root);
 		thread = new Thread(new runMCTS());
 		//solver = new Thread(new solver());
@@ -307,7 +307,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			for (int i = 0; i < num; ++i) {
 				double start = System.currentTimeMillis();
 				try {
-					val += Playout(node,mac);
+					val += mac.Playout(node);
 				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -359,14 +359,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			nod.utility += val;
 			nod.updates += num;
 		}
-	}
-
-	protected double Playout(XNode n, ThreadStateMachine mac) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		OpenBitSet state = n.state;
-		while(!mac.isTerminal(state)) {
-			state = mac.getRandomNextState(state);
-		}
-		return mac.getGoal(state, self_index);
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {

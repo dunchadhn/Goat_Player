@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
+import org.ggp.base.player.gamer.statemachine.XNode;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.XPropNet;
@@ -26,12 +27,13 @@ public class ThreadStateMachine extends XMachine {
     public int[] components;
     public long[] compInfo;
     public int[] connecTable;
+    private int self_index;
 
     private XStateMachine machine;
 
     private XORShiftRandom rand;
 
-    public ThreadStateMachine(XStateMachine x) {
+    public ThreadStateMachine(XStateMachine x, int ind) {
     	this.machine = x;
     	this.currentState = (OpenBitSet) x.getCurrentState().clone();
     	this.initState = (OpenBitSet) x.getCurrentState().clone();
@@ -43,6 +45,7 @@ public class ThreadStateMachine extends XMachine {
     	this.connecTable = Arrays.copyOf(x.getConnecTable(),x.getConnecTable().length);
     	this.rand = new XORShiftRandom();
     	this.q = new IntQueue(compInfo.length);
+    	this.self_index = ind;
     }
 
     private static final int NUM_TYPE_BITS = 8;
@@ -481,6 +484,14 @@ public class ThreadStateMachine extends XMachine {
 		System.out.println("Shouldn't call this method");
 		System.exit(0);
 		return 0;
+	}
+
+	public double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		OpenBitSet state = n.state;
+		while(!isTerminal(state)) {
+			state = getRandomNextState(state);
+		}
+		return getGoal(state, self_index);
 	}
 
 

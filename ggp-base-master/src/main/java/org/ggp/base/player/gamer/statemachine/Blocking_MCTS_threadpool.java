@@ -101,9 +101,9 @@ public class Blocking_MCTS_threadpool extends XStateMachineGamer {
 		executor = new ExecutorCompletionService<Double>(thread_pool);
 		thread_machines = new ThreadStateMachine[num_threads];
 		for (int i = 0; i < num_threads; ++i) {
-			thread_machines[i] = new ThreadStateMachine(machine);
+			thread_machines[i] = new ThreadStateMachine(machine,self_index);
 		}
-		background_machine = new ThreadStateMachine(machine);
+		background_machine = new ThreadStateMachine(machine,self_index);
 		//solver_machine = new ThreadStateMachine(machine);
 		Expand(root);
 		thread = new Thread(new runMCTS());

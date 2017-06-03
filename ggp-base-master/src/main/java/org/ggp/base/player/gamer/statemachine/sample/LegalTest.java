@@ -73,7 +73,7 @@ public class LegalTest extends XStateMachineGamer {
 		prover.initialize(getMatch().getGame().getRules());
 		roles = getStateMachine().getRoles();
 		self_index = roles.indexOf(getRole());
-		machine = new ThreadStateMachine(getStateMachine());
+		machine = new ThreadStateMachine(getStateMachine(),self_index);
 		if (!BitStateMachineVerifier.checkMachineConsistency(prover, machine, timeout - System.currentTimeMillis())) {
 			System.out.println("FAILURE");
 			System.exit(0);
