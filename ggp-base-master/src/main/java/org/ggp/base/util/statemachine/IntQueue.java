@@ -20,8 +20,7 @@ public class IntQueue {
 
 	public int remove() {
 		--num_queued;
-		++next;
-		return arr[next];
+		return arr[next++];
 	}
 
 	public boolean isEmpty() {
