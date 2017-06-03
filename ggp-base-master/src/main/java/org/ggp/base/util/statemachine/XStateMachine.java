@@ -9,7 +9,13 @@ import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.gdl.grammar.Gdl;
+import org.ggp.base.util.gdl.grammar.GdlDistinct;
+import org.ggp.base.util.gdl.grammar.GdlFunction;
+import org.ggp.base.util.gdl.grammar.GdlLiteral;
+import org.ggp.base.util.gdl.grammar.GdlPool;
+import org.ggp.base.util.gdl.grammar.GdlRule;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
+import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.propnet.architecture.XPropNet;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
@@ -77,6 +83,7 @@ public class XStateMachine extends XMachine {
     public void initialize(List<Gdl> description) {
         try {
         	System.out.println("Initialized");
+        	description = sanitizeDistinct(description);
             propNet = new XPropNet(OptimizingPropNetFactory.create(description));
 
             compInfo = propNet.getCompInfo();
@@ -661,6 +668,52 @@ public class XStateMachine extends XMachine {
 		System.out.println("Shouldn't call this method");
 		System.exit(0);
 		return 0;
+	}
+
+	private void sanitizeDistinctHelper(Gdl gdl, List<Gdl> in, List<Gdl> out) {
+	    if (!(gdl instanceof GdlRule)) {
+	        out.add(gdl);
+	        return;
+	    }
+	    GdlRule rule = (GdlRule) gdl;
+	    for (GdlLiteral lit : rule.getBody()) {
+	        if (lit instanceof GdlDistinct) {
+	            GdlDistinct d = (GdlDistinct) lit;
+	            GdlTerm a = d.getArg1();
+	            GdlTerm b = d.getArg2();
+	            if (!(a instanceof GdlFunction) && !(b instanceof GdlFunction)) continue;
+	            if (!(a instanceof GdlFunction && b instanceof GdlFunction)) return;
+	            GdlSentence af = ((GdlFunction) a).toSentence();
+	            GdlSentence bf = ((GdlFunction) b).toSentence();
+	            if (!af.getName().equals(bf.getName())) return;
+	            if (af.arity() != bf.arity()) return;
+	            for (int i = 0; i < af.arity(); i++) {
+	                List<GdlLiteral> ruleBody = new ArrayList<>();
+	                for (GdlLiteral newLit : rule.getBody()) {
+	                    if (newLit != lit) ruleBody.add(newLit);
+	                    else ruleBody.add(GdlPool.getDistinct(af.get(i), bf.get(i)));
+	                }
+	                GdlRule newRule = GdlPool.getRule(rule.getHead(), ruleBody);
+	                in.add(newRule);
+	            }
+	            return;
+	        }
+	    }
+	    for (GdlLiteral lit : rule.getBody()) {
+	        if (lit instanceof GdlDistinct) {
+	            System.out.println("distinct rule added: " + rule);
+	            break;
+	        }
+	    }
+	    out.add(rule);
+	}
+
+	private List<Gdl> sanitizeDistinct(List<Gdl> description) {
+	    List<Gdl> out = new ArrayList<>();
+	    for (int i = 0; i < description.size(); i++) {
+	        sanitizeDistinctHelper(description.get(i), description, out);
+	    }
+	    return out;
 	}
 
 

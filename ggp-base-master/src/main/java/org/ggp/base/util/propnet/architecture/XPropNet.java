@@ -94,6 +94,15 @@ public final class XPropNet
 		//prop.renderToFile("preOpt.dot");
 		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
+
+		int nLegals = 0;
+		int nInputs = prop.getInputPropositions().keySet().size();
+		for (Entry<Role, Set<Proposition>> e : prop.getLegalPropositions().entrySet()) {
+			nLegals += e.getValue().size();
+		}
+		System.out.println("NumLegals: " + nLegals + " NumInputs: " + nInputs);
+		if (nLegals != nInputs) System.exit(0);
+
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
 	    roles = prop.getRoles().toArray(new Role[prop.getRoles().size()]);
@@ -729,6 +738,15 @@ public final class XPropNet
     }
 
     protected void optimizeProp(PropNet prop) {
+
+    	Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
+    	HashSet<Proposition> is = new HashSet<Proposition>(prop.getInputPropositions().values());
+    	for (Proposition i : is) {
+    		if (legalInputMap.get(i) == null) {
+    			prop.removeComponent(i);
+    		}
+    	}
+
     	HashSet<Component> useful = new HashSet<Component>();
     	useful.addAll(prop.getLegalInputMap().keySet());
     	for (Entry<Role, Set<Proposition>> e : prop.getGoalPropositions().entrySet()) {
@@ -766,7 +784,6 @@ public final class XPropNet
     	}
 
     	clearQ(toRemove, prop);
-
 
 
     	for (Iterator<Proposition> it = prop.getPropositions().iterator(); it.hasNext();)  {
@@ -844,18 +861,20 @@ public final class XPropNet
     		if (removed.contains(c)) continue;
     		if (!useful.contains(c)) {
      			if (c.getOutputs().isEmpty()) {
-     				//System.out.println(c);
+
      				for (Component in : c.getInputs()) {
      					in.getOutputs().remove(c);
-     					q.push(in);
+     					if (!useful.contains(in))
+     						q.push(in);
      				}
          			prop.removeComponent(c);
          			removed.add(c);
          		} else if (c.getInputs().isEmpty()) {
-         			//System.out.println(c);
+
          			for (Component out : c.getOutputs()) {
          				out.getInputs().remove(c);
-         				q.push(out);
+         				if (!useful.contains(out))
+         					q.push(out);
          			}
          			prop.removeComponent(c);
          			removed.add(c);
@@ -870,6 +889,7 @@ public final class XPropNet
     	int postSize = prop.getComponents().size();
     	System.out.println("NumComponentsInitial: " + initSize + " NumComponentFinal: " + postSize);
     	System.out.println("Savings: " + (100 * (initSize - postSize) / ((double)initSize)) + "%");
+
     }
 
 }
