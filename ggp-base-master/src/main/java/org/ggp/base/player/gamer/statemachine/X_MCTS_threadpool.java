@@ -52,8 +52,11 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	private volatile int loops = 0;
 	//private volatile double total_backpropagate = 0;
 	private volatile int play_loops = 0;
+	private volatile double sum_x = 0;
+	private volatile double sum_x2 = 0;
+	private volatile int n = 0;
 
-	private static final double C_CONST = 50;
+	private volatile double C_CONST = 50;
 
 	public class Struct {
 		public double v;
@@ -95,10 +98,11 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			Thread.sleep(1000);
 			double avg_back = total_background/loops;
 			double avg_threadpool = total_threadpool/play_loops;
-			double num = num_threads * (avg_back/avg_threadpool);
+			double num = 10 * num_threads * (avg_back/avg_threadpool);
 			num_per = (int) num;
 			if (num_per < 1) num_per = 1;
 		}
+		System.out.println("C_CONST: " + C_CONST);
 		System.out.println("Depth Charges: " + depthCharges);
 		//System.out.println("Avg Select: " + total_select/loops);
 		//System.out.println("Avg Expand: " + total_expand/loops);
@@ -188,10 +192,11 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			Thread.sleep(1000);
 			double avg_back = total_background/loops;
 			double avg_threadpool = total_threadpool/play_loops;
-			double num = 3*num_threads * (avg_back/avg_threadpool);
+			double num = 10 * num_threads * (avg_back/avg_threadpool);
 			num_per = (int) num;
-			if (num_per < (Runtime.getRuntime().availableProcessors() / 4)) num_per = Runtime.getRuntime().availableProcessors() / 4;
+			if (num_per < 1) num_per = 1;
 		}
+		System.out.println("C_CONST: " + C_CONST);
 		System.out.println("Depth Charges: " + depthCharges);
 		System.out.println("Number of Select/Expand Loops " + loops);
 		/*System.out.println("Avg Select: " + total_select/loops);
@@ -272,8 +277,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 					e.printStackTrace();
 				}
 				//total_expand += (System.currentTimeMillis() - expand_start);
-				total_background += (System.currentTimeMillis() - start);
-				++loops;
 				// spawn off multiple threads
 				int charges = num_charges;
 				for (int i = 0; i < charges; ++i) {
@@ -297,6 +300,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			        depthCharges += num;
 			        last_depthCharges += num;
 			    }
+				total_background += (System.currentTimeMillis() - start);
+				++loops;
 			}
 		}
 	}
@@ -315,16 +320,21 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		public Struct call() throws InterruptedException{
 			double start = System.currentTimeMillis();
 			double val = 0;
+			double curr = 0;
 			int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
 			ThreadStateMachine mac = thread_machines[thread_ind];
 			for (int i = 0; i < num; ++i) {
 				//double start = System.currentTimeMillis();
 				try {
-					val += mac.Playout(node);
+					curr = mac.Playout(node);
 				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				val += curr;
+				sum_x += curr;
+				sum_x2 += (curr*curr);
+				++n;
 				//++play_loops;
 				//total_playout += (System.currentTimeMillis() - start);
 			}
@@ -374,6 +384,8 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			nod.utility += val;
 			nod.updates += num;
 		}
+		double mean = sum_x / n;
+		C_CONST = Math.sqrt((sum_x2 / n) - (mean * mean));
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
