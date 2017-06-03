@@ -85,7 +85,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 		double runs = 0;
 		while(System.currentTimeMillis() < finishBy) {
 			double start = System.currentTimeMillis();
-			Playout(new XNode(state),background_machine);
+			background_machine.Playout(new XNode(state));
 			time += (System.currentTimeMillis() - start);
 			++runs;
 		}

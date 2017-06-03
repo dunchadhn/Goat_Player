@@ -224,6 +224,40 @@ public class ThreadStateMachine extends XMachine {
 
     }
 
+    public List<Move> getRandomJointMoveCurr(OpenBitSet state) throws MoveDefinitionException
+    {
+    	//setState(state, null);
+
+    	int size = machine.roles.length - 1;
+    	List<Move> randomJointMove = new ArrayList<Move>();
+    	List<Move> moves;
+
+    	for (int i = 0; i < size; ++i) {
+    		moves = new ArrayList<Move>();
+    		int roleIndex = machine.rolesIndexMap[i];
+    		int nextRoleIndex = machine.rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(machine.legalArray[j]);
+    			}
+    		}
+    		randomJointMove.add(moves.get(rand.nextInt(moves.size())));
+    	}
+
+    	int start = machine.rolesIndexMap[size];
+    	int end = machine.legalArray.length;
+    	moves = new ArrayList<Move>();
+    	for(int i = start; i < end; ++i) {
+    		if (currLegals.fastGet(i)) {
+    			moves.add(machine.legalArray[i]);
+    		}
+    	}
+    	randomJointMove.add(moves.get(rand.nextInt(moves.size())));
+        return randomJointMove;
+
+    }
+
     public Move getRandomMove(OpenBitSet state, int rIndex) throws MoveDefinitionException
     {
         List<Move> legals = getLegalMoves(state, rIndex);
@@ -246,8 +280,8 @@ public class ThreadStateMachine extends XMachine {
     @Override
 	public OpenBitSet getRandomNextState(OpenBitSet state) throws MoveDefinitionException, TransitionDefinitionException
     {
-        List<Move> random = getRandomJointMove(state);
-        return getNextState(state, random);
+        List<Move> random = getRandomJointMoveCurr(state);
+        return getNextStateCurr(state, random);
     }
 
     /**
@@ -372,11 +406,24 @@ public class ThreadStateMachine extends XMachine {
     	propagate();
     }
 
+	protected void setStateCurr(OpenBitSet state, List<Move> moves) {
+    	//setBases((OpenBitSet)state.clone());
+    	setActions(movesToBit(moves));
+    	propagate();
+    }
+
 
     @Override
 	public OpenBitSet getNextState(OpenBitSet state, List<Move> moves) {
 
     	setState(state, moves);
+
+    	return (OpenBitSet) nextState.clone();
+    }
+
+    public OpenBitSet getNextStateCurr(OpenBitSet state, List<Move> moves) {
+
+    	setStateCurr(state, moves);
 
     	return (OpenBitSet) nextState.clone();
     }
@@ -486,12 +533,33 @@ public class ThreadStateMachine extends XMachine {
 		return 0;
 	}
 
+	public int getCurrGoal(OpenBitSet state, int rIndex)
+            throws GoalDefinitionException {
+
+    	//setState(state, null);
+        int[] rewards = machine.goalPropositions[rIndex];
+        int size = rewards.length;
+
+        for(int i = 0; i < size; ++i) {
+        	int rewardIndex = rewards[i];
+        	int value = components[rewardIndex];
+        	if ((value & CURR_VAL_MASK) != 0) {
+        		int goalVal = (int) ((compInfo[rewardIndex] & GOAL_MASK) >> TYPE_SHIFT);
+        		return goalVal;
+        	}
+
+        }
+        System.out.println("ERROR! Reward not defined in state " + state.toString());
+        System.exit(0);
+        return 0;
+    }
+
 	public double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		OpenBitSet state = n.state;
 		while(!isTerminal(state)) {
 			state = getRandomNextState(state);
 		}
-		return getGoal(state, self_index);
+		return getCurrGoal(state, self_index);
 	}
 
 
