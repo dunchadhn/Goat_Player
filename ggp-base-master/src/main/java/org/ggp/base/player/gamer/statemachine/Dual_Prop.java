@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.apps.player.Player;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.game.Game;
 import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.statemachine.Move;
@@ -29,8 +30,6 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class Dual_Prop extends FactorGamer {
 	protected Player p;
 	private XStateMachine machine;
-	private XStateMachine no_step_machine;
-	private ThreadStateMachine[] no_step_machines;
 	private List<Role> roles;
 	private int self_index, num_threads;
 	private volatile int depthCharges, last_depthCharges;
@@ -44,7 +43,6 @@ public class Dual_Prop extends FactorGamer {
 	//private Thread solver;
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
-	private ThreadStateMachine background_no_step;
 	private ThreadStateMachine solver_machine;
 	private volatile int num_charges, num_per;
 	private HashMap<OpenBitSet, Integer> graph;
@@ -62,6 +60,7 @@ public class Dual_Prop extends FactorGamer {
 	private volatile double sum_x2 = 0;
 	private volatile int n = 0;
 	private boolean no_step = false;
+	private int step_count;
 
 	private volatile double C_CONST = 50;
 
@@ -123,7 +122,6 @@ public class Dual_Prop extends FactorGamer {
 	}
 
 	protected void initialize(long timeout, OpenBitSet currentState, Role role) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		num_charges = 1;//Runtime.getRuntime().availableProcessors();
 		num_per = Runtime.getRuntime().availableProcessors();
 		num_threads = Runtime.getRuntime().availableProcessors();
 
@@ -134,43 +132,37 @@ public class Dual_Prop extends FactorGamer {
 		roles = machine.getRoles();
 		self_index = roles.indexOf(role);
 		PropNet p = machine.getPropNet();
-		PropNet no_step_p = PropNet.removeStepCounter(p);
-		no_step_machines = new ThreadStateMachine[num_threads];
+		Pair<PropNet, Integer> pair = PropNet.removeStepCounter(p);
+		PropNet no_step_p = pair.left;
 		no_step = false;
-		if (no_step_p != null) {
-			no_step_machine = new XStateMachine();
-			no_step_machine.initialize(no_step_p);
-			no_step_machine.getInitialState();
-    		for (int i = 0; i < num_threads; ++i) {
-    			no_step_machines[i] = new ThreadStateMachine(no_step_machine,self_index);
-    		}
-    		background_no_step = new ThreadStateMachine(no_step_machine,self_index);
-    		no_step = true;
-    		System.out.println("Found Step Counter!");
-		}
 
-		if(no_step) {
-			OpenBitSet state = no_step_machine.getInitialState();
+		if (no_step_p != null) {
+			step_count = pair.right;
+			machine = new XStateMachine();
+			machine.initialize(no_step_p);
+			OpenBitSet state = machine.getInitialState();
 			root = new DualNode(state);
 			graph.put(state, 0);
 			nodes.add(root);
+    		no_step = true;
+    		System.out.println("Found Step Counter!");
 		} else {
 			root = new DualNode(currentState);
 			orig_graph.put(currentState, root);
 		}
 
-
-		start_state = currentState;
-
-		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
-		executor = new ExecutorCompletionService<Struct>(thread_pool);
 		thread_machines = new ThreadStateMachine[num_threads];
 		for (int i = 0; i < num_threads; ++i) {
 			thread_machines[i] = new ThreadStateMachine(machine,self_index);
 		}
 		background_machine = new ThreadStateMachine(machine,self_index);
 		//solver_machine = new ThreadStateMachine(machine,self_index);
-		Expand(root, start_state);
+
+
+
+		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
+		executor = new ExecutorCompletionService<Struct>(thread_pool);
+		Expand(root);
 		thread = new Thread(new runMCTS());
 		//solver = new Thread(new solver());
 		depthCharges = 0;
@@ -204,15 +196,15 @@ public class Dual_Prop extends FactorGamer {
 
 	protected void initializeMCTS(OpenBitSet currentState, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		if (no_step) {
-			start_state = currentState;
-			OpenBitSet small_state = no_step_machine.getNextState(root.state, moves);
+			OpenBitSet small_state = machine.getNextState(root.state, moves);
 			if (root == null) System.out.println("NULL ROOT");
 			if (root.state.equals(small_state)) return;
-			for (List<Move> jointMove : no_step_machine.getLegalJointMoves(root.state)) {
-				OpenBitSet nextState = no_step_machine.getNextState(root.state, jointMove);
+			for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
+				OpenBitSet nextState = machine.getNextState(root.state, jointMove);
 				if (small_state.equals(nextState)) {
 					root = nodes.get(graph.get(root.childrenStates.get(jointMove)));
 					if (root == null) System.out.println("NOT IN MAP");
+					--step_count;
 					return;
 				}
 			}
@@ -220,6 +212,7 @@ public class Dual_Prop extends FactorGamer {
 			root = new DualNode(small_state);
 			graph.put(small_state, nodes.size());
 			nodes.add(root);
+			--step_count;
 		} else {
 			if (root == null) System.out.println("NULL ROOT");
 			if (root.state.equals(currentState)) return;
@@ -313,15 +306,17 @@ public class Dual_Prop extends FactorGamer {
 		@Override
 		public void run() {
 			DualNode root_thread;
+			int step;
 			while (true) {
 				double start = System.currentTimeMillis();
 				root_thread = root;
+				step = step_count;
 				OpenBitSet curr_state = start_state;
 				path = new ArrayList<DualNode>();
 				path.add(root_thread);
 				//double select_start = System.currentTimeMillis();
 				try {
-					curr_state = Select(root_thread, path, curr_state);
+					step = Select(root_thread, path, step_count);
 				} catch (MoveDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -330,7 +325,7 @@ public class Dual_Prop extends FactorGamer {
 				DualNode n = path.get(path.size() - 1);
 				//double expand_start = System.currentTimeMillis();
 				try {
-					Expand(n, path, curr_state);
+					step = Expand(n, path, step);
 				} catch (MoveDefinitionException | TransitionDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -338,7 +333,7 @@ public class Dual_Prop extends FactorGamer {
 				n = path.get(path.size() - 1);
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				// spawn off multiple threads
-				executor.submit(new RunMe(n, path, num_per,curr_state));
+				executor.submit(new RunMe(n, path, num_per, step));
 
 				while(true) {
 					Future<Struct> f = executor.poll();
@@ -367,13 +362,13 @@ public class Dual_Prop extends FactorGamer {
 		private DualNode node;
 		private List<DualNode> p;
 		private int num;
-		private OpenBitSet curr_state;
+		private int count;
 
-		public RunMe(DualNode n, List<DualNode> arr, int number, OpenBitSet curr) {
+		public RunMe(DualNode n, List<DualNode> arr, int number, int curr) {
 			this.node = n;
 			this.p = arr;
 			this.num = number;
-			this.curr_state = curr;
+			this.count = curr;
 		}
 		@Override
 		public Struct call() throws InterruptedException{
@@ -384,7 +379,7 @@ public class Dual_Prop extends FactorGamer {
 			for (int i = 0; i < num; ++i) {
 				//double start = System.currentTimeMillis();
 				try {
-					curr = Playout(node, thread_ind, curr_state);
+					curr = Playout(node, thread_ind, count);
 				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -403,16 +398,15 @@ public class Dual_Prop extends FactorGamer {
 	    }
 	}
 
-	public double Playout(DualNode n, int thread_ind, OpenBitSet curr_state) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	public double Playout(DualNode n, int thread_ind, int count) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		if (n.isSolved) return n.solvedValue;
 		if (no_step) {
 			OpenBitSet state = n.state;
-			while(!thread_machines[thread_ind].isTerminal(curr_state)) {
-				List<Move> moves = no_step_machines[thread_ind].getRandomJointMove(state);
-				state = no_step_machines[thread_ind].getNextState(state, moves);
-				curr_state = thread_machines[thread_ind].getNextState(curr_state, moves);
+			while(count > 0 && !thread_machines[thread_ind].isTerminal(state)) {
+				state = thread_machines[thread_ind].getRandomNextState(state);
+				--count;
 			}
-			return thread_machines[thread_ind].getCurrGoal(curr_state, self_index);
+			return thread_machines[thread_ind].getCurrGoal(state, self_index);
 		} else {
 			OpenBitSet state = n.state;
 			while(!thread_machines[thread_ind].isTerminal(state)) {
@@ -485,9 +479,9 @@ public class Dual_Prop extends FactorGamer {
 		if (no_step) {
 			int size = path.size();
 			DualNode nod = path.get(size - 1);
-			if (background_no_step.isTerminal(nod.state)) {
-				nod.isTerminal = true;
-			}
+			//if (background_machine.isTerminal(nod.state)) {
+			//	nod.isTerminal = true;
+			//}
 			for (int i = 0; i < size; ++i) {
 				nod = path.get(i);
 				nod.utility += val;
@@ -517,53 +511,49 @@ public class Dual_Prop extends FactorGamer {
 		}
 	}
 
-	protected OpenBitSet Select(DualNode n, List<DualNode> path, OpenBitSet curr_state) throws MoveDefinitionException {
+	protected int Select(DualNode n, List<DualNode> path, int steps) throws MoveDefinitionException {
 		if (no_step) {
 			while(true) {
 				++n.visits;
-				if (background_machine.isTerminal(curr_state)) return curr_state;
-				if (n.childrenStates.isEmpty()) return curr_state;
+				if (steps == 0 || background_machine.isTerminal(n.state)) return steps;
+				if (n.childrenStates.isEmpty()) return steps;
 				double maxValue = Double.NEGATIVE_INFINITY;
 				double parentVal = C_CONST * Math.sqrt(Math.log(n.visits));
 				DualNode maxChild = null;
-				List<Move> maxMove = null;
 				int size = n.legalMoves.length;
 				for(int i = 0; i < size; ++i) {
 					Move move = n.legalMoves[i];
 					double minValue = Double.NEGATIVE_INFINITY;
 					DualNode minChild = null;
-					List<Move> minMove = null;
 					for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 						DualNode succNode = nodes.get(graph.get(n.childrenStates.get(jointMove)));
 						if (succNode.visits == 0) {
-							curr_state = background_machine.getNextState(curr_state, jointMove);
+							--steps;
 							++succNode.visits;
 							path.add(succNode);
-							return curr_state;
+							return steps;
 						}
 						double nodeValue = uctMin(succNode, parentVal);
 						if (nodeValue > minValue) {
 							minValue = nodeValue;
 							minChild = succNode;
-							minMove = jointMove;
 						}
 					}
 					minValue = uctMax(minChild, parentVal);
 					if (minValue > maxValue) {
 						maxValue = minValue;
 						maxChild = minChild;
-						maxMove = minMove;
 					}
 				}
 				path.add(maxChild);
 				n = maxChild;
-				curr_state = background_machine.getNextState(curr_state, maxMove);
+				--steps;
 			}
 		} else {
 			while(true) {
 				++n.visits;
-				if (background_machine.isTerminal(n.state)) return curr_state;
-				if (n.children.isEmpty()) return curr_state;
+				if (background_machine.isTerminal(n.state)) return steps;
+				if (n.children.isEmpty()) return steps;
 				double maxValue = Double.NEGATIVE_INFINITY;
 				double parentVal = C_CONST * Math.sqrt(Math.log(n.visits));
 				DualNode maxChild = null;
@@ -577,7 +567,7 @@ public class Dual_Prop extends FactorGamer {
 						if (succNode.visits == 0) {
 							++succNode.visits;
 							path.add(succNode);
-							return curr_state;
+							return steps;
 						}
 						double nodeValue = uctMin(succNode, parentVal);
 						if (nodeValue > minValue) {
@@ -608,10 +598,10 @@ public class Dual_Prop extends FactorGamer {
 		return value + (parentVisits / Math.sqrt(n.visits));
 	}
 
-	protected void Expand(DualNode n, List<DualNode> path, OpenBitSet curr_state) throws MoveDefinitionException, TransitionDefinitionException {
+	protected int Expand(DualNode n, List<DualNode> path, int steps) throws MoveDefinitionException, TransitionDefinitionException {
 		if(no_step) {
-			if (n.children.isEmpty() && !background_machine.isTerminal(curr_state)) {
-				List<Move> moves = background_no_step.getLegalMoves(n.state, self_index);
+			if (n.children.isEmpty() && !background_machine.isTerminal(n.state) && steps > 0) {
+				List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 				int size = moves.size();
 				if (size < 1) {
 					System.out.println("Size less than 1!!!!!!!!!!");
@@ -621,8 +611,8 @@ public class Dual_Prop extends FactorGamer {
 					Move move = n.legalMoves[i];
 					n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 				}
-				for (List<Move> jointMove: background_no_step.getLegalJointMoves(n.state)) {
-					OpenBitSet state = background_no_step.getNextState(n.state, jointMove);
+				for (List<Move> jointMove: background_machine.getLegalJointMoves(n.state)) {
+					OpenBitSet state = background_machine.getNextState(n.state, jointMove);
 					Integer index = graph.get(state);
 					if(index == null) {
 						DualNode child = new DualNode(state);
@@ -632,10 +622,12 @@ public class Dual_Prop extends FactorGamer {
 					n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 					n.childrenStates.put(jointMove, state);
 				}
-				path.add(nodes.get(graph.get(n.childrenStates.get(background_no_step.getRandomJointMove(n.state)))));
-			} else if (!background_machine.isTerminal(curr_state)) {
+				--steps;
+				path.add(nodes.get(graph.get(n.childrenStates.get(background_machine.getRandomJointMove(n.state)))));
+			} else if (!background_machine.isTerminal(n.state) && steps > 0) {
 				System.out.println("ERROR. Tried to expand node that was previously expanded");
 			}
+			return steps;
 		} else {
 			if (n.children.isEmpty() && !background_machine.isTerminal(n.state)) {
 				List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
@@ -662,21 +654,22 @@ public class Dual_Prop extends FactorGamer {
 			} else if (!background_machine.isTerminal(n.state)) {
 				System.out.println("ERROR. Tried to expand node that was previously expanded");
 			}
+			return steps;
 		}
 	}
 
-	protected void Expand(DualNode n, OpenBitSet curr_state) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
+	protected void Expand(DualNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if(no_step) {
-			if (n.children.isEmpty() && !machine.isTerminal(curr_state)) {
-				List<Move> moves = no_step_machine.getLegalMoves(n.state, self_index);
+			if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
+				List<Move> moves = machine.getLegalMoves(n.state, self_index);
 				int size = moves.size();
 				n.legalMoves = moves.toArray(new Move[size]);
 				for (int i = 0; i < size; ++i) {
 					Move move = n.legalMoves[i];
 					n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 				}
-				for (List<Move> jointMove: no_step_machine.getLegalJointMoves(n.state)) {
-					OpenBitSet state = no_step_machine.getNextState(n.state, jointMove);
+				for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
+					OpenBitSet state = machine.getNextState(n.state, jointMove);
 					Integer index = graph.get(state);
 					if(index == null) {
 						DualNode child = new DualNode(state);
@@ -686,7 +679,7 @@ public class Dual_Prop extends FactorGamer {
 					n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 					n.childrenStates.put(jointMove, state);
 				}
-			} else if (!machine.isTerminal(curr_state)) {
+			} else if (!machine.isTerminal(n.state)) {
 				System.out.println("ERROR. Tried to expand node that was previously expanded");
 			}
 		} else {
