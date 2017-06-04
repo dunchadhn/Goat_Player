@@ -16,6 +16,7 @@ import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlRule;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
+import org.ggp.base.util.propnet.architecture.PropNet;
 import org.ggp.base.util.propnet.architecture.XPropNet;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
@@ -80,39 +81,31 @@ public class XStateMachine extends XMachine {
     }
 
     @Override
-    public void initialize(List<Gdl> description) {
-        try {
-        	System.out.println("Initialized");
-        	description = sanitizeDistinct(description);
-            propNet = new XPropNet(OptimizingPropNetFactory.create(description));
+    public void initialize(PropNet prop) {
+        propNet = new XPropNet(prop);
+		compInfo = propNet.getCompInfo();
+		connecTable = propNet.getConnecTable();
 
-            compInfo = propNet.getCompInfo();
-            connecTable = propNet.getConnecTable();
+		roles = propNet.getRoles();
 
-            roles = propNet.getRoles();
+		numBases = propNet.numBases();
+		numInputs = propNet.numInputs();
+		numLegals = propNet.numLegals();
+		baseOffset = propNet.getBaseOffset();
+		legalOffset = propNet.getLegalOffset();
+		inputOffset = propNet.getInputOffset();
 
-            numBases = propNet.numBases();
-            numInputs = propNet.numInputs();
-            numLegals = propNet.numLegals();
-            baseOffset = propNet.getBaseOffset();
-            legalOffset = propNet.getLegalOffset();
-            inputOffset = propNet.getInputOffset();
+		actions = propNet.getActionsMap();
+		rolesIndexMap = propNet.getRolesIndexMap();
+		legalArray = propNet.getLegalArray();
+		roleMoves = propNet.getRoleMoves();
 
-            actions = propNet.getActionsMap();
-            rolesIndexMap = propNet.getRolesIndexMap();
-            legalArray = propNet.getLegalArray();
-            roleMoves = propNet.getRoleMoves();
+		gdlSentenceMap = propNet.getGdlSentenceMap();
+		rand = new XORShiftRandom();
 
-            gdlSentenceMap = propNet.getGdlSentenceMap();
-            rand = new XORShiftRandom();
+		goalPropositions = propNet.getGoalPropositions();
 
-            goalPropositions = propNet.getGoalPropositions();
-
-            q = new IntQueue(compInfo.length);
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+		q = new IntQueue(compInfo.length);
     }
 
     private static final int NUM_TYPE_BITS = 8;
@@ -757,6 +750,42 @@ public class XStateMachine extends XMachine {
 	        sanitizeDistinctHelper(description.get(i), description, out);
 	    }
 	    return out;
+	}
+
+	@Override
+	public void initialize(List<Gdl> description) {
+		// TODO Auto-generated method stub
+		try {
+			System.out.println("Initialized");
+        	description = sanitizeDistinct(description);
+            propNet = new XPropNet(OptimizingPropNetFactory.create(description));
+
+            compInfo = propNet.getCompInfo();
+    		connecTable = propNet.getConnecTable();
+            roles = propNet.getRoles();
+
+            numBases = propNet.numBases();
+            numInputs = propNet.numInputs();
+            numLegals = propNet.numLegals();
+            baseOffset = propNet.getBaseOffset();
+            legalOffset = propNet.getLegalOffset();
+            inputOffset = propNet.getInputOffset();
+
+            actions = propNet.getActionsMap();
+            rolesIndexMap = propNet.getRolesIndexMap();
+            legalArray = propNet.getLegalArray();
+            roleMoves = propNet.getRoleMoves();
+
+            gdlSentenceMap = propNet.getGdlSentenceMap();
+            rand = new XORShiftRandom();
+
+            goalPropositions = propNet.getGoalPropositions();
+
+            q = new IntQueue(compInfo.length);
+
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 	}
 
 
