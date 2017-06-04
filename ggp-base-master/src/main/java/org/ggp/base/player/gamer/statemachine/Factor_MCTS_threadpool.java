@@ -158,7 +158,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	@Override
-	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr)
+	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr, List<Move> moves)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games

@@ -211,7 +211,7 @@ public abstract class FactorGamer extends Gamer
         	role = new Role(getRoleName());
         	List<PropNet> prop_list = new ArrayList<PropNet>();
         	prop_list.add(prop);
-        	//prop_list = factor_propnet(prop,role);
+        	//prop_list = PropNet.factor_propnet(prop,role);
         	if (prop_list.size() == 1) {
         		single_prop = true;
         		stateMachine = getInitialStateMachine();
@@ -283,9 +283,9 @@ public abstract class FactorGamer extends Gamer
 		{
 			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
 			if (single_prop) {
+				List<Move> moves = new ArrayList<Move>();
 				if (lastMoves != null)
 				{
-					List<Move> moves = new ArrayList<Move>();
 					for (GdlTerm sentence : lastMoves)
 					{
 						moves.add(stateMachine.getMoveFromTerm(sentence));
@@ -295,7 +295,7 @@ public abstract class FactorGamer extends Gamer
 					//getMatch().appendState(stateMachine.toGdl(currentState).getContents());
 				}
 
-				return stateMachineSelectMove(timeout, currentState).move.getContents();
+				return stateMachineSelectMove(timeout, currentState, moves).move.getContents();
 			} else {
 				for (int i = 0; i < num_threads; ++i) {
         			exec.submit(new RunSelect(lastMoves, timeout, i));
@@ -334,9 +334,9 @@ public abstract class FactorGamer extends Gamer
 		}
 		@Override
 		public MoveStruct call() throws Exception {
+			List<Move> moves = new ArrayList<Move>();
 			if (lastMoves != null)
 			{
-				List<Move> moves = new ArrayList<Move>();
 				for (GdlTerm sentence : lastMoves)
 				{
 					moves.add(machines[ind].getMoveFromTerm(sentence));
@@ -346,7 +346,7 @@ public abstract class FactorGamer extends Gamer
 				//getMatch().appendState(stateMachine.toGdl(currentState).getContents());
 			}
 
-			return players[ind].stateMachineSelectMove(timeout, currentStates[ind]);
+			return players[ind].stateMachineSelectMove(timeout, currentStates[ind], moves);
 		}
 	}
 
@@ -452,5 +452,12 @@ public abstract class FactorGamer extends Gamer
 			MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		// TODO Auto-generated method stub
 
+	}
+
+	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr, List<Move> moves)
+			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException,
+			InterruptedException, ExecutionException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

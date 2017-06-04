@@ -32,6 +32,8 @@ public class XStateMachine extends XMachine {
     public XPropNet propNet;
     public Role[] roles;
 
+    private PropNet prop;
+
     private IntQueue q;
     private OpenBitSet currentState, nextState, currInputs, currLegals;
     public int numBases, baseOffset, numLegals, numInputs, legalOffset, inputOffset;
@@ -81,7 +83,13 @@ public class XStateMachine extends XMachine {
     }
 
     @Override
-    public void initialize(PropNet prop) {
+	public PropNet getPropNet() {
+    	return prop;
+    }
+
+    @Override
+    public void initialize(PropNet p) {
+    	prop = p;
         propNet = new XPropNet(prop);
 		compInfo = propNet.getCompInfo();
 		connecTable = propNet.getConnecTable();
@@ -482,7 +490,7 @@ public class XStateMachine extends XMachine {
     }
 
     @Override
-    public XPropNet getPropNet() {
+    public XPropNet getXPropNet() {
     	return propNet;
     }
 
@@ -758,7 +766,8 @@ public class XStateMachine extends XMachine {
 		try {
 			System.out.println("Initialized");
         	description = sanitizeDistinct(description);
-            propNet = new XPropNet(OptimizingPropNetFactory.create(description));
+        	prop = OptimizingPropNetFactory.create(description);
+            propNet = new XPropNet(prop);
 
             compInfo = propNet.getCompInfo();
     		connecTable = propNet.getConnecTable();
