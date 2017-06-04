@@ -34,4 +34,9 @@ public final class Or extends Component
 	{
 		return toDot("ellipse", "grey", "OR");
 	}
+
+	@Override
+	public String bitString(int cValue) {
+		return toDot("ellipse", (get_current_value(cValue) ? "red" : "grey"), "OR");
+	}
 }

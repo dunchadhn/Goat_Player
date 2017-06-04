@@ -27,4 +27,9 @@ public final class Transition extends Component
 	{
 		return toDot("box", "grey", "TRANSITION");
 	}
+
+	@Override
+	public String bitString(int cValue) {
+		return toDot("box", (get_current_value(cValue) ? "red" : "grey"), "TRANSITION");
+	}
 }

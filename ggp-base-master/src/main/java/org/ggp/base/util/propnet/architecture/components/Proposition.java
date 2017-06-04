@@ -79,4 +79,9 @@ public class Proposition extends Component
 	{
 		return toDot("circle", value ? "red" : "white", name.toString());
 	}
+
+	@Override
+	public String bitString(int cValue) {
+		return toDot("circle", (get_current_value(cValue) ? "red" : "grey"), name.toString());
+	}
 }

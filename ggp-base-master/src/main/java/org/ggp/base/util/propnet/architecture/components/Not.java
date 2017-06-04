@@ -27,4 +27,9 @@ public final class Not extends Component
 	{
 		return toDot("invtriangle", "grey", "NOT");
 	}
+
+	@Override
+	public String bitString(int cValue) {
+		return toDot("invtriangle", (get_current_value(cValue) ? "red" : "grey"), "NOT");
+	}
 }

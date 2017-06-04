@@ -35,4 +35,9 @@ public final class And extends Component
 		return toDot("invhouse", "grey", "AND");
 	}
 
+	@Override
+	public String bitString(int cValue) {
+		return toDot("invhouse", (get_current_value(cValue) ? "red" : "grey"), "AND");
+	}
+
 }

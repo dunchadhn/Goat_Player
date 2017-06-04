@@ -1,9 +1,8 @@
 package org.ggp.base.player.gamer.statemachine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Stack;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
@@ -18,12 +17,9 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class Solver extends XStateMachineGamer {
 
 	private XStateMachine machine;
-	private int self_index, visits;
+	private int self_index;
 	private List<Role> roles;
-	private boolean solved;
-	Stack<Move> winningMoves;
-	private long leaves, finishBy;
-	private HashSet<OpenBitSet> visited;
+	private long finishBy;
 	private HashMap<OpenBitSet, Integer> valueMap;
 	@Override
 	public XStateMachine getInitialStateMachine() {
@@ -38,73 +34,154 @@ public class Solver extends XStateMachineGamer {
 		machine = getStateMachine();
 		self_index = machine.getRoles().indexOf(getRole());
 		roles = machine.getRoles();
-		solved = false;
-		leaves = 0;
-		winningMoves = new Stack<Move>();
-		visited = new HashSet<OpenBitSet>();
-		valueMap = new HashMap<OpenBitSet, Integer>();
-		OpenBitSet init = machine.getInitialState();
-		visited.add(init);
-		visits = 0;
-		/*
-		double bfactor = 0;
-		double depth = 0;
-		int rounds = 20;
-		for (int i = 0; i < rounds; ++i) {
-			OpenBitSet state = init;
-			double bfactor2 = 0;
-			double iters = 0;
-			while (!machine.isTerminal(state)) {
-				bfactor2 += machine.getLegalMoves(state, self_index).size();
-				state = machine.getRandomNextState(state);
-				++depth;
-				++iters;
-			}
-			bfactor += (bfactor2 / iters);
-		}
-		bfactor /= rounds;
-		depth /= rounds;
-		System.out.println("Avg Branching Factor: " + bfactor);
-		System.out.println("AvgDepth: " + depth);
-		solve(init);
-		//if (solved) System.out.println("Game Solved!");
-		System.out.println("Enumerated " + leaves + " leaves of estimated " + Math.pow(bfactor, depth));
-		System.out.println("visited: " + visited.size());
-
-		OpenBitSet state = init;
-		int alpha = -1;
-		for (Move move : machine.getLegalMoves(state, self_index)) {
-			int minValue = 101;
-			if (System.currentTimeMillis() > finishBy) return;
-
-			for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
-				if (System.currentTimeMillis() > finishBy) return;
-				OpenBitSet nextState = machine.getNextState(state, jointMove);
-				if (!visited.contains(nextState)) {
-					System.out.println("1");
-					visited.add(nextState);
-					int value;
-					if (valueMap.containsKey(nextState)) value = valueMap.get(nextState);
-					else {
-						value = alphabeta(nextState, alpha, minValue);
-						valueMap.put(nextState, value);
-					}
-					if (value == 0 || value <= alpha) {
-						minValue = 0;
-						break;
-					}
-					if (value < minValue) minValue = value;
-				}
-
-			}
-
-			if (minValue > alpha) alpha = minValue;
-
-			System.out.println(move + " " + minValue);
-		}*/
 
 	}
 
+
+
+	protected Move bestmove() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		valueMap = new HashMap<OpenBitSet, Integer>(); //need to recreate the map?
+		OpenBitSet state = getCurrentState();
+		int alpha = 0;
+		List<Move> legals = machine.getLegalMoves(state, self_index);
+		Move bestMove = legals.get(0);
+
+		HashMap<Move, List<List<Move>>> moveMap = new HashMap<Move, List<List<Move>>>();
+		for (Move m : legals) moveMap.put(m, new ArrayList<List<Move>>());
+		for (List<Move> jointMove : machine.getLegalJointMoves(state)) {
+			moveMap.get(jointMove.get(self_index)).add(jointMove);
+		}
+
+		for (Move move : legals) {
+
+			int minValue = 100;
+			if (!machine.getLegalJointMoves(state, self_index, move).equals(moveMap.get(move))) {
+				System.out.println(machine.getLegalJointMoves(state, self_index, move).toString());
+				System.out.println(moveMap.get(move).toString());
+				System.exit(0);
+			}
+			//for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
+			for (List<Move> jointMove : moveMap.get(move)) {
+				OpenBitSet nextState = machine.getNextState(state, jointMove);
+				int result;
+				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
+				else {
+					result = alphabeta(nextState, alpha, minValue);
+					valueMap.put(nextState, result);
+				}
+				if (result <= alpha) {
+					minValue = alpha;
+					break;
+				}
+				if (result == 0) {
+					minValue = 0;
+					break;
+				}
+				if (result < minValue) {
+					minValue = result;
+				}
+			}
+
+			System.out.println(move + " " + minValue);
+			if (minValue == 100) {
+				return move;
+			}
+			if (minValue > alpha) {
+				alpha = minValue;
+				bestMove = move;
+			}
+		}
+
+		return bestMove;
+
+	}
+	protected int alphabeta(OpenBitSet state, int alpha, int beta) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
+		if (machine.isTerminal(state)) return machine.getGoal(state, self_index);
+
+		List<Move> legals = machine.getLegalMoves(state, self_index);
+		HashMap<Move, List<List<Move>>> moveMap = new HashMap<Move, List<List<Move>>>();
+		for (Move m : legals) moveMap.put(m, new ArrayList<List<Move>>());
+		for (List<Move> jointMove : machine.getLegalJointMoves(state)) {
+			moveMap.get(jointMove.get(self_index)).add(jointMove);
+		}
+
+		for (Move move : legals) {
+			int minValue = beta;
+			if (!machine.getLegalJointMoves(state, self_index, move).equals(moveMap.get(move))) {
+				System.out.println(machine.getLegalJointMoves(state, self_index, move).toString());
+				System.out.println(moveMap.get(move).toString());
+				System.exit(0);
+			}
+			//for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
+			for (List<Move> jointMove : moveMap.get(move)) {
+				OpenBitSet nextState = machine.getNextState(state, jointMove);
+				int result;
+				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
+				else {
+					result = alphabeta(nextState, alpha, minValue);
+					valueMap.put(nextState, result);
+				}
+				if (result <= alpha) {
+					minValue = alpha;
+					break;
+				}
+				if (result == 0) {
+					minValue = 0;
+					break;
+				}
+				if (result < minValue) minValue = result;
+			}
+			if (minValue >= beta) return beta;
+			if (minValue == 100) return 100;
+			if (minValue > alpha) alpha = minValue;
+		}
+
+		return alpha;
+	}
+
+	/*public List<List<Move>> getLegalJointMoves(OpenBitSet state, int rIndex, Move m) throws MoveDefinitionException {
+    	setState(state, null);
+
+    	int size = roles.length;
+        List<List<Move>> jointMoves = new ArrayList<List<Move>>();
+
+    	for (int i = 0; i < rIndex; ++i) {
+    		List<Move> moves = new ArrayList<Move>();
+    		int roleIndex = rolesIndexMap[i];
+    		int nextRoleIndex = rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(legalArray[j]);
+    			}
+    		}
+    		jointMoves.add(moves);
+    	}
+
+    	List<Move> rMoves = new ArrayList<Move>();
+    	rMoves.add(m);
+    	jointMoves.add(rMoves);
+
+    	for (int i = rIndex + 1; i < size; ++i) {
+    		List<Move> moves = new ArrayList<Move>();
+    		int roleIndex = rolesIndexMap[i];
+    		int nextRoleIndex = (i == (size - 1) ? legalArray.length : rolesIndexMap[i + 1]);
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(legalArray[j]);
+    			}
+    		}
+    		jointMoves.add(moves);
+    	}
+
+
+        List<List<Move>> crossProduct = new ArrayList<List<Move>>();
+        crossProductLegalMoves(jointMoves, crossProduct, new ArrayDeque<Move>());//
+
+        return crossProduct;
+    }*/
+/*
 	protected void solve(OpenBitSet state) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
 		if (machine.isTerminal(state)) {
 			++leaves;
@@ -126,139 +203,8 @@ public class Solver extends XStateMachineGamer {
 				}
 			}
 		}
-	}
-
-
-	protected Move bestmove()
-			throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		visits = 0;
-		HashSet<OpenBitSet> path = new HashSet<OpenBitSet>();
-		OpenBitSet state = getCurrentState();
-		visited.add(state);
-		path.add(state);
-		List<Move> moves = machine.getLegalMoves(state, self_index);
-
-		Move action = moves.get(self_index);
-		int score = 0;
-
-		/*for(Move m : moves) {
-			for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, m)) {
-				OpenBitSet nextState = machine.getNextState(state, jointMove);
-				if (!path.contains(nextState)) {
-					path.add(nextState);
-					int result;
-					if (!visited.contains(nextState)) {
-						result = alphabeta(nextState, 0, 100, path);
-						valueMap.put(nextState, result);
-					} else {
-						result = valueMap.get(nextState);
-					}
-					path.remove(nextState);
-					System.out.println(jointMove.get(self_index) + " " + result);
-					if (result == 100) {
-						System.out.println("Visits: " + visits);
-						return jointMove.get(self_index);
-					} else if(result > score) {
-						score = result;
-						action = jointMove.get(self_index);
-					}
-				}
-
-				if(System.currentTimeMillis() > finishBy) break;
-			}
-
-		}*/
-		valueMap.put(state, score);
-		System.out.println("Visits: " + visits);
-		return action;
-	}
-
-	protected int alphabeta(OpenBitSet state, int alpha, int beta, HashSet<OpenBitSet> path) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
-		++visits;
-		visited.add(state);
-
-		if (machine.isTerminal(state))
-			return machine.getGoal(state, self_index);
-
-		for (Move m : machine.getLegalMoves(state, self_index)) {
-
-			int minValue = beta;
-			/*for (List<Move> jointMove: machine.getLegalJointMoves(state, self_index, m)) {
-				OpenBitSet nextState = machine.getNextState(state, jointMove);
-				if (!path.contains(nextState)) {
-					path.add(nextState);
-					int result;
-					if (!visited.contains(nextState)) {
-						result = alphabeta(nextState, alpha, minValue, path);
-						valueMap.put(nextState, result);
-					} else {
-						result = valueMap.get(nextState);
-					}
-					path.remove(nextState);
-					if (result == 0 || result <= alpha) {
-						minValue = alpha;
-						break;
-					}
-					if (result < minValue) minValue = result;
-				}
-			}
-
-			if (minValue == 100 ||  minValue >= beta) return beta;
-			if (minValue > alpha) alpha = minValue;*/
-
-		}
-
-		return alpha;
-
-	}
-
-
-
-	/*protected int alphabeta(OpenBitSet state, int alpha, int beta) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
-		if (machine.isTerminal(state))
-			return machine.getGoal(state, self_index);
-
-
-		List<Move> legals = machine.getLegalMoves(state, self_index);
-		int size = legals.size();
-		System.out.println(size);
-		for(int i = 0; i < size; ++i) {
-			Move move = legals.get(i);
-			int minValue = beta;
-			if (System.currentTimeMillis() > finishBy) return 0;
-
-			for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
-				if (System.currentTimeMillis() > finishBy) return 0;
-				OpenBitSet nextState = machine.getNextState(state, jointMove);
-				if (!visited.contains(nextState)) {
-					visited.add(nextState);
-					int value;
-					if (valueMap.containsKey(nextState)) value = valueMap.get(nextState);
-					else {
-						value = alphabeta(nextState, alpha, minValue);
-						valueMap.put(nextState, value);
-					}
-					if (value == 0 || value <= alpha) {
-						minValue = 0;
-						break;
-					}
-					if (value < minValue) minValue = value;
-
-				} else {
-					System.out.println("Duplicate");
-				}
-
-			}
-
-
-			if (minValue == 100 || minValue >= beta) return beta;
-			if (minValue > alpha) {
-				alpha = minValue;
-			}
-		}
-
-		return alpha;
 	}*/
+
 
 
 	@Override
