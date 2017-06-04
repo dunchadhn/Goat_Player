@@ -549,4 +549,58 @@ public final class PropNet
 		//c.removeAllInputs();
 		//c.removeAllOutputs();
 	}
+
+	public static List<PropNet> factor_propnet(PropNet prop, Role r) {
+		return null;
+	}
+
+	public static PropNet removeStepCounter(PropNet prop) {
+		Proposition terminal = prop.getTerminalProposition();
+		Set<Component> terminalInputs = terminal.getInputs();
+		if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Or) { //terminal connected by ORs
+			Component terminalOr = terminal.getSingleInput();
+			Set<Component> stepCounter = new HashSet<Component>();
+			for (Component orInput : terminalOr.getInputs()) {
+				boolean isStepCounter = PropNet.stepCounterDetection(orInput, 0, stepCounter, null, prop.getInitProposition());
+				if (isStepCounter) {
+					Set<Component> counterlessComponents = new HashSet<>(prop.getComponents());
+					counterlessComponents.removeAll(stepCounter);
+					terminalOr.removeInput(orInput);
+					PropNet counterlessProp = new PropNet(prop.getRoles(), counterlessComponents);
+					return counterlessProp;
+				}
+			}
+		}
+		return null;
+	}
+
+	private static boolean stepCounterDetection(Component c, int state, Set<Component> stepCounter, Component last, Proposition init) {
+		state = state % 3;
+		stepCounter.add(c);
+		if (state == 0) {
+			if (!(c instanceof Proposition) || c.getInputs().size() != 1) {
+				return false;
+			}
+			return PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+		}
+		if (state == 1) {
+			if (!(c instanceof Transition) || c.getInputs().size() != 1) {
+				return false;
+			}
+			return PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+		}
+		if (state == 2) {
+			if (c.equals(init)) { //omg we found the step counter, probably
+				System.out.println("FOUND STEP COUNTER LOL " + stepCounter.size());
+				stepCounter.remove(c);
+				c.removeOutput(last);
+				return true;
+			}
+			if (!(c instanceof Proposition) || c.getInputs().size() != 1) {
+				return false;
+			}
+			return PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+		}
+		return false;
+	}
 }
