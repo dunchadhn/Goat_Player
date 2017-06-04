@@ -128,15 +128,13 @@ public class Dual_Prop extends FactorGamer {
 		graph = new HashMap<OpenBitSet, Integer>();
 		orig_graph = new HashMap<OpenBitSet, DualNode>();
 		nodes = new ArrayList<DualNode>();
-		machine = getStateMachine();
-		roles = machine.getRoles();
-		self_index = roles.indexOf(role);
-		PropNet p = machine.getPropNet();
+
+		PropNet p = getStateMachine().getPropNet();
 		Pair<PropNet, Integer> pair = PropNet.removeStepCounter(p);
-		PropNet no_step_p = pair.left;
 		no_step = false;
 
-		if (no_step_p != null) {
+		if (pair != null) {
+			PropNet no_step_p = pair.left;
 			step_count = pair.right;
 			machine = new XStateMachine();
 			machine.initialize(no_step_p);
@@ -147,9 +145,13 @@ public class Dual_Prop extends FactorGamer {
     		no_step = true;
     		System.out.println("Found Step Counter!");
 		} else {
+			machine = getStateMachine();
 			root = new DualNode(currentState);
 			orig_graph.put(currentState, root);
 		}
+
+		roles = machine.getRoles();
+		self_index = roles.indexOf(role);
 
 		thread_machines = new ThreadStateMachine[num_threads];
 		for (int i = 0; i < num_threads; ++i) {
@@ -311,7 +313,6 @@ public class Dual_Prop extends FactorGamer {
 				double start = System.currentTimeMillis();
 				root_thread = root;
 				step = step_count;
-				OpenBitSet curr_state = start_state;
 				path = new ArrayList<DualNode>();
 				path.add(root_thread);
 				//double select_start = System.currentTimeMillis();
@@ -603,9 +604,6 @@ public class Dual_Prop extends FactorGamer {
 			if (n.children.isEmpty() && !background_machine.isTerminal(n.state) && steps > 0) {
 				List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 				int size = moves.size();
-				if (size < 1) {
-					System.out.println("Size less than 1!!!!!!!!!!");
-				}
 				n.legalMoves = moves.toArray(new Move[size]);
 				for (int i = 0; i < size; ++i) {
 					Move move = n.legalMoves[i];
