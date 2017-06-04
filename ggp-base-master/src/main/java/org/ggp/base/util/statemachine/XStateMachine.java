@@ -375,6 +375,49 @@ public class XStateMachine extends XMachine {
         return crossProduct;
     }
 
+    public List<List<Move>> getLegalJointMoves(OpenBitSet state, int rIndex, Move m) throws MoveDefinitionException {
+    	setState(state, null);
+
+    	int size = roles.length;
+        List<List<Move>> jointMoves = new ArrayList<List<Move>>();
+
+    	for (int i = 0; i < rIndex; ++i) {
+    		List<Move> moves = new ArrayList<Move>();
+    		int roleIndex = rolesIndexMap[i];
+    		int nextRoleIndex = rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(legalArray[j]);
+    			}
+    		}
+    		jointMoves.add(moves);
+    	}
+
+    	List<Move> rMoves = new ArrayList<Move>();
+    	rMoves.add(m);
+    	jointMoves.add(rMoves);
+
+    	for (int i = rIndex + 1; i < size; ++i) {
+    		List<Move> moves = new ArrayList<Move>();
+    		int roleIndex = rolesIndexMap[i];
+    		int nextRoleIndex = (i == (size - 1) ? legalArray.length : rolesIndexMap[i + 1]);
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(legalArray[j]);
+    			}
+    		}
+    		jointMoves.add(moves);
+    	}
+
+
+        List<List<Move>> crossProduct = new ArrayList<List<Move>>();
+        crossProductLegalMoves(jointMoves, crossProduct, new ArrayDeque<Move>());//
+
+        return crossProduct;
+    }
+
     @Override
 	public List<Move> getRandomJointMove(OpenBitSet state) throws MoveDefinitionException
     {
