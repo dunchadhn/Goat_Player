@@ -189,6 +189,49 @@ public class ThreadStateMachine extends XMachine {
         return crossProduct;
     }
 
+	public List<List<Move>> getLegalJointMoves(OpenBitSet state, int rIndex, Move m) throws MoveDefinitionException {
+    	setState(state, null);
+
+    	int size = machine.roles.length;
+        List<List<Move>> jointMoves = new ArrayList<List<Move>>();
+
+    	for (int i = 0; i < rIndex; ++i) {
+    		List<Move> moves = new ArrayList<Move>();
+    		int roleIndex = machine.rolesIndexMap[i];
+    		int nextRoleIndex = machine.rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(machine.legalArray[j]);
+    			}
+    		}
+    		jointMoves.add(moves);
+    	}
+
+    	List<Move> rMoves = new ArrayList<Move>();
+    	rMoves.add(m);
+    	jointMoves.add(rMoves);
+
+    	for (int i = rIndex + 1; i < size; ++i) {
+    		List<Move> moves = new ArrayList<Move>();
+    		int roleIndex = machine.rolesIndexMap[i];
+    		int nextRoleIndex = (i == (size - 1) ? machine.legalArray.length : machine.rolesIndexMap[i + 1]);
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(machine.legalArray[j]);
+    			}
+    		}
+    		jointMoves.add(moves);
+    	}
+
+
+        List<List<Move>> crossProduct = new ArrayList<List<Move>>();
+        crossProductLegalMoves(jointMoves, crossProduct, new ArrayDeque<Move>());//
+
+        return crossProduct;
+    }
+
     @Override
 	public List<Move> getRandomJointMove(OpenBitSet state) throws MoveDefinitionException
     {
@@ -533,7 +576,7 @@ public class ThreadStateMachine extends XMachine {
 		return 0;
 	}
 
-	public int getCurrGoal(OpenBitSet state, int rIndex)
+	public double getCurrGoal(OpenBitSet state, int rIndex)
             throws GoalDefinitionException {
 
     	//setState(state, null);
@@ -545,7 +588,7 @@ public class ThreadStateMachine extends XMachine {
         	int value = components[rewardIndex];
         	if ((value & CURR_VAL_MASK) != 0) {
         		int goalVal = (int) ((compInfo[rewardIndex] & GOAL_MASK) >> TYPE_SHIFT);
-        		return goalVal;
+        		return (double)goalVal;
         	}
 
         }
@@ -555,6 +598,7 @@ public class ThreadStateMachine extends XMachine {
     }
 
 	public double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		if (n.isSolved) return n.solvedValue;
 		OpenBitSet state = n.state;
 		while(!isTerminal(state)) {
 			state = getRandomNextState(state);
