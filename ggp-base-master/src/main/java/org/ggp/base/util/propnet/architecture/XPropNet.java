@@ -92,7 +92,7 @@ public final class XPropNet
 	{
 		System.out.println("XPropNet initializing...");
 		//prop.renderToFile("preOpt.dot");
-		optimizeProp(prop);
+		//optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
 
 		int nLegals = 0;
@@ -101,7 +101,7 @@ public final class XPropNet
 			nLegals += e.getValue().size();
 		}
 		System.out.println("NumLegals: " + nLegals + " NumInputs: " + nInputs);
-		if (nLegals != nInputs) System.exit(0);
+		//if (nLegals != nInputs) System.exit(0);
 
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
