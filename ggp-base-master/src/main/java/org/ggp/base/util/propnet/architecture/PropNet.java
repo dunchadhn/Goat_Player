@@ -98,6 +98,10 @@ public final class PropNet
 	/** A helper list of all of the roles. */
 	private final List<Role> roles;
 
+	//pairwise distances between components
+	private int[][] dependencyMatrix;
+
+
 	public void addComponent(Component c)
 	{
 		components.add(c);
@@ -553,6 +557,45 @@ public final class PropNet
 	public static List<PropNet> factor_propnet(PropNet prop, Role r) {
 		return null;
 	}
+
+	private void inputDFS(Component c, int dist, Map<Component, Integer> goalDependency, Set<Component> seen, PropNet prop, String path) {
+		if (seen.contains(c)) {
+			return;
+		}
+		if ((c instanceof Proposition)){
+			Proposition p = (Proposition) c;
+			boolean isInput = prop.getInputPropositions().values().contains(p);
+			if (isInput) {
+				goalDependency.put(p, dist);
+				//if (path.contains("left")) System.out.println(path);
+			}
+		}
+		seen.add(c);
+		for (Component in : c.getInputs()) {
+			inputDFS(in, dist+1, goalDependency, seen, prop, path+" "+in);
+		}
+	}
+
+    private void initDependencyMatrix(int length) {
+
+    	dependencyMatrix = new int[length][length];
+
+    	//let's initialize each entry to -1 for some reason
+    	for(int i=0;i<dependencyMatrix.length;++i) {
+    		for(int j=0;j<dependencyMatrix.length;++j) {
+    			dependencyMatrix[i][j] = -1;
+    		}
+    	}
+    }
+
+    private Set<Component> findSet(List<Set<Component>> sets, Component elem) {
+    	for (Set<Component> set : sets) {
+    		if (set.contains(elem)) {
+    			return set;
+    		}
+    	}
+		return null;
+    }
 
 	public static PropNet removeStepCounter(PropNet prop) {
 		Proposition terminal = prop.getTerminalProposition();
