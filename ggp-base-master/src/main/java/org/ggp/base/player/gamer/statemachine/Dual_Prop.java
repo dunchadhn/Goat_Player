@@ -335,6 +335,7 @@ public class Dual_Prop extends FactorGamer {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				n = path.get(path.size() - 1);
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				// spawn off multiple threads
 				executor.submit(new RunMe(n, path, num_per,curr_state));
