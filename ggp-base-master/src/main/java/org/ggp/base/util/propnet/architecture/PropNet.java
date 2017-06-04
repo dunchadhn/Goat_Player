@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlProposition;
@@ -567,7 +568,6 @@ public final class PropNet
 			boolean isInput = prop.getInputPropositions().values().contains(p);
 			if (isInput) {
 				goalDependency.put(p, dist);
-				//if (path.contains("left")) System.out.println(path);
 			}
 		}
 		seen.add(c);
@@ -597,7 +597,7 @@ public final class PropNet
 		return null;
     }
 
-	public static PropNet removeStepCounter(PropNet prop) {
+	public static Pair<PropNet, Integer> removeStepCounter(PropNet prop) {
 		Proposition terminal = prop.getTerminalProposition();
 		Set<Component> terminalInputs = terminal.getInputs();
 		if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Or) { //terminal connected by ORs
@@ -610,7 +610,7 @@ public final class PropNet
 					counterlessComponents.removeAll(stepCounter);
 					terminalOr.removeInput(orInput);
 					PropNet counterlessProp = new PropNet(prop.getRoles(), counterlessComponents);
-					return counterlessProp;
+					return Pair.of(counterlessProp, (stepCounter.size()/3+1));
 				}
 			}
 		}
