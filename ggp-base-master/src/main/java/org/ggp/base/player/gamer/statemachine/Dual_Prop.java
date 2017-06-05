@@ -44,7 +44,7 @@ public class Dual_Prop extends FactorGamer {
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
-	private volatile int num_charges, num_per;
+	private volatile int num_per;
 	private HashMap<OpenBitSet, Integer> graph;
 	private HashMap<OpenBitSet, DualNode> orig_graph;
 	private List<DualNode> nodes;
@@ -56,9 +56,9 @@ public class Dual_Prop extends FactorGamer {
 	private volatile int loops = 0;
 	//private volatile double total_backpropagate = 0;
 	private volatile int play_loops = 0;
-	private volatile double sum_x = 0;
-	private volatile double sum_x2 = 0;
-	private volatile int n = 0;
+	private int num_players = 1;
+	private boolean single = true;
+	private int buffer = 2500;
 	private boolean no_step = false;
 	private int step_count;
 
@@ -74,6 +74,13 @@ public class Dual_Prop extends FactorGamer {
 			this.p = arr;
 			this.n = num;
 		}
+	}
+
+	public void init(XStateMachine mac, int players) {
+		machine = mac;
+		num_players = players;
+		single = false;
+		buffer = 3000;
 	}
 
 	@Override
@@ -123,14 +130,19 @@ public class Dual_Prop extends FactorGamer {
 	}
 
 	protected void initialize(long timeout, OpenBitSet currentState, Role role) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		num_per = Runtime.getRuntime().availableProcessors();
-		num_threads = Runtime.getRuntime().availableProcessors();
+		num_per = Runtime.getRuntime().availableProcessors() / num_players;
+		num_threads = Runtime.getRuntime().availableProcessors() / num_players;
 
 		graph = new HashMap<OpenBitSet, Integer>();
 		orig_graph = new HashMap<OpenBitSet, DualNode>();
 		nodes = new ArrayList<DualNode>();
 
-		PropNet p = getStateMachine().getPropNet();
+		PropNet p;
+		if (single) {
+			p = getStateMachine().getPropNet();
+		} else {
+			p = machine.getPropNet();
+		}
 		Pair<PropNet, Integer> pair = PropNet.removeStepCounter(p);
 		no_step = false;
 
@@ -147,7 +159,7 @@ public class Dual_Prop extends FactorGamer {
     		no_step = true;
     		System.out.println("Found Step Counter!");
 		} else {
-			machine = getStateMachine();
+			if (single) machine = getStateMachine();
 			root = new DualNode(currentState);
 			orig_graph.put(currentState, root);
 		}
@@ -194,7 +206,7 @@ public class Dual_Prop extends FactorGamer {
 		//total_backpropagate = 0;
 		play_loops = 0;
 		System.out.println("Background Depth Charges: " + last_depthCharges);
-		finishBy = timeout - 3000;
+		finishBy = timeout - buffer;
 		return MCTS(currentState, moves);
 	}
 
@@ -251,7 +263,6 @@ public class Dual_Prop extends FactorGamer {
 			if (num_per < 1) num_per = 1;
 		}
 		System.out.println("Num states: " + graph.size());
-		System.out.println("C_CONST: " + C_CONST);
 		System.out.println("Depth Charges: " + depthCharges);
 		System.out.println("Number of Select/Expand Loops " + loops);
 		/*System.out.println("Avg Select: " + total_select/loops);
@@ -388,9 +399,9 @@ public class Dual_Prop extends FactorGamer {
 					e.printStackTrace();
 				}
 				val += curr;
-				sum_x += curr;
-				sum_x2 += (curr*curr);
-				++n;
+				node.sum_x += curr;
+				node.sum_x2 += (curr*curr);
+				++node.n;
 				//++play_loops;
 				//total_playout += (System.currentTimeMillis() - start);
 			}
@@ -480,35 +491,27 @@ public class Dual_Prop extends FactorGamer {
 		if (no_step) {
 			int size = path.size();
 			DualNode nod = path.get(size - 1);
-			//if (background_machine.isTerminal(nod.state)) {
-			//	nod.isTerminal = true;
-			//}
 			for (int i = 0; i < size; ++i) {
 				nod = path.get(i);
 				nod.utility += val;
 				nod.updates += num;
 			}
-			double mean_square = sum_x / n;
+			double mean_square = nod.sum_x / nod.n;
 			mean_square *= mean_square;
-			double avg_square = sum_x2 / n;
-			if (avg_square > mean_square) C_CONST = Math.sqrt(avg_square - mean_square);
-			if (C_CONST < 50) C_CONST = 50;
+			double avg_square = nod.sum_x2 / nod.n;
+			if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
 		} else {
 			int size = path.size();
 			DualNode nod = path.get(size - 1);
-			if (background_machine.isTerminal(nod.state)) {
-				nod.isTerminal = true;
-			}
 			for (int i = 0; i < size; ++i) {
 				nod = path.get(i);
 				nod.utility += val;
 				nod.updates += num;
 			}
-			double mean_square = sum_x / n;
+			double mean_square = nod.sum_x / nod.n;
 			mean_square *= mean_square;
-			double avg_square = sum_x2 / n;
-			if (avg_square > mean_square) C_CONST = Math.sqrt(avg_square - mean_square);
-			if (C_CONST < 50) C_CONST = 50;
+			double avg_square = nod.sum_x2 / nod.n;
+			if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
 		}
 	}
 
