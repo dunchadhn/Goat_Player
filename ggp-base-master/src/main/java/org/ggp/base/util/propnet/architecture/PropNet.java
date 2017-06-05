@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -602,16 +603,29 @@ public final class PropNet
 		Set<Component> terminalInputs = terminal.getInputs();
 		if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Or) { //terminal connected by ORs
 			Component terminalOr = terminal.getSingleInput();
-			Set<Component> stepCounter = new HashSet<Component>();
-			for (Component orInput : terminalOr.getInputs()) {
-				boolean isStepCounter = PropNet.stepCounterDetection(orInput, 0, stepCounter, null, prop.getInitProposition());
+			Iterator<Component> iter = terminalOr.getInputs().iterator();
+			while (iter.hasNext()) {
+				Set<Component> stepCounter = new HashSet<Component>();
+				Component orInput = iter.next();
+				boolean isStepCounter = PropNet.stepCounterDetection(orInput, 0, stepCounter, terminalOr, prop.getInitProposition());
 				if (isStepCounter) {
 					Set<Component> counterlessComponents = new HashSet<>(prop.getComponents());
 					counterlessComponents.removeAll(stepCounter);
-					terminalOr.removeInput(orInput);
+					iter.remove();
 					PropNet counterlessProp = new PropNet(prop.getRoles(), counterlessComponents);
 					return Pair.of(counterlessProp, (stepCounter.size()/3+1));
 				}
+			}
+		} else if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Proposition) {//terminal potentially connected by just stepcounter
+			System.out.println("Step counter is only input to terminal");
+			Set<Component> stepCounter = new HashSet<Component>();
+			boolean isStepCounter = PropNet.stepCounterDetection(terminal.getSingleInput(), 0, stepCounter, null, prop.getInitProposition());
+			if (isStepCounter) {
+				Set<Component> counterlessComponents = new HashSet<>(prop.getComponents());
+				counterlessComponents.removeAll(stepCounter);
+				terminal.removeAllInputs();
+				PropNet counterlessProp = new PropNet(prop.getRoles(), counterlessComponents);
+				return Pair.of(counterlessProp, (stepCounter.size()/3+1));
 			}
 		}
 		return null;
@@ -624,7 +638,24 @@ public final class PropNet
 			if (!(c instanceof Proposition) || c.getInputs().size() != 1) {
 				return false;
 			}
-			return PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+			boolean isStepCounter = PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+			if (isStepCounter) {
+				Set<Component> toRemove = new HashSet<>();
+				for (Component output : c.getOutputs()) {
+					if (output.equals(last)) {
+						continue;
+					}
+					toRemove.add(output);
+					output.removeInput(c);
+				}
+				if (toRemove.size() > 0) {
+					System.out.println("We have other outputs coming out of the step counter, this can be dangerous ;)");
+				}
+				for (Component r : toRemove) {
+					c.removeOutput(r);
+				}
+			}
+			return isStepCounter;
 		}
 		if (state == 1) {
 			if (!(c instanceof Transition) || c.getInputs().size() != 1) {
@@ -634,7 +665,7 @@ public final class PropNet
 		}
 		if (state == 2) {
 			if (c.equals(init)) { //omg we found the step counter, probably
-				System.out.println("FOUND STEP COUNTER LOL " + stepCounter.size());
+				System.out.println("FOUND STEP COUNTER " + stepCounter.size());
 				stepCounter.remove(c);
 				c.removeOutput(last);
 				return true;
