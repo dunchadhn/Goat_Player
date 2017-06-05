@@ -118,6 +118,7 @@ public class Dual_Prop extends FactorGamer {
 		System.out.println("Avg Background: " + total_background/loops);
 		System.out.println("Avg Threadpool: " + total_threadpool/play_loops);
 		System.out.println("Number of playouts per thread: " + num_per);
+		bestMove(root);
 		last_depthCharges = 0;
 	}
 
@@ -199,17 +200,17 @@ public class Dual_Prop extends FactorGamer {
 
 	protected void initializeMCTS(OpenBitSet currentState, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		if (no_step) {
+			if (moves.isEmpty()) return;
 			OpenBitSet small_state = machine.getNextState(root.state, moves);
 			if (root == null) System.out.println("NULL ROOT");
 			if (root.state.equals(small_state)) return;
-			for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
-				OpenBitSet nextState = machine.getNextState(root.state, jointMove);
-				if (small_state.equals(nextState)) {
-					root = nodes.get(graph.get(root.childrenStates.get(jointMove)));
-					if (root == null) System.out.println("NOT IN MAP");
-					--step_count;
-					return;
-				}
+			//for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
+				//OpenBitSet nextState = machine.getNextState(root.state, jointMove);
+				//if (small_state.equals(nextState)) {
+			if (root.childrenStates.get(moves) != null) {
+				root = nodes.get(root.childrenStates.get(moves));
+				--step_count;
+				return;
 			}
 			System.out.println("ERROR. Current State not in tree");
 			root = new DualNode(small_state);
@@ -420,6 +421,7 @@ public class Dual_Prop extends FactorGamer {
 
 	protected MoveStruct bestMove(DualNode n) throws MoveDefinitionException {
 		if(no_step) {
+			System.out.println();
 			double maxValue = Double.NEGATIVE_INFINITY;
 			Move maxMove = n.legalMoves[0];
 			int size = n.legalMoves.length;
@@ -428,15 +430,12 @@ public class Dual_Prop extends FactorGamer {
 				double minValue = Double.POSITIVE_INFINITY;
 				double visits = 0;
 				for (List<Move> jointMove : n.legalJointMoves.get(move)) {
-					Integer ind = graph.get(n.childrenStates.get(jointMove));
-					if (ind != null) {
-						DualNode succNode = nodes.get(ind);
-						if (succNode.updates != 0) {
-							double nodeValue = succNode.utility / succNode.updates;
-							if (nodeValue < minValue) {
-								visits = succNode.updates;
-								minValue = nodeValue;
-							}
+					DualNode succNode = nodes.get(n.childrenStates.get(jointMove));
+					if (succNode.updates > 0) {
+						double nodeValue = succNode.utility / succNode.updates;
+						if (nodeValue < minValue) {
+							visits = succNode.updates;
+							minValue = nodeValue;
 						}
 					}
 				}
@@ -528,7 +527,7 @@ public class Dual_Prop extends FactorGamer {
 					double minValue = Double.NEGATIVE_INFINITY;
 					DualNode minChild = null;
 					for (List<Move> jointMove : n.legalJointMoves.get(move)) {
-						DualNode succNode = nodes.get(graph.get(n.childrenStates.get(jointMove)));
+						DualNode succNode = nodes.get(n.childrenStates.get(jointMove));
 						if (succNode.visits == 0) {
 							--steps;
 							++succNode.visits;
@@ -615,14 +614,15 @@ public class Dual_Prop extends FactorGamer {
 					Integer index = graph.get(state);
 					if(index == null) {
 						DualNode child = new DualNode(state);
-						graph.put(state, nodes.size());
 						nodes.add(child);
+						index = nodes.size() - 1;
+						graph.put(state, index);
 					}
 					n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
-					n.childrenStates.put(jointMove, state);
+					n.childrenStates.put(jointMove, index);
 				}
 				--steps;
-				path.add(nodes.get(graph.get(n.childrenStates.get(background_machine.getRandomJointMove(n.state)))));
+				path.add(nodes.get(n.childrenStates.get(background_machine.getRandomJointMove(n.state))));
 			} else if (!background_machine.isTerminal(n.state) && steps > 0) {
 				System.out.println("ERROR. Tried to expand node that was previously expanded");
 			}
@@ -668,15 +668,16 @@ public class Dual_Prop extends FactorGamer {
 					n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 				}
 				for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
-					OpenBitSet state = machine.getNextState(n.state, jointMove);
+					OpenBitSet state = background_machine.getNextState(n.state, jointMove);
 					Integer index = graph.get(state);
 					if(index == null) {
 						DualNode child = new DualNode(state);
-						graph.put(state, nodes.size());
 						nodes.add(child);
+						index = nodes.size() - 1;
+						graph.put(state, index);
 					}
 					n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
-					n.childrenStates.put(jointMove, state);
+					n.childrenStates.put(jointMove, index);
 				}
 			} else if (!machine.isTerminal(n.state)) {
 				System.out.println("ERROR. Tried to expand node that was previously expanded");

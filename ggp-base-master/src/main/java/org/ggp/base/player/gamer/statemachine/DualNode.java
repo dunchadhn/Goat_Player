@@ -11,7 +11,7 @@ public class DualNode {
 		this.state = state;
 		this.isTerminal = false;
 		this.isSolved = false;
-		this.childrenStates = new HashMap<List<Move>, OpenBitSet>();
+		this.childrenStates = new HashMap<List<Move>, Integer>();
 		this.children = new HashMap<List<Move>, DualNode>();
 		this.legalJointMoves = new HashMap<Move, List<List<Move>>>();
 		this.utility = 0;
@@ -21,10 +21,10 @@ public class DualNode {
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
-	public volatile double visits;
-	public volatile double updates;
+	public volatile long visits;
+	public volatile long updates;
 	public volatile Move[] legalMoves;
-	public volatile HashMap<List<Move>, OpenBitSet> childrenStates;
+	public volatile HashMap<List<Move>, Integer> childrenStates;
 	public volatile HashMap<List<Move>, DualNode> children;
 	public volatile HashMap<Move, List<List<Move>>> legalJointMoves;
 	public volatile boolean isTerminal;
