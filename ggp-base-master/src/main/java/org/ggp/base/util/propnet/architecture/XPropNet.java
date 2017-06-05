@@ -703,7 +703,7 @@ public final class XPropNet
 		for ( Component component : compIndexMap.keySet())
 		{
 			int index = compIndexMap.get(component);
-			//sb.append("\t" + component.bitString(comps[index], compInfo[index], connecTable, index) + "\n");
+			sb.append("\t" + component.bitString(comps[index]) + "\n");
 
 		}
 		sb.append("}");

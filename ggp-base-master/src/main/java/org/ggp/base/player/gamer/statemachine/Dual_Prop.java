@@ -135,7 +135,8 @@ public class Dual_Prop extends FactorGamer {
 
 		if (pair != null) {
 			PropNet no_step_p = pair.left;
-			step_count = pair.right;
+			step_count = pair.right - 1;
+			System.out.println("Step_Count: " + step_count);
 			machine = new XStateMachine();
 			machine.initialize(no_step_p);
 			OpenBitSet state = machine.getInitialState();
@@ -317,7 +318,7 @@ public class Dual_Prop extends FactorGamer {
 				path.add(root_thread);
 				//double select_start = System.currentTimeMillis();
 				try {
-					step = Select(root_thread, path, step_count);
+					step = Select(root_thread, path, step);
 				} catch (MoveDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -403,7 +404,7 @@ public class Dual_Prop extends FactorGamer {
 		if (n.isSolved) return n.solvedValue;
 		if (no_step) {
 			OpenBitSet state = n.state;
-			while(count > 0 && !thread_machines[thread_ind].isTerminal(state)) {
+			while(!thread_machines[thread_ind].isTerminal(state) && count > 0) {
 				state = thread_machines[thread_ind].getRandomNextState(state);
 				--count;
 			}
