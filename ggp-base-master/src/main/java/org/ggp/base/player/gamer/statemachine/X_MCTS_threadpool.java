@@ -80,7 +80,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		initialize(timeout);
-		machine.getGoal(getCurrentState(), self_index);
 		/*OpenBitSet state = machine.getInitialState();
 		double time = 0;
 		double runs = 0;
@@ -277,6 +276,7 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				n = path.get(path.size() - 1);
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				// spawn off multiple threads
 				executor.submit(new RunMe(n, path, num_per));

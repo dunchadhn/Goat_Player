@@ -17,6 +17,10 @@ public class XNode {
 		this.visits = 0;
 		this.updates = 0;
 		this.solvedValue = 0;
+		this.sum_x = 0;
+		this.sum_x2 = 0;
+		this.n = 0;
+		this.C_CONST = 50;
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
@@ -28,4 +32,8 @@ public class XNode {
 	public volatile boolean isTerminal;
 	public volatile boolean isSolved;
 	public volatile double solvedValue;
+	public volatile double sum_x;
+	public volatile double sum_x2;
+	public volatile int n;
+	public volatile double C_CONST;
 }

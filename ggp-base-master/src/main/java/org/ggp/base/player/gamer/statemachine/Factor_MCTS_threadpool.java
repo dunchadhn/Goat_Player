@@ -42,7 +42,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
-	private volatile int num_charges, num_per;
+	private volatile int num_per;
 	private Map<OpenBitSet, XNode> graph;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
@@ -52,15 +52,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private volatile int loops = 0;
 	//private volatile double total_backpropagate = 0;
 	private volatile int play_loops = 0;
-	private volatile double sum_x = 0;
-	private volatile double sum_x2 = 0;
-	private volatile int n = 0;
-	private int player_ind = 0;
 	private int num_players = 1;
 	private boolean single = true;
 	private int buffer = 2500;
-
-	private volatile double C_CONST = 50;
 
 	public class Struct {
 		public double v;
@@ -113,7 +107,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			num_per = (int) num;
 			if (num_per < 1) num_per = 1;
 		}
-		System.out.println("C_CONST: " + C_CONST);
 		System.out.println("Depth Charges: " + depthCharges);
 		//System.out.println("Avg Select: " + total_select/loops);
 		//System.out.println("Avg Expand: " + total_expand/loops);
@@ -134,7 +127,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		self_index = roles.indexOf(role);
 		root = new XNode(curr);
 
-		num_charges = 1;//Runtime.getRuntime().availableProcessors();
 		num_per = Runtime.getRuntime().availableProcessors() / num_players;
 		num_threads = (Runtime.getRuntime().availableProcessors()) / num_players;
 		thread_pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
@@ -208,7 +200,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			num_per = (int) num;
 			if (num_per < 1) num_per = 1;
 		}
-		System.out.println("C_CONST: " + C_CONST);
 		System.out.println("Depth Charges: " + depthCharges);
 		System.out.println("Number of Select/Expand Loops " + loops);
 		/*System.out.println("Avg Select: " + total_select/loops);
@@ -288,6 +279,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				n = path.get(path.size() - 1);
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				// spawn off multiple threads
 				executor.submit(new RunMe(n, path, num_per));
@@ -341,9 +333,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 					e.printStackTrace();
 				}
 				val += curr;
-				sum_x += curr;
-				sum_x2 += (curr*curr);
-				++n;
+				node.sum_x += curr;
+				node.sum_x2 += (curr*curr);
+				++node.n;
 				//++play_loops;
 				//total_playout += (System.currentTimeMillis() - start);
 			}
@@ -385,6 +377,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	protected void Backpropogate(double val, List<XNode> path, int num) {
 		int size = path.size();
 		XNode nod = path.get(size - 1);
+		double mean_square = nod.sum_x / nod.n;
+		mean_square *= mean_square;
+		double avg_square = nod.sum_x2 / nod.n;
+		if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
 		if (background_machine.isTerminal(nod.state)) {
 			nod.isTerminal = true;
 		}
@@ -393,11 +389,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			nod.utility += val;
 			nod.updates += num;
 		}
-		double mean_square = sum_x / n;
-		mean_square *= mean_square;
-		double avg_square = sum_x2 / n;
-		if (avg_square > mean_square) C_CONST = Math.sqrt(avg_square - mean_square);
-		if (C_CONST < 50) C_CONST = 50;
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
@@ -406,7 +397,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			if (background_machine.isTerminal(n.state)) return;
 			if (n.children.isEmpty()) return;
 			double maxValue = Double.NEGATIVE_INFINITY;
-			double parentVal = C_CONST * Math.sqrt(Math.log(n.visits));
+			double parentVal = n.C_CONST * Math.sqrt(Math.log(n.visits));
 			XNode maxChild = null;
 			int size = n.legalMoves.length;
 			for(int i = 0; i < size; ++i) {
