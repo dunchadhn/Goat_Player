@@ -5,10 +5,12 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlProposition;
@@ -97,6 +99,10 @@ public final class PropNet
 
 	/** A helper list of all of the roles. */
 	private final List<Role> roles;
+
+	//pairwise distances between components
+	private int[][] dependencyMatrix;
+
 
 	public void addComponent(Component c)
 	{
@@ -548,5 +554,127 @@ public final class PropNet
 		//These are actually unnecessary...
 		//c.removeAllInputs();
 		//c.removeAllOutputs();
+	}
+
+	public static List<PropNet> factor_propnet(PropNet prop, Role r) {
+		return null;
+	}
+
+	private void inputDFS(Component c, int dist, Map<Component, Integer> goalDependency, Set<Component> seen, PropNet prop, String path) {
+		if (seen.contains(c)) {
+			return;
+		}
+		if ((c instanceof Proposition)){
+			Proposition p = (Proposition) c;
+			boolean isInput = prop.getInputPropositions().values().contains(p);
+			if (isInput) {
+				goalDependency.put(p, dist);
+			}
+		}
+		seen.add(c);
+		for (Component in : c.getInputs()) {
+			inputDFS(in, dist+1, goalDependency, seen, prop, path+" "+in);
+		}
+	}
+
+    private void initDependencyMatrix(int length) {
+
+    	dependencyMatrix = new int[length][length];
+
+    	//let's initialize each entry to -1 for some reason
+    	for(int i=0;i<dependencyMatrix.length;++i) {
+    		for(int j=0;j<dependencyMatrix.length;++j) {
+    			dependencyMatrix[i][j] = -1;
+    		}
+    	}
+    }
+
+    private Set<Component> findSet(List<Set<Component>> sets, Component elem) {
+    	for (Set<Component> set : sets) {
+    		if (set.contains(elem)) {
+    			return set;
+    		}
+    	}
+		return null;
+    }
+
+	public static Pair<PropNet, Integer> removeStepCounter(PropNet prop) {
+		Proposition terminal = prop.getTerminalProposition();
+		Set<Component> terminalInputs = terminal.getInputs();
+		if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Or) { //terminal connected by ORs
+			Component terminalOr = terminal.getSingleInput();
+			Iterator<Component> iter = terminalOr.getInputs().iterator();
+			while (iter.hasNext()) {
+				Set<Component> stepCounter = new HashSet<Component>();
+				Component orInput = iter.next();
+				boolean isStepCounter = PropNet.stepCounterDetection(orInput, 0, stepCounter, terminalOr, prop.getInitProposition());
+				if (isStepCounter) {
+					Set<Component> counterlessComponents = new HashSet<>(prop.getComponents());
+					counterlessComponents.removeAll(stepCounter);
+					iter.remove();
+					PropNet counterlessProp = new PropNet(prop.getRoles(), counterlessComponents);
+					return Pair.of(counterlessProp, (stepCounter.size()/3+1));
+				}
+			}
+		} else if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Proposition) {//terminal potentially connected by just stepcounter
+			System.out.println("Step counter is only input to terminal");
+			Set<Component> stepCounter = new HashSet<Component>();
+			boolean isStepCounter = PropNet.stepCounterDetection(terminal.getSingleInput(), 0, stepCounter, null, prop.getInitProposition());
+			if (isStepCounter) {
+				Set<Component> counterlessComponents = new HashSet<>(prop.getComponents());
+				counterlessComponents.removeAll(stepCounter);
+				terminal.removeAllInputs();
+				PropNet counterlessProp = new PropNet(prop.getRoles(), counterlessComponents);
+				return Pair.of(counterlessProp, (stepCounter.size()/3+1));
+			}
+		}
+		return null;
+	}
+
+	private static boolean stepCounterDetection(Component c, int state, Set<Component> stepCounter, Component last, Proposition init) {
+		state = state % 3;
+		stepCounter.add(c);
+		if (state == 0) {
+			if (!(c instanceof Proposition) || c.getInputs().size() != 1) {
+				return false;
+			}
+			boolean isStepCounter = PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+			if (isStepCounter) {
+				Set<Component> toRemove = new HashSet<>();
+				for (Component output : c.getOutputs()) {
+					if (output.equals(last)) {
+						continue;
+					}
+					toRemove.add(output);
+					output.removeInput(c);
+				}
+				if (toRemove.size() > 0) {
+					System.out.println("We have other outputs coming out of the step counter, this can be dangerous ;)");
+				}
+				for (Component r : toRemove) {
+					c.removeOutput(r);
+				}
+			}
+			return isStepCounter;
+		}
+		if (state == 1) {
+			if (!(c instanceof Transition) || c.getInputs().size() != 1) {
+				return false;
+			}
+			return PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+		}
+		if (state == 2) {
+			if (c.equals(init)) { //omg we found the step counter, probably
+				System.out.println("FOUND STEP COUNTER " + stepCounter.size());
+				stepCounter.remove(c);
+				c.removeOutput(last);
+				return true;
+			}
+			if (!(c instanceof Proposition) || c.getInputs().size() != 1) {
+				return false;
+			}
+			return PropNet.stepCounterDetection(c.getSingleInput(), state+1, stepCounter, c, init);
+		}
+		return false;
 	}
 }

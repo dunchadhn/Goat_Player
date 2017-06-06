@@ -6,12 +6,12 @@ import java.util.List;
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.statemachine.Move;
 
-public class XNode {
-	public XNode(OpenBitSet state) {
+public class DualNode {
+	public DualNode(OpenBitSet state) {
 		this.state = state;
-		this.isTerminal = false;
 		this.isSolved = false;
-		this.children = new HashMap<List<Move>, XNode>();
+		this.childrenStates = new HashMap<List<Move>, Integer>();
+		this.children = new HashMap<List<Move>, DualNode>();
 		this.legalJointMoves = new HashMap<Move, List<List<Move>>>();
 		this.utility = 0;
 		this.visits = 0;
@@ -24,16 +24,16 @@ public class XNode {
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
-	public volatile double visits;
-	public volatile double updates;
+	public volatile long visits;
+	public volatile long updates;
 	public volatile Move[] legalMoves;
-	public volatile HashMap<List<Move>, XNode> children;
+	public volatile HashMap<List<Move>, Integer> childrenStates;
+	public volatile HashMap<List<Move>, DualNode> children;
 	public volatile HashMap<Move, List<List<Move>>> legalJointMoves;
-	public volatile boolean isTerminal;
 	public volatile boolean isSolved;
 	public volatile double solvedValue;
 	public volatile double sum_x;
 	public volatile double sum_x2;
-	public volatile int n;
+	public volatile long n;
 	public volatile double C_CONST;
 }

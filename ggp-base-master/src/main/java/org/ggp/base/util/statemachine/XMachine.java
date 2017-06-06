@@ -11,6 +11,8 @@ import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
+import org.ggp.base.util.propnet.architecture.PropNet;
+import org.ggp.base.util.propnet.architecture.XPropNet;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
@@ -485,4 +487,14 @@ public abstract class XMachine
 
 	public abstract MachineState toGdl(OpenBitSet state);
 	public abstract OpenBitSet toBit(MachineState state);
+
+	public void initialize(PropNet prop) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public XPropNet getXPropNet() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
