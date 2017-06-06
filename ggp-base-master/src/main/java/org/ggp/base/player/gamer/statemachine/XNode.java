@@ -21,6 +21,8 @@ public class XNode {
 		this.sum_x2 = 0;
 		this.n = 0;
 		this.C_CONST = 50;
+		this.expanded = false;
+		this.started = false;
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
@@ -31,9 +33,11 @@ public class XNode {
 	public volatile HashMap<Move, List<List<Move>>> legalJointMoves;
 	public volatile boolean isTerminal;
 	public volatile boolean isSolved;
-	public volatile double solvedValue;
+	public volatile int solvedValue;
 	public volatile double sum_x;
 	public volatile double sum_x2;
 	public volatile int n;
 	public volatile double C_CONST;
+	public volatile boolean expanded;
+	public volatile boolean started;
 }

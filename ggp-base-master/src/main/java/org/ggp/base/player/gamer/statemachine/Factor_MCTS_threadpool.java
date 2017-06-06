@@ -38,7 +38,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private CompletionService<Struct> executor;
 	private ThreadPoolExecutor thread_pool;
 	private Thread thread;
-	//private Thread solver;
+	private Thread solver;
 	private ThreadStateMachine[] thread_machines;
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
@@ -55,6 +55,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private int num_players = 1;
 	private boolean single = true;
 	private int buffer = 2500;
+	private boolean game_solved = false;
 
 	public class Struct {
 		public double v;
@@ -136,14 +137,14 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			thread_machines[i] = new ThreadStateMachine(machine,self_index);
 		}
 		background_machine = new ThreadStateMachine(machine,self_index);
-		//solver_machine = new ThreadStateMachine(machine,self_index);
+		solver_machine = new ThreadStateMachine(machine,self_index);
 		Expand(root);
 		thread = new Thread(new runMCTS());
-		//solver = new Thread(new solver());
+		solver = new Thread(new solver());
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
-		//solver.start();
+		solver.start();
 
 		finishBy = timeout - buffer;
 		System.out.println("NumThreads: " + num_threads);
@@ -186,6 +187,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr);
+		if(game_solved) {
+			return bestMove_solved(root);
+		}
 		thread_pool.getQueue().clear();
 		graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
@@ -216,43 +220,14 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	public class solver implements Runnable {
 		@Override
 		public void run() {
-
-		}
-	}
-
-	protected int alphabeta(int player, OpenBitSet state, int alpha, int beta) throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
-		if (solver_machine.isTerminal(state))
-			return solver_machine.getGoal(state, roles.get(self_index));
-
-		List<List<Move>> jointMoves = solver_machine.getLegalJointMoves(state);
-		int score = 100;
-		if (player == self_index) score = 0;
-		int nextPlayer = player + 1;
-
-		if (player == self_index) {
-			for (List<Move> jointMove: jointMoves) {
-				OpenBitSet nextState = solver_machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta);
-				if (result == 100 ||  result >= beta) return 100;
-				if (result > alpha) alpha = result;
-				if (result > score) score = result;
-				if(System.currentTimeMillis() > finishBy) return 0;
-			}
-		} else {
-			for (List<Move> jointMove: jointMoves) {
-				OpenBitSet nextState = solver_machine.getNextState(state, jointMove);
-				int result = alphabeta(nextPlayer % roles.size(), nextState, alpha, beta);
-				if (result == 0 || score <= alpha) return 0;
-				if (result < beta) beta = result;
-				if (result < score) score = result;
-				if(System.currentTimeMillis() > finishBy) return 0;
+			try {
+				Solver();
+			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
-
-		return score;
-
 	}
-
 
 	public class runMCTS implements Runnable {
 		@Override
@@ -356,7 +331,12 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				XNode succNode = n.children.get(jointMove);
-				if (succNode.updates != 0) {
+				if (succNode.isSolved) {
+					if (succNode.solvedValue < minValue) {
+						visits = -1;
+						minValue = succNode.solvedValue;
+					}
+				} else if (succNode.updates != 0) {
 					double nodeValue = succNode.utility / succNode.updates;
 					if (nodeValue < minValue) {
 						visits = succNode.updates;
@@ -381,6 +361,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		mean_square *= mean_square;
 		double avg_square = nod.sum_x2 / nod.n;
 		if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
+		if (nod.C_CONST < 50) nod.C_CONST = 50;
 		if (background_machine.isTerminal(nod.state)) {
 			nod.isTerminal = true;
 		}
@@ -440,7 +421,13 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
-		if (n.children.isEmpty() && !background_machine.isTerminal(n.state)) {
+		if (n.started) {
+			while(true) {
+				if(n.expanded) return;
+			}
+		}
+		n.started = true;
+		if (!n.expanded && !background_machine.isTerminal(n.state)) {
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			if (size < 1) {
@@ -461,14 +448,21 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
+			n.expanded = true;
 			path.add(n.children.get(background_machine.getRandomJointMove(n.state)));
 		} else if (!background_machine.isTerminal(n.state)) {
-			System.out.println("ERROR. Tried to expand node that was previously expanded");
+			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
 	}
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
-		if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
+		if (n.started) {
+			while(true) {
+				if(n.expanded) return;
+			}
+		}
+		n.started = true;
+		if (!n.expanded && !machine.isTerminal(n.state)) {
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -486,8 +480,40 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
+			n.expanded = true;
 		} else if (!machine.isTerminal(n.state)) {
-			System.out.println("ERROR. Tried to expand node that was previously expanded");
+			//System.out.println("ERROR. Tried to expand node that was previously expanded");
+		}
+	}
+
+	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
+		if (n.started) {
+			while(true) {
+				if(n.expanded) return;
+			}
+		}
+		n.started = true;
+		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
+			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
+			int size = moves.size();
+			n.legalMoves = moves.toArray(new Move[size]);
+			for (int i = 0; i < size; ++i) {
+				Move move = n.legalMoves[i];
+				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
+			}
+			for (List<Move> jointMove: solver_machine.getLegalJointMoves(n.state)) {
+				OpenBitSet state = solver_machine.getNextState(n.state, jointMove);
+				XNode child = graph.get(state);
+				if(child == null) {
+					child = new XNode(state);
+					graph.put(state, child);
+				}
+				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
+				n.children.put(jointMove, child);
+			}
+			n.expanded = true;
+		} else if (!solver_machine.isTerminal(n.state)) {
+			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
 	}
 
@@ -532,4 +558,120 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	protected void Solver() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		int alpha = 0;
+		XNode root_thread = root;
+
+		for (Move move : root_thread.legalMoves) {
+
+			int minValue = 100;
+			for (List<Move> jointMove : root_thread.legalJointMoves.get(move)) {
+				XNode child = root_thread.children.get(jointMove);
+				int result;
+				if (child.isSolved) result = child.solvedValue;
+				else {
+					result = alphabeta(child, alpha, minValue);
+					child.solvedValue = result;
+					child.isSolved = true;
+				}
+				if (result <= alpha) {
+					minValue = alpha;
+					break;
+				}
+				if (result == 0) {
+					minValue = 0;
+					break;
+				}
+				if (result < minValue) {
+					minValue = result;
+				}
+			}
+
+			if (minValue == 100) {
+				game_solved = true;
+				System.out.println();
+				System.out.println("GAME SOLVED");
+				System.out.println();
+				return;
+			}
+			if (minValue > alpha) {
+				alpha = minValue;
+			}
+		}
+	}
+
+	public class data {
+		public XNode n;
+		public int alpha;
+		public int min;
+
+		public data(XNode node, int a, int m) {
+			n = node;
+			a = alpha;
+			m = min;
+		}
+	}
+
+	protected int alphabeta(XNode node, int alpha, int beta) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
+		if (machine.isTerminal(node.state)) return solver_machine.getGoal(node.state, self_index);
+
+		Expand(node);
+
+		for (Move move : node.legalMoves) {
+			int minValue = beta;
+
+			for (List<Move> jointMove : node.legalJointMoves.get(move)) {
+				XNode child = node.children.get(jointMove);
+				int result;
+				if (child.isSolved) result = child.solvedValue;
+				else {
+					result = alphabeta(child, alpha, minValue);
+					child.solvedValue = result;
+					child.isSolved = true;
+				}
+				if (result <= alpha) {
+					minValue = alpha;
+					break;
+				}
+				if (result == 0) {
+					minValue = 0;
+					break;
+				}
+				if (result < minValue) minValue = result;
+			}
+			if (minValue >= beta) return beta;
+			if (minValue == 100) return 100;
+			if (minValue > alpha) alpha = minValue;
+		}
+
+		return alpha;
+	}
+
+	protected MoveStruct bestMove_solved(XNode node) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		int maxValue = -1;
+		Move m = node.legalMoves[0];
+
+		for (Move move : node.legalMoves) {
+			int minValue = 101;
+			for (List<Move> jointMove : node.legalJointMoves.get(move)) {
+				XNode child = node.children.get(jointMove);
+				if (child.isSolved) {
+					if (child.solvedValue < minValue) {
+						minValue = child.solvedValue;
+					}
+				}
+			}
+			if (minValue < 101) {
+				if (minValue > maxValue) {
+					maxValue = minValue;
+					m = move;
+				}
+			}
+		}
+		System.out.println(" Max Move: " + m + " Max Value: " + maxValue);
+		return new MoveStruct(m, maxValue);
+
+	}
+
 }

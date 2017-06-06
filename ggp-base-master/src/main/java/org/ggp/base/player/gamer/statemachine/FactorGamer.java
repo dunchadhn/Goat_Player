@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.lucene.util.OpenBitSet;
@@ -16,6 +17,7 @@ import org.ggp.base.player.gamer.exception.AbortingException;
 import org.ggp.base.player.gamer.exception.MetaGamingException;
 import org.ggp.base.player.gamer.exception.MoveSelectionException;
 import org.ggp.base.player.gamer.exception.StoppingException;
+import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlDistinct;
 import org.ggp.base.util.gdl.grammar.GdlFunction;
@@ -217,10 +219,20 @@ public abstract class FactorGamer extends Gamer
         		stateMachine = getInitialStateMachine();
         		stateMachine.initialize(prop_list.get(0));
         		currentState = stateMachine.getInitialState();
-        		//MachineState convertedState = stateMachine.toGdl(currentState);
-        		//getMatch().appendState(convertedState.getContents());
-
-        		stateMachineMetaGame(timeout, currentState,role);
+        		Pair<PropNet,Integer> p = PropNet.removeStepCounter(prop);
+        		if (p != null) {
+        			solverMachine = new XStateMachine();
+        			solverMachine.initialize(p.left);
+        			solverState = solverMachine.getInitialState();
+        			solver = new Solver(solverMachine, p.right);
+        			solve = true;
+        			solver_thread = new Thread(new Run_Solver_Meta(timeout));
+        			solver_thread.start();
+        			stateMachineMetaGame(timeout, currentState,role);
+        			solver_thread.join();
+        		} else {
+        			stateMachineMetaGame(timeout, currentState,role);
+        		}
         	} else {
         		num_threads = prop_list.size();
         		threadpool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
@@ -241,6 +253,26 @@ public abstract class FactorGamer extends Gamer
 		    GamerLogger.logStackTrace("GamePlayer", e);
 			throw new MetaGamingException(e);
 		}
+	}
+
+	public class Run_Solver_Meta implements Runnable {
+		long timeout;
+
+		public Run_Solver_Meta(long time) {
+			timeout = time;
+		}
+
+		@Override
+		public void run() {
+			try {
+				solver.stateMachineMetaGame(timeout, solverState, role);
+			} catch (TransitionDefinitionException | MoveDefinitionException | GoalDefinitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
 	}
 
 	public class RunMeta implements Callable<MoveStruct> {
@@ -283,19 +315,42 @@ public abstract class FactorGamer extends Gamer
 		{
 			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
 			if (single_prop) {
-				List<Move> moves = new ArrayList<Move>();
-				if (lastMoves != null)
-				{
-					for (GdlTerm sentence : lastMoves)
+				if (solve) {
+					FutureTask<MoveStruct> futureTask = new FutureTask<MoveStruct>(new Run_Select_Solver(timeout,lastMoves));
+					solver_thread = new Thread(futureTask);
+					solver_thread.start();
+					List<Move> moves = new ArrayList<Move>();
+					if (lastMoves != null)
 					{
-						moves.add(stateMachine.getMoveFromTerm(sentence));
+						for (GdlTerm sentence : lastMoves)
+						{
+							moves.add(stateMachine.getMoveFromTerm(sentence));
+						}
+
+						currentState = stateMachine.getNextState(currentState, moves);
 					}
+					MoveStruct m1 = stateMachineSelectMove(timeout, currentState, moves);
+					MoveStruct m2 = futureTask.get();
+					if (m1.score >= m2.score) {
+						return m1.move.getContents();
+					} else {
+						System.out.println("USING SOLVER MAX MOVE");
+						System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
+						return m2.move.getContents();
+					}
+				} else {
+					List<Move> moves = new ArrayList<Move>();
+					if (lastMoves != null)
+					{
+						for (GdlTerm sentence : lastMoves)
+						{
+							moves.add(stateMachine.getMoveFromTerm(sentence));
+						}
 
-					currentState = stateMachine.getNextState(currentState, moves);
-					//getMatch().appendState(stateMachine.toGdl(currentState).getContents());
+						currentState = stateMachine.getNextState(currentState, moves);
+					}
+					return stateMachineSelectMove(timeout, currentState, moves).move.getContents();
 				}
-
-				return stateMachineSelectMove(timeout, currentState, moves).move.getContents();
 			} else {
 				for (int i = 0; i < num_threads; ++i) {
         			exec.submit(new RunSelect(lastMoves, timeout, i));
@@ -321,6 +376,31 @@ public abstract class FactorGamer extends Gamer
 		    GamerLogger.logStackTrace("GamePlayer", e);
 			throw new MoveSelectionException(e);
 		}
+	}
+
+	public class Run_Select_Solver implements Callable<MoveStruct> {
+		long timeout;
+		List<GdlTerm> lastMoves;
+		public Run_Select_Solver(long time, List<GdlTerm> m) {
+			timeout = time;
+			lastMoves = m;
+		}
+
+		@Override
+		public MoveStruct call() throws Exception {
+			List<Move> moves = new ArrayList<Move>();
+			if (lastMoves != null)
+			{
+				for (GdlTerm sentence : lastMoves)
+				{
+					moves.add(solverMachine.getMoveFromTerm(sentence));
+				}
+
+				solverState = solverMachine.getNextState(solverState, moves);
+			}
+			return solver.stateMachineSelectMove(timeout, solverState, moves);
+		}
+
 	}
 
 	public class RunSelect implements Callable<MoveStruct> {
@@ -433,7 +513,10 @@ public abstract class FactorGamer extends Gamer
     // Internal state about the current state of the state machine.
     private Role role;
     private OpenBitSet currentState;
+    private OpenBitSet solverState;
     private XStateMachine stateMachine;
+    private XStateMachine solverMachine;
+    private Solver solver;
     private XStateMachine[] machines;
     private Factor_MCTS_threadpool[] players;
     private CompletionService<MoveStruct> exec;
@@ -441,6 +524,8 @@ public abstract class FactorGamer extends Gamer
 	private OpenBitSet[] currentStates;
 	private boolean single_prop = false;
 	private int num_threads;
+	private Thread solver_thread;
+	private boolean solve = false;
 
 	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr) throws TransitionDefinitionException,
 			MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
@@ -460,4 +545,5 @@ public abstract class FactorGamer extends Gamer
 		// TODO Auto-generated method stub
 		return null;
 	}
+
 }

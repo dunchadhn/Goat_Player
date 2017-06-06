@@ -2,6 +2,7 @@ package org.ggp.base.player.gamer.statemachine;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
@@ -13,34 +14,41 @@ import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
-public class Solver extends XStateMachineGamer {
+public class Solver extends FactorGamer {
 
 	private XStateMachine machine;
 	private int self_index;
 	private List<Role> roles;
 	private long finishBy;
+	private int step_count;
+	private OpenBitSet currentState;
 	private HashMap<OpenBitSet, Integer> valueMap;
 	@Override
 	public XStateMachine getInitialStateMachine() {
 		return new XStateMachine();
 	}
 
+	public Solver(XStateMachine mac, int total_steps) {
+		machine = mac;
+		step_count = total_steps - 1;
+	}
+
 	@Override
-	public void stateMachineMetaGame(long timeout)
+	public void stateMachineMetaGame(long timeout, OpenBitSet curr, Role role)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
-		finishBy = timeout - 2500;
-		machine = getStateMachine();
-		self_index = machine.getRoles().indexOf(getRole());
+		currentState = curr;
+		self_index = machine.getRoles().indexOf(role);
 		roles = machine.getRoles();
-
+		finishBy = timeout - 3000;
+		bestmove(curr);
 	}
 
 
 
-	protected Move bestmove() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected MoveStruct bestmove(OpenBitSet curr) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		valueMap = new HashMap<OpenBitSet, Integer>(); //need to recreate the map?
-		OpenBitSet state = getCurrentState();
+		OpenBitSet state = curr;
 		int alpha = 0;
 		List<Move> legals = machine.getLegalMoves(state, self_index);
 		Move bestMove = legals.get(0);
@@ -49,12 +57,12 @@ public class Solver extends XStateMachineGamer {
 
 			int minValue = 100;
 			for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
-				if (System.currentTimeMillis() > finishBy) return bestMove;
+				if (System.currentTimeMillis() > finishBy) return new MoveStruct(bestMove,alpha);
 				OpenBitSet nextState = machine.getNextState(state, jointMove);
 				int result;
 				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
 				else {
-					result = alphabeta(nextState, alpha, minValue);
+					result = alphabeta(nextState, alpha, minValue, step_count - 1);
 					valueMap.put(nextState, result);
 				}
 				if (result <= alpha) {
@@ -70,9 +78,11 @@ public class Solver extends XStateMachineGamer {
 				}
 			}
 
-			System.out.println(move + " " + minValue);
 			if (minValue == 100) {
-				return move;
+				System.out.println();
+				System.out.println("OUTSIDE SOLVER FOUND 100");
+				System.out.println();
+				return new MoveStruct(move, 100);
 			}
 			if (minValue > alpha) {
 				alpha = minValue;
@@ -80,11 +90,13 @@ public class Solver extends XStateMachineGamer {
 			}
 		}
 
-		return bestMove;
+		return new MoveStruct(bestMove,alpha);
 
 	}
-	protected int alphabeta(OpenBitSet state, int alpha, int beta) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
-		if (machine.isTerminal(state)) return machine.getGoal(state, self_index);
+
+
+	protected int alphabeta(OpenBitSet state, int alpha, int beta, int steps) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
+		if (machine.isTerminal(state) || steps == 0) return machine.getGoal(state, self_index);
 
 		List<Move> legals = machine.getLegalMoves(state, self_index);
 
@@ -97,7 +109,7 @@ public class Solver extends XStateMachineGamer {
 				int result;
 				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
 				else {
-					result = alphabeta(nextState, alpha, minValue);
+					result = alphabeta(nextState, alpha, minValue, steps - 1);
 					valueMap.put(nextState, result);
 				}
 				if (result <= alpha) {
@@ -145,11 +157,15 @@ public class Solver extends XStateMachineGamer {
 
 
 	@Override
-	public Move stateMachineSelectMove(long timeout)
+	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr, List<Move> moves)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
-		finishBy = timeout - 2500;
-		return bestmove();
+		if (!curr.equals(currentState)) {
+			--step_count;
+			currentState = curr;
+		}
+		finishBy = timeout - 3000;
+		return bestmove(curr);
 	}
 
 	@Override
@@ -174,6 +190,20 @@ public class Solver extends XStateMachineGamer {
 	public String getName() {
 		// TODO Auto-generated method stub
 		return "Solver";
+	}
+
+	@Override
+	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException,
+			GoalDefinitionException, InterruptedException, ExecutionException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void stateMachineMetaGame(long timeout) throws TransitionDefinitionException, MoveDefinitionException,
+			GoalDefinitionException, InterruptedException, ExecutionException {
+		// TODO Auto-generated method stub
+
 	}
 
 }
