@@ -27,7 +27,7 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 
-public class Dual_Prop extends FactorGamer {
+public class Dual_Prop extends DualPropGamer {
 	protected Player p;
 	private XStateMachine machine;
 	private List<Role> roles;
@@ -205,7 +205,6 @@ public class Dual_Prop extends FactorGamer {
 		loops = 0;
 		//total_backpropagate = 0;
 		play_loops = 0;
-		System.out.println("Background Depth Charges: " + last_depthCharges);
 		finishBy = timeout - buffer;
 		return MCTS(currentState, moves);
 	}
@@ -248,6 +247,7 @@ public class Dual_Prop extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet currentState, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(currentState, moves);
+		System.out.println("Background Depth Charges: " + last_depthCharges);
 		thread_pool.getQueue().clear();
 		orig_graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
@@ -320,10 +320,19 @@ public class Dual_Prop extends FactorGamer {
 	public class runMCTS implements Runnable {
 		@Override
 		public void run() {
-			DualNode root_thread;
+			DualNode root_thread = null;
 			int step;
 			while (true) {
 				double start = System.currentTimeMillis();
+				if(no_step) {
+					if (!root.equals(root_thread)) {
+						System.out.println("Started clear");
+						for(DualNode n: nodes) {
+							n.clear();
+						}
+						System.out.println("Finished clear");
+					}
+				}
 				root_thread = root;
 				step = step_count;
 				path = new ArrayList<DualNode>();
@@ -604,7 +613,7 @@ public class Dual_Prop extends FactorGamer {
 
 	protected int Expand(DualNode n, List<DualNode> path, int steps) throws MoveDefinitionException, TransitionDefinitionException {
 		if(no_step) {
-			if (n.children.isEmpty() && !background_machine.isTerminal(n.state) && steps > 0) {
+			if (n.childrenStates.isEmpty() && !background_machine.isTerminal(n.state) && steps > 0) {
 				List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 				int size = moves.size();
 				n.legalMoves = moves.toArray(new Move[size]);
@@ -627,7 +636,7 @@ public class Dual_Prop extends FactorGamer {
 				--steps;
 				path.add(nodes.get(n.childrenStates.get(background_machine.getRandomJointMove(n.state))));
 			} else if (!background_machine.isTerminal(n.state) && steps > 0) {
-				System.out.println("ERROR. Tried to expand node that was previously expanded");
+				//System.out.println("ERROR. Tried to expand node that was previously expanded");
 			}
 			return steps;
 		} else {
@@ -662,7 +671,7 @@ public class Dual_Prop extends FactorGamer {
 
 	protected void Expand(DualNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if(no_step) {
-			if (n.children.isEmpty() && !machine.isTerminal(n.state)) {
+			if (n.childrenStates.isEmpty() && !machine.isTerminal(n.state)) {
 				List<Move> moves = machine.getLegalMoves(n.state, self_index);
 				int size = moves.size();
 				n.legalMoves = moves.toArray(new Move[size]);
@@ -683,7 +692,7 @@ public class Dual_Prop extends FactorGamer {
 					n.childrenStates.put(jointMove, index);
 				}
 			} else if (!machine.isTerminal(n.state)) {
-				System.out.println("ERROR. Tried to expand node that was previously expanded");
+				//System.out.println("ERROR. Tried to expand node that was previously expanded");
 			}
 		} else {
 			if (n.children.isEmpty() && !machine.isTerminal(n.state)) {

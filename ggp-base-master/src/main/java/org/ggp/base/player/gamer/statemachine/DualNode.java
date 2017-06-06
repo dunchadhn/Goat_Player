@@ -22,6 +22,13 @@ public class DualNode {
 		this.n = 0;
 		this.C_CONST = 50;
 	}
+
+	public void clear() {
+		visits = 0;
+		utility = 0;
+		updates = 0;
+	}
+
 	public volatile OpenBitSet state;
 	public volatile double utility;
 	public volatile long visits;

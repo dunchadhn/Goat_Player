@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.util.OpenBitSet;
+import org.ggp.base.player.gamer.statemachine.DualNode;
 import org.ggp.base.player.gamer.statemachine.XNode;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
@@ -606,6 +607,24 @@ public class ThreadStateMachine extends XMachine {
 		return getCurrGoal(state, self_index);
 	}
 
+	public double Playout(DualNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		if (n.isSolved) return n.solvedValue;
+		OpenBitSet state = n.state;
+		while(!isTerminal(state)) {
+			state = getRandomNextState(state);
+		}
+		return getCurrGoal(state, self_index);
+	}
+
+	public double Playout_No_Step(DualNode n, int count) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		if (n.isSolved) return n.solvedValue;
+			OpenBitSet state = n.state;
+			while(!isTerminal(state) && count > 0) {
+				state = getRandomNextState(state);
+				--count;
+			}
+			return getCurrGoal(state, self_index);
+	}
 
 	@Override
 	public void initialize(List<Gdl> description) {
