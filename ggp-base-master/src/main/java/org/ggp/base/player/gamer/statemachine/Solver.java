@@ -79,7 +79,7 @@ public class Solver extends FactorGamer {
 
 			if (minValue == 100) {
 				System.out.println();
-				System.out.println("OUTSIDE SOLVER FOUND 100");
+				System.out.println("OUTSIDE SOLVER SOLVED");
 				System.out.println();
 				return new MoveStruct(move, 100);
 			}
@@ -88,7 +88,9 @@ public class Solver extends FactorGamer {
 				bestMove = move;
 			}
 		}
-
+		System.out.println();
+		System.out.println("OUTSIDE SOLVER SOLVED, NO 100");
+		System.out.println();
 		return new MoveStruct(bestMove,alpha);
 
 	}
@@ -156,7 +158,7 @@ public class Solver extends FactorGamer {
 		stack.push(first);
 		while(!stack.isEmpty()) {
 			data d = stack.pop();
-			if (machine.isTerminal(d.state) || steps == 0) {
+			if (machine.isTerminal(d.state) || d.steps == 0) {
 				int val = machine.getGoal(d.state, self_index);
 				valueMap.put(d.state, val);
 				d.value = val;

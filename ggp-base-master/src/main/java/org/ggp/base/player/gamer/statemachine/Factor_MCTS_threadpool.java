@@ -604,8 +604,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 		}
 		System.out.println();
-		System.out.println("GAME UNSOLVED");
+		System.out.println("GAME SOLVED, NO 100");
 		System.out.println();
+		game_solved = true;
 	}
 
 	public class data {
