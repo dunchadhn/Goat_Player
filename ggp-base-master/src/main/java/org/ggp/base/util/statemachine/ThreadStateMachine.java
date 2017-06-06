@@ -598,7 +598,7 @@ public class ThreadStateMachine extends XMachine {
     }
 
 	public double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-
+		if (n.isSolved) return n.solvedValue;
 		OpenBitSet state = n.state;
 		while(!isTerminal(state)) {
 			state = getRandomNextState(state);

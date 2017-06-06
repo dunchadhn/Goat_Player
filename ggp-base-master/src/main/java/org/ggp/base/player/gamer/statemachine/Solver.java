@@ -1,9 +1,12 @@
 package org.ggp.base.player.gamer.statemachine;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.player.gamer.exception.GamePreviewException;
@@ -23,6 +26,11 @@ public class Solver extends FactorGamer {
 	private int step_count;
 	private OpenBitSet currentState;
 	private HashMap<OpenBitSet, Integer> valueMap;
+	private HashSet<OpenBitSet> path;
+	private Thread helper;
+	private FutureTask<MoveStruct> ft;
+	private volatile boolean solved = false;
+	private long finishby;
 	@Override
 	public XStateMachine getInitialStateMachine() {
 		return new XStateMachine();
@@ -34,20 +42,41 @@ public class Solver extends FactorGamer {
 	}
 
 	@Override
-	public boolean stateMachineMetaGame1(long timeout, OpenBitSet curr, Role role)
+	public Boolean stateMachineMetaGame1(long timeout, OpenBitSet curr, Role role)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException {
+			GoalDefinitionException, InterruptedException {
 		currentState = curr;
 		self_index = machine.getRoles().indexOf(role);
 		roles = machine.getRoles();
-		bestmove(curr);
-		return true;
+		ft = new FutureTask<MoveStruct>(new Solver_Helper(curr));
+		helper = new Thread(ft);
+		valueMap = new HashMap<OpenBitSet, Integer>();
+		helper.start();
+		finishby = timeout - 3000;
+		Thread.sleep(finishby - System.currentTimeMillis());
+		return solved;
+	}
+
+	public class Solver_Helper implements Callable<MoveStruct> {
+		private OpenBitSet state;
+
+		public Solver_Helper(OpenBitSet curr) {
+			state = curr;
+		}
+
+		@Override
+		public MoveStruct call() throws Exception {
+			// TODO Auto-generated method stub
+			return bestmove(state);
+		}
+
 	}
 
 
 
-	protected MoveStruct bestmove(OpenBitSet curr) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		valueMap = new HashMap<OpenBitSet, Integer>(); //need to recreate the map?
+	protected MoveStruct bestmove(OpenBitSet curr) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ThreadDeath {
+		//path = new HashSet<OpenBitSet>();
+		//path.add(curr);
 		OpenBitSet state = curr;
 		int alpha = 0;
 		List<Move> legals = machine.getLegalMoves(state, self_index);
@@ -61,7 +90,8 @@ public class Solver extends FactorGamer {
 				int result;
 				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
 				else {
-					result = iterative(nextState, alpha, minValue, step_count - 1);
+					//if (path.contains(nextState)) continue;
+					result = alphabeta(nextState, alpha, minValue, step_count - 1);
 					valueMap.put(nextState, result);
 				}
 				if (result <= alpha) {
@@ -81,6 +111,7 @@ public class Solver extends FactorGamer {
 				System.out.println();
 				System.out.println("OUTSIDE SOLVER SOLVED");
 				System.out.println();
+				solved = true;
 				return new MoveStruct(move, 100);
 			}
 			if (minValue > alpha) {
@@ -91,12 +122,13 @@ public class Solver extends FactorGamer {
 		System.out.println();
 		System.out.println("OUTSIDE SOLVER SOLVED, NO 100");
 		System.out.println();
+		solved = true;
 		return new MoveStruct(bestMove,alpha);
 
 	}
 
 
-	protected int alphabeta(OpenBitSet state, int alpha, int beta, int steps) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
+	protected int alphabeta(OpenBitSet state, int alpha, int beta, int steps) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException, InterruptedException, ThreadDeath {
 		if (machine.isTerminal(state) || steps == 0) return machine.getGoal(state, self_index);
 
 		List<Move> legals = machine.getLegalMoves(state, self_index);
@@ -109,7 +141,7 @@ public class Solver extends FactorGamer {
 				int result;
 				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
 				else {
-					result = iterative(nextState, alpha, minValue, steps - 1);
+					result = alphabeta(nextState, alpha, minValue, steps - 1);
 					valueMap.put(nextState, result);
 				}
 				if (result <= alpha) {
@@ -152,12 +184,14 @@ public class Solver extends FactorGamer {
 		}
 	}
 
-	protected int iterative(OpenBitSet state, int alpha, int beta, int steps) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected int iterative(OpenBitSet state, int alpha, int beta, int steps) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ThreadDeath {
 		Stack<data> stack = new Stack<data>();
 		data first = new data(state, alpha, beta, steps);
 		stack.push(first);
+		//path.add(state);
 		while(!stack.isEmpty()) {
 			data d = stack.pop();
+			//path.remove(d.state);
 			if (machine.isTerminal(d.state) || d.steps == 0) {
 				int val = machine.getGoal(d.state, self_index);
 				valueMap.put(d.state, val);
@@ -232,7 +266,10 @@ public class Solver extends FactorGamer {
 				}
 				OpenBitSet nextState = machine.getNextState(d.state, d.jointMoves.get(d.legals.get(d.moves_ind)).get(d.joint_ind));
 				stack.push(d);
+				//path.add(d.state);
+				//if (path.contains(nextState)) continue;
 				stack.push(new data(nextState,d.alpha,d.min,d.steps - 1));
+				//path.add(nextState);
 			}
 		}
 		return first.value;
@@ -264,23 +301,46 @@ public class Solver extends FactorGamer {
 
 
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr, List<Move> moves)
 			throws TransitionDefinitionException, MoveDefinitionException,
-			GoalDefinitionException {
-		return bestmove(curr);
+			GoalDefinitionException, InterruptedException, ExecutionException, ThreadDeath {
+		if(!currentState.equals(curr)) {
+			--step_count;
+			currentState = curr;
+		}
+		if (solved) {
+			MoveStruct m = bestmove(curr);
+			m.solved = true;
+			return m;
+		}
+		helper.stop();
+		ft= new FutureTask<MoveStruct>(new Solver_Helper(curr));
+		helper = new Thread(ft);
+		valueMap.clear();
+		helper.start();
+		finishby = timeout - 3000;
+		Thread.sleep(finishby - System.currentTimeMillis());
+		if (ft.isDone()) {
+			MoveStruct m = ft.get();
+			m.solved = true;
+			return m;
+		} else {
+			return new MoveStruct(moves.get(0), -100);
+		}
 	}
 
 	@Override
 	public void stateMachineStop() {
 		// TODO Auto-generated method stub
-
+		helper.stop();
 	}
 
 	@Override
 	public void stateMachineAbort() {
 		// TODO Auto-generated method stub
-
+		helper.stop();
 	}
 
 	@Override
