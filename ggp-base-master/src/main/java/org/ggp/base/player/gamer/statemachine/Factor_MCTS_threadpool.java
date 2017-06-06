@@ -300,6 +300,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			double curr = 0;
 			int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
 			ThreadStateMachine mac = thread_machines[thread_ind];
+			if (node.isSolved) {
+				++play_loops;
+				total_threadpool += (System.currentTimeMillis() - start);
+				return new Struct(node.solvedValue, p, num);
+			}
 			for (int i = 0; i < num; ++i) {
 				//double start = System.currentTimeMillis();
 				try {
@@ -316,8 +321,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				//total_playout += (System.currentTimeMillis() - start);
 			}
 			++play_loops;
-			total_threadpool += (System.currentTimeMillis() - start);
 			Struct s = new Struct(val, p, num);
+			total_threadpool += (System.currentTimeMillis() - start);
 			return s;
 	    }
 	}
@@ -422,12 +427,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
-		if (n.started) {
+		if(n.started.getAndSet(true)) {
 			while(true) {
-				if(n.expanded) return;
+				if (n.expanded) return;
 			}
 		}
-		n.started = true;
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -457,12 +461,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
-		if (n.started) {
+		if(n.started.getAndSet(true)) {
 			while(true) {
-				if(n.expanded) return;
+				if (n.expanded) return;
 			}
 		}
-		n.started = true;
 		if (!n.expanded && !machine.isTerminal(n.state)) {
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -488,12 +491,12 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
-		if (n.started) {
+		if(n.started.getAndSet(true)) {
 			while(true) {
-				if(n.expanded) return;
+				if (n.expanded) return;
 			}
 		}
-		n.started = true;
+
 		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -590,10 +593,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 
 			if (minValue == 100) {
-				game_solved = true;
 				System.out.println();
 				System.out.println("GAME SOLVED");
 				System.out.println();
+				game_solved = true;
 				return;
 			}
 			if (minValue > alpha) {
@@ -610,10 +613,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		public int alpha;
 		public int beta;
 		public int min;
-		public Stack<XNode> children = null;
-		public int value;
-		public XNode child = null;
-		public Stack<Move> moves = null;
+		public int joint_ind = 0;
+		public int joint_max = -1;
+		public int value = 0;
+		public int moves_ind = 0;
+		public int moves_max = -1;
 
 		public data(XNode node, int a, int m) {
 			n = node;
@@ -628,7 +632,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		stack.push(first);
 		while(!stack.isEmpty()) {
 			data d = stack.pop();
-			if (d.n.isSolved) continue;
 			if (solver_machine.isTerminal(d.n.state)) {
 				int val = solver_machine.getGoal(d.n.state, self_index);
 				d.n.solvedValue = val;
@@ -637,34 +640,28 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				continue;
 			}
 			if (!d.n.isSolved) {
-				if (d.moves == null) {
+				if (d.moves_max < 0) {
 					Expand(d.n);
-					Stack<Move> moves = new Stack<Move>();
-					for (Move move : d.n.legalMoves) {
-						moves.push(move);
-					}
-					d.moves = moves;
-					Move move = d.moves.pop();
+					d.moves_max = d.n.legalMoves.length - 1;
+					Move move = d.n.legalMoves[0];
 					d.min = d.beta;
-					Stack<XNode> children = new Stack<XNode>();
-					for (List<Move> jointMove : d.n.legalJointMoves.get(move)) {
-						XNode child = d.n.children.get(jointMove);
-						children.push(child);
-					}
-					d.children = children;
-				}
-				if (d.child != null) {
-					if (d.child.solvedValue <= d.alpha) {
+					d.joint_max = d.n.legalJointMoves.get(move).size();
+				} else if (d.joint_max > -1) {
+					XNode child = d.n.children.get(d.n.legalJointMoves.get(d.n.legalMoves[d.moves_ind]).get(d.joint_ind));
+					if (child.solvedValue <= d.alpha) {
 						d.min = d.alpha;
-						d.children.clear();
-					} else if (d.child.solvedValue == 0) {
+						d.joint_ind = d.joint_max;
+					} else if (child.solvedValue == 0) {
 						d.min = 0;
-						d.children.clear();
-					} else if (d.child.solvedValue < d.min) {
-						d.min = d.child.solvedValue;
+						d.joint_ind = d.joint_max;
+					} else if (child.solvedValue < d.min) {
+						d.min = child.solvedValue;
+						++d.joint_ind;
+					} else {
+						++d.joint_ind;
 					}
 				}
-				if (d.moves.isEmpty() && d.children.isEmpty()) {
+				if ((d.moves_ind == d.moves_max) && (d.joint_ind == d.joint_max)) {
 					if (d.min >= d.beta) {
 						d.n.solvedValue = d.beta;
 						d.n.isSolved = true;
@@ -685,7 +682,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 					d.value = d.alpha;
 					continue;
 				}
-				if (d.children.isEmpty()) {
+				if (d.joint_ind == d.joint_max) {
 					if (d.min >= d.beta) {
 						d.n.solvedValue = d.beta;
 						d.n.isSolved = true;
@@ -701,28 +698,18 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 					if (d.min > d.alpha) {
 						d.alpha = d.min;
 					}
-					if (d.moves.isEmpty()) {
-						d.n.solvedValue = d.alpha;
-						d.n.isSolved = true;
-						d.value = d.alpha;
-						continue;
-					}
-					Move move = d.moves.pop();
+					++d.moves_ind;
 					d.min = d.beta;
-					Stack<XNode> children = new Stack<XNode>();
-					for (List<Move> jointMove : d.n.legalJointMoves.get(move)) {
-						XNode child = d.n.children.get(jointMove);
-						children.push(child);
-					}
-					d.children = children;
+					Move move = d.n.legalMoves[d.moves_ind];
+					d.joint_max = d.n.legalJointMoves.get(move).size();
+					d.joint_ind = 0;
 				}
-				XNode child = d.children.pop();
-				d.child = child;
+				XNode child = d.n.children.get(d.n.legalJointMoves.get(d.n.legalMoves[d.moves_ind]).get(d.joint_ind));
 				stack.push(d);
 				stack.push(new data(child,d.alpha,d.min));
 			}
 		}
-		return first.alpha;
+		return first.value;
 	}
 
 	protected int alphabeta(XNode node, int alpha, int beta) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
@@ -768,10 +755,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			int minValue = 101;
 			for (List<Move> jointMove : node.legalJointMoves.get(move)) {
 				XNode child = node.children.get(jointMove);
-				if (child.isSolved) {
-					if (child.solvedValue < minValue) {
-						minValue = child.solvedValue;
-					}
+				if (child.solvedValue < minValue) {
+					minValue = child.solvedValue;
 				}
 			}
 			if (minValue < 101) {

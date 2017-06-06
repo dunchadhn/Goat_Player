@@ -2,6 +2,7 @@ package org.ggp.base.player.gamer.statemachine;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.statemachine.Move;
@@ -22,7 +23,7 @@ public class XNode {
 		this.n = 0;
 		this.C_CONST = 50;
 		this.expanded = false;
-		this.started = false;
+		this.started = new AtomicBoolean(false);
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
@@ -39,5 +40,5 @@ public class XNode {
 	public volatile int n;
 	public volatile double C_CONST;
 	public volatile boolean expanded;
-	public volatile boolean started;
+	public volatile AtomicBoolean started;
 }

@@ -2,6 +2,7 @@ package org.ggp.base.player.gamer.statemachine;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.lucene.util.OpenBitSet;
@@ -19,7 +20,6 @@ public class Solver extends FactorGamer {
 	private XStateMachine machine;
 	private int self_index;
 	private List<Role> roles;
-	private long finishBy;
 	private int step_count;
 	private OpenBitSet currentState;
 	private HashMap<OpenBitSet, Integer> valueMap;
@@ -34,14 +34,14 @@ public class Solver extends FactorGamer {
 	}
 
 	@Override
-	public void stateMachineMetaGame(long timeout, OpenBitSet curr, Role role)
+	public boolean stateMachineMetaGame1(long timeout, OpenBitSet curr, Role role)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
 		currentState = curr;
 		self_index = machine.getRoles().indexOf(role);
 		roles = machine.getRoles();
-		finishBy = timeout - 3000;
 		bestmove(curr);
+		return true;
 	}
 
 
@@ -57,12 +57,11 @@ public class Solver extends FactorGamer {
 
 			int minValue = 100;
 			for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
-				if (System.currentTimeMillis() > finishBy) return new MoveStruct(bestMove,alpha);
 				OpenBitSet nextState = machine.getNextState(state, jointMove);
 				int result;
 				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
 				else {
-					result = alphabeta(nextState, alpha, minValue, step_count - 1);
+					result = iterative(nextState, alpha, minValue, step_count - 1);
 					valueMap.put(nextState, result);
 				}
 				if (result <= alpha) {
@@ -104,12 +103,11 @@ public class Solver extends FactorGamer {
 			int minValue = beta;
 
 			for (List<Move> jointMove : machine.getLegalJointMoves(state, self_index, move)) {
-				if (System.currentTimeMillis() > finishBy) return alpha;
 				OpenBitSet nextState = machine.getNextState(state, jointMove);
 				int result;
 				if (valueMap.containsKey(nextState)) result = valueMap.get(nextState);
 				else {
-					result = alphabeta(nextState, alpha, minValue, steps - 1);
+					result = iterative(nextState, alpha, minValue, steps - 1);
 					valueMap.put(nextState, result);
 				}
 				if (result <= alpha) {
@@ -128,6 +126,114 @@ public class Solver extends FactorGamer {
 		}
 
 		return alpha;
+	}
+
+	public class data {
+		public OpenBitSet state;
+		public int alpha;
+		public int beta;
+		public int min;
+		public int joint_ind = 0;
+		public int joint_max = -1;
+		public int value = 0;
+		public int moves_ind = 0;
+		public int moves_max = -1;
+		public int steps;
+		public List<Move> legals;
+		public HashMap<Move, List<List<Move>>> jointMoves;
+
+		public data(OpenBitSet s, int a, int m, int st) {
+			state = s;
+			alpha = a;
+			beta = m;
+			steps = st;
+		}
+	}
+
+	protected int iterative(OpenBitSet state, int alpha, int beta, int steps) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		Stack<data> stack = new Stack<data>();
+		data first = new data(state, alpha, beta, steps);
+		stack.push(first);
+		while(!stack.isEmpty()) {
+			data d = stack.pop();
+			if (machine.isTerminal(d.state) || steps == 0) {
+				int val = machine.getGoal(d.state, self_index);
+				valueMap.put(d.state, val);
+				d.value = val;
+				continue;
+			}
+			if (!valueMap.containsKey(d.state)) {
+				if (d.moves_max < 0) {
+					d.legals = machine.getLegalMoves(d.state, self_index);
+					d.moves_max = d.legals.size() - 1;
+					Move move = d.legals.get(0);
+					d.min = d.beta;
+					d.jointMoves = new HashMap<Move, List<List<Move>>>();
+					for (Move m: d.legals) {
+						d.jointMoves.put(m,machine.getLegalJointMoves(d.state, self_index, move));
+					}
+
+					d.joint_max = d.jointMoves.get(move).size();
+				} else if (d.joint_max > -1) {
+					OpenBitSet nextState = machine.getNextState(d.state, d.jointMoves.get(d.legals.get(d.moves_ind)).get(d.joint_ind));
+					int val = valueMap.get(nextState);
+					if (val <= d.alpha) {
+						d.min = d.alpha;
+						d.joint_ind = d.joint_max;
+					} else if (val == 0) {
+						d.min = 0;
+						d.joint_ind = d.joint_max;
+					} else if (val < d.min) {
+						d.min = val;
+						++d.joint_ind;
+					} else {
+						++d.joint_ind;
+					}
+				}
+				if ((d.moves_ind == d.moves_max) && (d.joint_ind == d.joint_max)) {
+					if (d.min >= d.beta) {
+						valueMap.put(d.state, d.beta);
+						d.value = d.beta;
+						continue;
+					}
+					if (d.min == 100) {
+						valueMap.put(d.state, 100);
+						d.value = 100;
+						continue;
+					}
+					if (d.min > d.alpha) {
+						d.alpha = d.min;
+					}
+					valueMap.put(d.state, d.alpha);
+					d.value = d.alpha;
+					continue;
+				}
+				if (d.joint_ind == d.joint_max) {
+					if (d.min >= d.beta) {
+						valueMap.put(d.state, d.beta);
+						d.value = d.beta;
+						continue;
+					}
+					if (d.min == 100) {
+						valueMap.put(d.state, 100);
+						d.value = 100;
+						continue;
+					}
+					if (d.min > d.alpha) {
+						d.alpha = d.min;
+					}
+					++d.moves_ind;
+					Move move = d.legals.get(d.moves_ind);
+					d.min = d.beta;
+					d.joint_max = d.jointMoves.get(move).size();
+					d.joint_ind = 0;
+				}
+				OpenBitSet nextState = machine.getNextState(d.state, d.jointMoves.get(d.legals.get(d.moves_ind)).get(d.joint_ind));
+				stack.push(d);
+				stack.push(new data(nextState,d.alpha,d.min,d.steps - 1));
+			}
+		}
+		return first.value;
 	}
 
 
@@ -160,11 +266,6 @@ public class Solver extends FactorGamer {
 	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr, List<Move> moves)
 			throws TransitionDefinitionException, MoveDefinitionException,
 			GoalDefinitionException {
-		if (!curr.equals(currentState)) {
-			--step_count;
-			currentState = curr;
-		}
-		finishBy = timeout - 3000;
 		return bestmove(curr);
 	}
 

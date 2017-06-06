@@ -226,10 +226,13 @@ public abstract class FactorGamer extends Gamer
         			solverState = solverMachine.getInitialState();
         			solver = new Solver(solverMachine, p.right);
         			solve = true;
-        			solver_thread = new Thread(new Run_Solver_Meta(timeout));
-        			solver_thread.start();
+        			task = new FutureTask<Boolean>(new Run_Solver_Meta(timeout));
+					solver_thread = new Thread(task);
+					solver_thread.start();
         			stateMachineMetaGame(timeout, currentState,role);
-        			solver_thread.join();
+        			if(task.isDone()) {
+        				game_solved = task.get();
+        			}
         		} else {
         			stateMachineMetaGame(timeout, currentState,role);
         		}
@@ -255,7 +258,7 @@ public abstract class FactorGamer extends Gamer
 		}
 	}
 
-	public class Run_Solver_Meta implements Runnable {
+	public class Run_Solver_Meta implements Callable<Boolean> {
 		long timeout;
 
 		public Run_Solver_Meta(long time) {
@@ -263,14 +266,14 @@ public abstract class FactorGamer extends Gamer
 		}
 
 		@Override
-		public void run() {
+		public Boolean call() {
 			try {
-				solver.stateMachineMetaGame(timeout, solverState, role);
+				return solver.stateMachineMetaGame1(timeout, solverState, role);
 			} catch (TransitionDefinitionException | MoveDefinitionException | GoalDefinitionException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
+			return false;
 		}
 
 	}
@@ -316,27 +319,34 @@ public abstract class FactorGamer extends Gamer
 			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
 			if (single_prop) {
 				if (solve) {
-					FutureTask<MoveStruct> futureTask = new FutureTask<MoveStruct>(new Run_Select_Solver(timeout,lastMoves));
-					solver_thread = new Thread(futureTask);
-					solver_thread.start();
-					List<Move> moves = new ArrayList<Move>();
-					if (lastMoves != null)
-					{
-						for (GdlTerm sentence : lastMoves)
-						{
-							moves.add(stateMachine.getMoveFromTerm(sentence));
+					if(!game_solved) {
+						if(task.isDone()) {
+							game_solved = task.get();
 						}
-
-						currentState = stateMachine.getNextState(currentState, moves);
 					}
-					MoveStruct m1 = stateMachineSelectMove(timeout, currentState, moves);
-					MoveStruct m2 = futureTask.get();
-					if (m1.score >= m2.score) {
-						return m1.move.getContents();
-					} else {
-						System.out.println("USING SOLVER MAX MOVE");
-						System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
-						return m2.move.getContents();
+					if (game_solved) {
+						FutureTask<MoveStruct> futureTask = new FutureTask<MoveStruct>(new Run_Select_Solver(timeout,lastMoves));
+						solver_thread = new Thread(futureTask);
+						solver_thread.start();
+						List<Move> moves = new ArrayList<Move>();
+						if (lastMoves != null)
+						{
+							for (GdlTerm sentence : lastMoves)
+							{
+								moves.add(stateMachine.getMoveFromTerm(sentence));
+							}
+
+							currentState = stateMachine.getNextState(currentState, moves);
+						}
+						MoveStruct m1 = stateMachineSelectMove(timeout, currentState, moves);
+						MoveStruct m2 = futureTask.get();
+						if (m1.score >= m2.score) {
+							return m1.move.getContents();
+						} else {
+							System.out.println("USING SOLVER MAX MOVE");
+							System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
+							return m2.move.getContents();
+						}
 					}
 				} else {
 					List<Move> moves = new ArrayList<Move>();
@@ -376,6 +386,7 @@ public abstract class FactorGamer extends Gamer
 		    GamerLogger.logStackTrace("GamePlayer", e);
 			throw new MoveSelectionException(e);
 		}
+		return null;
 	}
 
 	public class Run_Select_Solver implements Callable<MoveStruct> {
@@ -526,6 +537,8 @@ public abstract class FactorGamer extends Gamer
 	private int num_threads;
 	private Thread solver_thread;
 	private boolean solve = false;
+	private boolean game_solved = false;
+	private FutureTask<Boolean> task;
 
 	public MoveStruct stateMachineSelectMove(long timeout, OpenBitSet curr) throws TransitionDefinitionException,
 			MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
@@ -544,6 +557,10 @@ public abstract class FactorGamer extends Gamer
 			InterruptedException, ExecutionException {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	public boolean stateMachineMetaGame1(long timeout, OpenBitSet curr, Role role) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		return true;
 	}
 
 }
