@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -571,7 +572,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				int result;
 				if (child.isSolved) result = child.solvedValue;
 				else {
-					result = alphabeta(child, alpha, minValue);
+					result = iterative(child, alpha, minValue);
 					child.solvedValue = result;
 					child.isSolved = true;
 				}
@@ -599,22 +600,133 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				alpha = minValue;
 			}
 		}
+		System.out.println();
+		System.out.println("GAME UNSOLVED");
+		System.out.println();
 	}
 
 	public class data {
 		public XNode n;
 		public int alpha;
+		public int beta;
 		public int min;
+		public Stack<XNode> children = null;
+		public int value;
+		public XNode child = null;
+		public Stack<Move> moves = null;
 
 		public data(XNode node, int a, int m) {
 			n = node;
-			a = alpha;
-			m = min;
+			alpha = a;
+			beta = m;
 		}
 	}
 
+	protected int iterative(XNode node, int alpha, int beta) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+		Stack<data> stack = new Stack<data>();
+		data first = new data(node, alpha, beta);
+		stack.push(first);
+		while(!stack.isEmpty()) {
+			data d = stack.pop();
+			if (d.n.isSolved) continue;
+			if (solver_machine.isTerminal(d.n.state)) {
+				int val = solver_machine.getGoal(d.n.state, self_index);
+				d.n.solvedValue = val;
+				d.n.isSolved = true;
+				d.value = val;
+				continue;
+			}
+			if (!d.n.isSolved) {
+				if (d.moves == null) {
+					Expand(d.n);
+					Stack<Move> moves = new Stack<Move>();
+					for (Move move : d.n.legalMoves) {
+						moves.push(move);
+					}
+					d.moves = moves;
+					Move move = d.moves.pop();
+					d.min = d.beta;
+					Stack<XNode> children = new Stack<XNode>();
+					for (List<Move> jointMove : d.n.legalJointMoves.get(move)) {
+						XNode child = d.n.children.get(jointMove);
+						children.push(child);
+					}
+					d.children = children;
+				}
+				if (d.child != null) {
+					if (d.child.solvedValue <= d.alpha) {
+						d.min = d.alpha;
+						d.children.clear();
+					} else if (d.child.solvedValue == 0) {
+						d.min = 0;
+						d.children.clear();
+					} else if (d.child.solvedValue < d.min) {
+						d.min = d.child.solvedValue;
+					}
+				}
+				if (d.moves.isEmpty() && d.children.isEmpty()) {
+					if (d.min >= d.beta) {
+						d.n.solvedValue = d.beta;
+						d.n.isSolved = true;
+						d.value = d.beta;
+						continue;
+					}
+					if (d.min == 100) {
+						d.n.solvedValue = 100;
+						d.n.isSolved = true;
+						d.value = 100;
+						continue;
+					}
+					if (d.min > d.alpha) {
+						d.alpha = d.min;
+					}
+					d.n.solvedValue = d.alpha;
+					d.n.isSolved = true;
+					d.value = d.alpha;
+					continue;
+				}
+				if (d.children.isEmpty()) {
+					if (d.min >= d.beta) {
+						d.n.solvedValue = d.beta;
+						d.n.isSolved = true;
+						d.value = d.beta;
+						continue;
+					}
+					if (d.min == 100) {
+						d.n.solvedValue = 100;
+						d.n.isSolved = true;
+						d.value = 100;
+						continue;
+					}
+					if (d.min > d.alpha) {
+						d.alpha = d.min;
+					}
+					if (d.moves.isEmpty()) {
+						d.n.solvedValue = d.alpha;
+						d.n.isSolved = true;
+						d.value = d.alpha;
+						continue;
+					}
+					Move move = d.moves.pop();
+					d.min = d.beta;
+					Stack<XNode> children = new Stack<XNode>();
+					for (List<Move> jointMove : d.n.legalJointMoves.get(move)) {
+						XNode child = d.n.children.get(jointMove);
+						children.push(child);
+					}
+					d.children = children;
+				}
+				XNode child = d.children.pop();
+				d.child = child;
+				stack.push(d);
+				stack.push(new data(child,d.alpha,d.min));
+			}
+		}
+		return first.alpha;
+	}
+
 	protected int alphabeta(XNode node, int alpha, int beta) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
-		if (machine.isTerminal(node.state)) return solver_machine.getGoal(node.state, self_index);
+		if (solver_machine.isTerminal(node.state)) return solver_machine.getGoal(node.state, self_index);
 
 		Expand(node);
 
