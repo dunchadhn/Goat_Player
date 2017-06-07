@@ -297,22 +297,29 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			double start = System.currentTimeMillis();
 			double val = 0;
 			double curr = 0;
-			int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
-			ThreadStateMachine mac = thread_machines[thread_ind];
-			for (int i = 0; i < num; ++i) {
-				//double start = System.currentTimeMillis();
-				try {
-					curr = mac.Playout(node);
-				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+			if (node.isSolved) {
+				val += (curr * num);
+				node.sum_x += (curr * num);
+				node.sum_x2 += num*(curr*curr);
+				node.n += num;
+			} else {
+				int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
+				ThreadStateMachine mac = thread_machines[thread_ind];
+				for (int i = 0; i < num; ++i) {
+					//double start = System.currentTimeMillis();
+					try {
+						curr = mac.Playout(node);
+					} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					val += curr;
+					node.sum_x += curr;
+					node.sum_x2 += (curr*curr);
+					++node.n;
+					//++play_loops;
+					//total_playout += (System.currentTimeMillis() - start);
 				}
-				val += curr;
-				node.sum_x += curr;
-				node.sum_x2 += (curr*curr);
-				++node.n;
-				//++play_loops;
-				//total_playout += (System.currentTimeMillis() - start);
 			}
 			++play_loops;
 			Struct s = new Struct(val, p, num);
@@ -389,6 +396,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 					XNode succNode = n.children.get(jointMove);
 					if (succNode.visits == 0) {
+						++succNode.visits;
+						path.add(succNode);
+						return;
+					} else if (succNode.isSolved) {
 						++succNode.visits;
 						path.add(succNode);
 						return;
