@@ -68,7 +68,6 @@ public final class XPropNet
     private int[][] goalPropositions;
     private HashMap<Role, List<Move>> actionsMap;
     private OpenIntObjectHashMap gdlSentenceMap;
-    //private HashMap<Integer, GdlSentence> gdlSentenceMap;
     private HashMap<GdlSentence, Integer> basesMap;
     private int[] rolesIndexMap;
     private OpenIntObjectHashMap indexCompMap;
@@ -92,7 +91,7 @@ public final class XPropNet
 	{
 		System.out.println("XPropNet initializing...");
 		//prop.renderToFile("preOpt.dot");
-		//optimizeProp(prop);
+		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
 
 		int nLegals = 0;
@@ -101,7 +100,15 @@ public final class XPropNet
 			nLegals += e.getValue().size();
 		}
 		System.out.println("NumLegals: " + nLegals + " NumInputs: " + nInputs);
-		//if (nLegals != nInputs) System.exit(0);
+
+		for (Proposition i : prop.getInputPropositions().values()) {
+			if (prop.getLegalInputMap().get(i) == null) {
+				System.out.println(i.toString());
+				System.out.println("   Outputs:");
+				for (Component out : i.getOutputs()) System.out.println("    " + out.toString());
+			}
+		}
+		if (nLegals != nInputs) System.exit(0);
 
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
@@ -740,11 +747,16 @@ public final class XPropNet
 
     protected void optimizeProp(PropNet prop) {
 
+    	int initSize = prop.getComponents().size();
+
     	Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
     	HashSet<Proposition> is = new HashSet<Proposition>(prop.getInputPropositions().values());
     	for (Proposition i : is) {
     		if (legalInputMap.get(i) == null) {
     			prop.removeComponent(i);
+    			for (Component out : i.getOutputs()) {
+    				out.getInputs().remove(i);
+    			}
     		}
     	}
 
@@ -757,7 +769,7 @@ public final class XPropNet
     	useful.addAll(prop.getBasePropositions().values());
     	useful.add(prop.getInitProposition());
 
-    	int initSize = prop.getComponents().size();
+
     	ArrayDeque<Component> toRemove = new ArrayDeque<Component>();
     	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
     		Component c = it.next();
