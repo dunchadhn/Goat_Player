@@ -562,7 +562,7 @@ public final class PropNet
 	}
 
 	public static List<PropNet> factor_propnet(PropNet prop, Role r) {
-		prop.renderToFile("unfactoredprop.dot");
+		//prop.renderToFile("unfactoredprop.dot");
 
 		int cId = 0;
 		HashMap<Component, Integer> cMap = new HashMap<Component, Integer>();
@@ -957,7 +957,7 @@ public final class PropNet
 
 
 
-		prop2.renderToFile("factoredprop.dot");
+		//prop2.renderToFile("factoredprop.dot");
 
 
 		System.out.println("Trimmed roles: " + prop2.getRoles().size());
