@@ -194,7 +194,6 @@ public final class XPropNet
  * Define Proposition ordering from Inputs. Set numInputs and inputOffset
  */
 
-		props.addAll(inputs);
 		numInputs = 0; inputOffset = compId;
 		for (Proposition i : inputs) {
 			if (i != null) {
@@ -202,8 +201,11 @@ public final class XPropNet
 				++compId;
 				++numInputs;
 				total_outputs += i.getOutputs().size();
+			} else {
+				inputs.remove(i);
 			}
 		}
+		props.addAll(inputs);
 
 
 
