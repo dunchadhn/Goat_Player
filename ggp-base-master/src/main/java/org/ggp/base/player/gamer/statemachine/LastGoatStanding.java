@@ -379,7 +379,11 @@ public class LastGoatStanding extends FactorGamer {
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
-
+			if(n.started.getAndSet(true)) {
+				while(true) {
+					if (n.expanded) return;
+				}
+			}
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			if (size < 1) {
@@ -405,7 +409,11 @@ public class LastGoatStanding extends FactorGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !machine.isTerminal(n.state)) {
-
+			if(n.started.getAndSet(true)) {
+				while(true) {
+					if (n.expanded) return;
+				}
+			}
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -421,6 +429,32 @@ public class LastGoatStanding extends FactorGamer {
 			}
 			n.expanded = true;
 		} else if (!machine.isTerminal(n.state)) {
+			//System.out.println("ERROR. Tried to expand node that was previously expanded");
+		}
+	}
+
+	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
+		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
+			if(n.started.getAndSet(true)) {
+				while(true) {
+					if (n.expanded) return;
+				}
+			}
+			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
+			int size = moves.size();
+			n.legalMoves = moves.toArray(new Move[size]);
+			for (int i = 0; i < size; ++i) {
+				Move move = n.legalMoves[i];
+				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
+			}
+			for (List<Move> jointMove: solver_machine.getLegalJointMoves(n.state)) {
+				OpenBitSet state = solver_machine.getNextState(n.state, jointMove);
+				XNode child = new XNode(state);
+				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
+				n.children.put(jointMove, child);
+			}
+			n.expanded = true;
+		} else if (!solver_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
 	}
@@ -525,7 +559,7 @@ public class LastGoatStanding extends FactorGamer {
 	}
 
 	public class data {
-		public OpenBitSet state;
+		public XNode n;
 		public int alpha;
 		public int beta;
 		public int min;
@@ -535,16 +569,16 @@ public class LastGoatStanding extends FactorGamer {
 		public int moves_ind = 0;
 		public int moves_max = -1;
 
-		public data(OpenBitSet s, int a, int m) {
-			state = s;
+		public data(XNode node, int a, int m) {
+			n = node;
 			alpha = a;
 			beta = m;
 		}
 	}
 
-	protected int iterative(OpenBitSet state, int alpha, int beta, XNode solver_root) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected int iterative(XNode node, int alpha, int beta, XNode solver_root) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		stack = new Stack<data>();
-		data first = new data(state, alpha, beta);
+		data first = new data(node, alpha, beta);
 		stack.push(first);
 		while(!stack.isEmpty()) {
 			if (!solver_root.equals(root)) {
@@ -552,28 +586,30 @@ public class LastGoatStanding extends FactorGamer {
 				return -1;
 			}
 			data d = stack.pop();
-			if (solver_machine.isTerminal(d.state)) {
-				int val = solver_machine.getGoal(d.state, self_index);
-				valueMap.put(d.state, (double)val);
+			if (solver_machine.isTerminal(d.n.state)) {
+				int val = solver_machine.getGoal(d.n.state, self_index);
+				valueMap.put(d.n.state, (double)val);
 				d.value = val;
 				continue;
 			}
-			if (!valueMap.containsKey(d.state)) {
+			if (!valueMap.containsKey(d.n.state)) {
 				if (d.moves_max < 0) {
+					Expand_solver(d.n);
 					d.moves_max = d.n.legalMoves.length - 1;
 					Move move = d.n.legalMoves[0];
 					d.min = d.beta;
 					d.joint_max = d.n.legalJointMoves.get(move).size();
 				} else if (d.joint_max > -1) {
 					XNode child = d.n.children.get(d.n.legalJointMoves.get(d.n.legalMoves[d.moves_ind]).get(d.joint_ind));
-					if (child.solvedValue <= d.alpha) {
+					double val = valueMap.get(child.state);
+					if (val <= d.alpha) {
 						d.min = d.alpha;
 						d.joint_ind = d.joint_max;
-					} else if (child.solvedValue == 0) {
+					} else if (val == 0) {
 						d.min = 0;
 						d.joint_ind = d.joint_max;
-					} else if (child.solvedValue < d.min) {
-						d.min = child.solvedValue;
+					} else if (val < d.min) {
+						d.min = (int) val;
 						++d.joint_ind;
 					} else {
 						++d.joint_ind;
@@ -591,8 +627,7 @@ public class LastGoatStanding extends FactorGamer {
 					if (d.min > d.alpha) {
 						d.alpha = d.min;
 					}
-					d.n.solvedValue = d.alpha;
-					d.n.isSolved = true;
+					valueMap.put(d.n.state, (double) d.alpha);
 					d.value = d.alpha;
 					continue;
 				}
