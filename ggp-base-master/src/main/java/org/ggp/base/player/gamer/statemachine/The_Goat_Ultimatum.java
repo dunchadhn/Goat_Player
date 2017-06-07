@@ -547,7 +547,7 @@ public class The_Goat_Ultimatum extends FactorGamer {
 			int minValue = 100;
 			for (List<Move> jointMove : root_thread.legalJointMoves.get(move)) {
 				XNode child = root_thread.children.get(jointMove);
-				int result = iterative(child, alpha, minValue, root_thread);
+				int result = alphabeta(child, alpha, minValue, root_thread);
 				if (result == -1) return -1;
 
 				if (result <= alpha) {

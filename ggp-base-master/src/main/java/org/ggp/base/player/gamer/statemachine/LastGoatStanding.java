@@ -374,14 +374,16 @@ public class LastGoatStanding extends FactorGamer {
 						return;
 					}
 					double nodeValue;
-					if (valueMap.containsKey(succNode.state)) nodeValue = -valueMap.get(succNode.state);
+					Double val = valueMap.get(succNode.state);
+					if (val != null) nodeValue = -val;
 					else nodeValue = uctMin(succNode, parentVal);
 					if (nodeValue > minValue) {
 						minValue = nodeValue;
 						minChild = succNode;
 					}
 				}
-				if (valueMap.containsKey(minChild.state)) minValue = valueMap.get(minChild.state);
+				Double val = valueMap.get(minChild.state);
+				if (val != null) minValue = val;
 				else minValue = uctMax(minChild, parentVal);
 				if (minValue > maxValue) {
 					maxValue = minValue;
