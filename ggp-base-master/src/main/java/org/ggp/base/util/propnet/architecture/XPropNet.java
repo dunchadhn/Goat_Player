@@ -319,7 +319,7 @@ public final class XPropNet
 			if (in != null) {
 				if (compIndices.get(in) != (inputOffset + i)) {
 					System.out.println("compIndices.get(in) != (inputOffset + i)");
-					System.exit(0);
+					//System.exit(0);
 				}
 			}
 		}
