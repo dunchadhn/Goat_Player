@@ -579,6 +579,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		int alpha = 0;
 		XNode root_thread = root;
 		Expand(root_thread);
+		if (solver_machine.isTerminal(root_thread.state)) {
+			return solver_machine.getGoal(root_thread.state, self_index);
+		}
 		for (Move move : root_thread.legalMoves) {
 
 			int minValue = 100;
