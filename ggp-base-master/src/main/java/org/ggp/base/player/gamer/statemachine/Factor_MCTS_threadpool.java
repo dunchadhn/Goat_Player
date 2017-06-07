@@ -331,18 +331,16 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				XNode succNode = n.children.get(jointMove);
-				if (succNode.updates != 0) {
-					if (succNode.isSolved) {
-						if (succNode.solvedValue < minValue) {
-							visits = -1;
-							minValue = succNode.solvedValue;
-						}
-					} else {
-						double nodeValue = succNode.utility / succNode.updates;
-						if (nodeValue < minValue) {
-							visits = succNode.updates;
-							minValue = nodeValue;
-						}
+				if (succNode.isSolved) {
+					if (succNode.solvedValue < minValue) {
+						visits = -1;
+						minValue = succNode.solvedValue;
+					}
+				} else if (succNode.updates != 0) {
+					double nodeValue = succNode.utility / succNode.updates;
+					if (nodeValue < minValue) {
+						visits = succNode.updates;
+						minValue = nodeValue;
 					}
 				}
 			}
