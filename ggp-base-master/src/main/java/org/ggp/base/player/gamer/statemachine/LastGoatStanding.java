@@ -173,7 +173,7 @@ public class LastGoatStanding extends FactorGamer {
 			thread = new Thread(new runMCTS());
 		}
 		thread_pool.getQueue().clear();
-		valueMap.clear();
+		//valueMap.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
 		if (num_rests < 0) {
 			return bestMove(root);
