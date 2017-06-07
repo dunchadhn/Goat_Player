@@ -563,6 +563,15 @@ public final class PropNet
 	public static List<PropNet> factor_propnet(PropNet prop, Role r) {
 		//prop.renderToFile("unfactoredprop.dot");
 
+		int PROP_SIZE_LIMIT = 23000;
+		if (prop.getComponents().size() > PROP_SIZE_LIMIT) {
+			List<PropNet> factoredProps = new ArrayList<>();
+			PropNet prop2 = new PropNet(prop.getRoles(), prop.getComponents());
+			factoredProps.add(prop2);
+			System.out.println("Propnet too large to factor, gtfo. " + prop.getComponents().size());
+			return factoredProps;
+		}
+
 		int cId = 0;
 		HashMap<Component, Integer> cMap = new HashMap<Component, Integer>();
 		HashMap<Integer, Component> iMap = new HashMap<Integer, Component>();
