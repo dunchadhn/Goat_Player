@@ -438,6 +438,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.lock.unlock();
 				return;
 			}
+			System.out.println("Get legal moves");
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			if (size < 1) {
@@ -448,7 +449,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
+			System.out.println("Get legal joint moves");
 			for (List<Move> jointMove: background_machine.getLegalJointMoves(n.state)) {
+				System.out.println("Get next state");
 				OpenBitSet state = background_machine.getNextState(n.state, jointMove);
 				XNode child = graph.get(state);
 				if(child == null) {
@@ -469,9 +472,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !machine.isTerminal(n.state)) {
-			System.out.println("Getting lock");
 			n.lock.lock();
-			System.out.println("Got lock " + n.toString());
 			if (n.expanded) {
 				n.lock.unlock();
 				return;
@@ -495,7 +496,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			n.expanded = true;
 			n.lock.unlock();
-			System.out.println("Release lock " + n.toString());
 		} else if (!machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
@@ -510,6 +510,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.lock.unlock();
 				return;
 			}
+			System.out.println("Get legal moves");
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -517,7 +518,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
+			System.out.println("Get legal joint moves");
 			for (List<Move> jointMove: solver_machine.getLegalJointMoves(n.state)) {
+				System.out.println("Get next state");
 				OpenBitSet state = solver_machine.getNextState(n.state, jointMove);
 				XNode child = graph.get(state);
 				if(child == null) {
