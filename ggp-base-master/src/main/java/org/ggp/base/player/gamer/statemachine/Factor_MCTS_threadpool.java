@@ -451,11 +451,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			for (List<Move> jointMove: background_machine.getLegalJointMoves(n.state)) {
 				OpenBitSet state = background_machine.getNextState(n.state, jointMove);
-				XNode child = graph.get(state);
-				if(child == null) {
-					child = new XNode(state);
-					graph.put(state, child);
-				}
+				//XNode child = graph.get(state);
+				//if(child == null) {
+				XNode child = new XNode(state);
+					//graph.put(state, child);
+				//}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -482,11 +482,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			for (List<Move> jointMove: machine.getLegalJointMoves(n.state)) {
 				OpenBitSet state = machine.getNextState(n.state, jointMove);
-				XNode child = graph.get(state);
-				if(child == null) {
-					child = new XNode(state);
-					graph.put(state, child);
-				}
+				//XNode child = graph.get(state);
+				//if(child == null) {
+				XNode child = new XNode(state);
+					//graph.put(state, child);
+				//}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
@@ -512,11 +512,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			for (List<Move> jointMove: solver_machine.getLegalJointMoves(n.state)) {
 				OpenBitSet state = solver_machine.getNextState(n.state, jointMove);
-				XNode child = graph.get(state);
-				if(child == null) {
-					child = new XNode(state);
-					graph.put(state, child);
-				}
+				//XNode child = graph.get(state);
+				//if(child == null) {
+				XNode child = new XNode(state);
+					//graph.put(state, child);
+				//}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
 			}
