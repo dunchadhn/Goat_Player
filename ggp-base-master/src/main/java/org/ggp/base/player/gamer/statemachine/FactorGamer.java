@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -133,8 +130,6 @@ public abstract class FactorGamer extends Gamer
         stateMachine = null;
         setMatch(null);
         setRoleName(null);
-        machines = null;
-        players = null;
         exec = null;
     	threadpool = null;
     	currentStates = null;
@@ -212,43 +207,28 @@ public abstract class FactorGamer extends Gamer
         	role = new Role(getRoleName());
         	List<PropNet> prop_list = new ArrayList<PropNet>();
         	prop_list = PropNet.factor_propnet(prop,role);
-        	if (prop_list.size() == 1) {
-        		single_prop = true;
-        		stateMachine = getInitialStateMachine();
-        		stateMachine.initialize(prop_list.get(0));
-        		currentState = stateMachine.getInitialState();
-        		//Pair<PropNet,Integer> p = PropNet.removeStepCounter(prop_list.get(0));
-        		//if (p != null) {
-        		/*if(false) {
-        			solverMachine = new XStateMachine();
-        			solverMachine.initialize(p.left);
-        			solverState = solverMachine.getInitialState();
-        			solver = new Solver(solverMachine, p.right);
-        			solve = true;
-        			task = new FutureTask<Boolean>(new Run_Solver_Meta(timeout));
-					solver_thread = new Thread(task);
-					solver_thread.start();
-        			stateMachineMetaGame(timeout, currentState,role);
-        			if (task.get()) {
-        				game_solved = true;
-        			}*/
-        		//} else {
-        		stateMachineMetaGame(timeout, currentState,role);
-        		//}
-        	} else {
-        		num_threads = prop_list.size();
-        		threadpool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
-        		exec = new ExecutorCompletionService<MoveStruct>(threadpool);
-        		machines = new XStateMachine[num_threads];
-        		currentStates = new OpenBitSet[num_threads];
-        		players = new Factor_MCTS_threadpool[num_threads];
-        		for (int i = 0; i < num_threads; ++i) {
-        			exec.submit(new RunMeta(prop_list.get(i), timeout, i));
-        		}
-        		for (int i = 0; i < num_threads; ++i) {
-        			exec.take();
-        		}
-        	}
+    		single_prop = true;
+    		stateMachine = getInitialStateMachine();
+    		stateMachine.initialize(prop_list.get(0));
+    		currentState = stateMachine.getInitialState();
+    		//Pair<PropNet,Integer> p = PropNet.removeStepCounter(prop_list.get(0));
+    		//if (p != null) {
+    		/*if(false) {
+    			solverMachine = new XStateMachine();
+    			solverMachine.initialize(p.left);
+    			solverState = solverMachine.getInitialState();
+    			solver = new Solver(solverMachine, p.right);
+    			solve = true;
+    			task = new FutureTask<Boolean>(new Run_Solver_Meta(timeout));
+				solver_thread = new Thread(task);
+				solver_thread.start();
+    			stateMachineMetaGame(timeout, currentState,role);
+    			if (task.get()) {
+    				game_solved = true;
+    			}*/
+    		//} else {
+    		stateMachineMetaGame(timeout, currentState,role);
+    		//}
 		}
 		catch (Exception e)
 		{
@@ -278,33 +258,6 @@ public abstract class FactorGamer extends Gamer
 
 	}
 
-	public class RunMeta implements Callable<MoveStruct> {
-		private PropNet prop;
-		private long timeout;
-		private int ind;
-
-		public RunMeta(PropNet propnet, long time, int i) {
-			prop = propnet;
-			timeout = time;
-			ind = i;
-		}
-
-		@Override
-		public MoveStruct call() throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
-			machines[ind] = new XStateMachine();
-    		machines[ind].initialize(prop);
-    		currentStates[ind] = machines[ind].getInitialState();
-    		players[ind] = new Factor_MCTS_threadpool();
-    		players[ind].init(machines[ind], machines.length);
-    		//MachineState convertedState = stateMachine.toGdl(currentState);
-    		//getMatch().appendState(convertedState.getContents());
-
-    		players[ind].stateMachineMetaGame(timeout, currentStates[ind], role);
-    		return null;
-		}
-
-	}
-
 	/**
 	 * A wrapper function for stateMachineSelectMove. When we are asked to
 	 * select a move, this advances the state machine up to the current state
@@ -317,67 +270,47 @@ public abstract class FactorGamer extends Gamer
 		try
 		{
 			List<GdlTerm> lastMoves = getMatch().getMostRecentMoves();
-			if (single_prop) {
-				if (solve) {
-					FutureTask<MoveStruct> futureTask = new FutureTask<MoveStruct>(new Run_Select_Solver(timeout,lastMoves));
-					solver_thread = new Thread(futureTask);
-					solver_thread.start();
-					List<Move> moves = new ArrayList<Move>();
-					if (lastMoves != null)
+			if (solve) {
+				FutureTask<MoveStruct> futureTask = new FutureTask<MoveStruct>(new Run_Select_Solver(timeout,lastMoves));
+				solver_thread = new Thread(futureTask);
+				solver_thread.start();
+				List<Move> moves = new ArrayList<Move>();
+				if (lastMoves != null)
+				{
+					for (GdlTerm sentence : lastMoves)
 					{
-						for (GdlTerm sentence : lastMoves)
-						{
-							moves.add(stateMachine.getMoveFromTerm(sentence));
-						}
+						moves.add(stateMachine.getMoveFromTerm(sentence));
+					}
 
-						currentState = stateMachine.getNextState(currentState, moves);
-					}
-					if (game_solved) {
-						MoveStruct m2 = futureTask.get();
-						System.out.println("USING SOLVER MAX MOVE");
-						System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
-						return m2.move.getContents();
-					}
-					MoveStruct m1 = stateMachineSelectMove(timeout, currentState, moves);
-					MoveStruct m2 = futureTask.get();
-					if (m2.solved) {
-						game_solved = true;
-						System.out.println("USING SOLVER MAX MOVE");
-						System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
-						return m2.move.getContents();
-					}
-					return m1.move.getContents();
-				} else {
-					List<Move> moves = new ArrayList<Move>();
-					if (lastMoves != null)
-					{
-						for (GdlTerm sentence : lastMoves)
-						{
-							moves.add(stateMachine.getMoveFromTerm(sentence));
-						}
-
-						currentState = stateMachine.getNextState(currentState, moves);
-					}
-					return stateMachineSelectMove(timeout, currentState, moves).move.getContents();
+					currentState = stateMachine.getNextState(currentState, moves);
 				}
+				if (game_solved) {
+					MoveStruct m2 = futureTask.get();
+					System.out.println("USING SOLVER MAX MOVE");
+					System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
+					return m2.move.getContents();
+				}
+				MoveStruct m1 = stateMachineSelectMove(timeout, currentState, moves);
+				MoveStruct m2 = futureTask.get();
+				if (m2.solved) {
+					game_solved = true;
+					System.out.println("USING SOLVER MAX MOVE");
+					System.out.println("Max Move: " + m2.move + " Max Value: " + m2.score);
+					return m2.move.getContents();
+				}
+				return m1.move.getContents();
 			} else {
-				for (int i = 0; i < num_threads; ++i) {
-        			exec.submit(new RunSelect(lastMoves, timeout, i));
-        		}
+				List<Move> moves = new ArrayList<Move>();
+				if (lastMoves != null)
+				{
+					for (GdlTerm sentence : lastMoves)
+					{
+						moves.add(stateMachine.getMoveFromTerm(sentence));
+					}
 
-				Move bestMove = null;
-				double bestScore = -1;
-
-        		for (int i = 0; i < num_threads; ++i) {
-        			Future<MoveStruct> f = exec.take();
-        			MoveStruct s = null;
-        			s = f.get();
-        			if (s.score > bestScore) {
-        				bestMove = s.move;
-        				bestScore = s.score;
-        			}
-        		}
-        		return bestMove.getContents();
+					currentState = stateMachine.getNextState(currentState, moves);
+				}
+				return stateMachineSelectMove(timeout, currentState, moves).move.getContents();
 			}
 		}
 		catch (Exception e)
@@ -412,42 +345,10 @@ public abstract class FactorGamer extends Gamer
 
 	}
 
-	public class RunSelect implements Callable<MoveStruct> {
-		private List<GdlTerm> lastMoves;
-		private long timeout;
-		private int ind;
-		public RunSelect(List<GdlTerm> last, long time, int i) {
-			lastMoves = last;
-			timeout = time;
-			ind = i;
-		}
-		@Override
-		public MoveStruct call() throws Exception {
-			List<Move> moves = new ArrayList<Move>();
-			if (lastMoves != null)
-			{
-				for (GdlTerm sentence : lastMoves)
-				{
-					moves.add(machines[ind].getMoveFromTerm(sentence));
-				}
-
-				currentStates[ind] = machines[ind].getNextState(currentStates[ind], moves);
-				//getMatch().appendState(stateMachine.toGdl(currentState).getContents());
-			}
-
-			return players[ind].stateMachineSelectMove(timeout, currentStates[ind], moves);
-		}
-	}
-
 	@Override
 	public void stop() throws StoppingException {
 		try {
-			if (single_prop) stateMachineStop();
-			else {
-				for(Factor_MCTS_threadpool x: players) {
-					x.stateMachineStop();
-				}
-			}
+			stateMachineStop();
 		}
 		catch (Exception e)
 		{
@@ -459,12 +360,7 @@ public abstract class FactorGamer extends Gamer
 	@Override
 	public void abort() throws AbortingException {
 		try {
-			if (single_prop) stateMachineAbort();
-			else {
-				for(Factor_MCTS_threadpool x: players) {
-					x.stateMachineAbort();
-				}
-			}
+			stateMachineAbort();
 		}
 		catch (Exception e)
 		{
@@ -526,8 +422,6 @@ public abstract class FactorGamer extends Gamer
     private XStateMachine stateMachine;
     private XStateMachine solverMachine;
     private Solver solver;
-    private XStateMachine[] machines;
-    private Factor_MCTS_threadpool[] players;
     private CompletionService<MoveStruct> exec;
 	private ThreadPoolExecutor threadpool;
 	private OpenBitSet[] currentStates;

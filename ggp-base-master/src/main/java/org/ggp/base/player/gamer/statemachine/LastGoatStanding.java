@@ -240,10 +240,12 @@ public class LastGoatStanding extends FactorGamer {
 					} catch (InterruptedException | ExecutionException e) {
 						e.printStackTrace();
 					}
-			        int num = s.n;
-			        Backpropogate(s.v,s.p, num);
-			        depthCharges += num;
-			        last_depthCharges += num;
+			        if (s != null) {
+				        int num = s.n;
+				        Backpropogate(s.v,s.p, num);
+				        depthCharges += num;
+				        last_depthCharges += num;
+			        }
 			    }
 				total_background += (System.currentTimeMillis() - start);
 				++loops;
@@ -270,8 +272,12 @@ public class LastGoatStanding extends FactorGamer {
 			ThreadStateMachine mac = thread_machines[thread_ind];
 			for (int i = 0; i < num; ++i) {
 				try {
-					if (valueMap.containsKey(node.state)) curr = valueMap.get(node.state);
-					else curr = mac.Playout(node);
+					Double c = valueMap.get(node.state);
+					if (c == null) {
+						curr = mac.Playout(node);
+					} else {
+						curr = c;
+					}
 				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 					e.printStackTrace();
 				}
@@ -565,8 +571,7 @@ public class LastGoatStanding extends FactorGamer {
 		System.out.println();
 		System.out.println("GAME SOLVED, MAX SCORE: " + alpha);
 		System.out.println();
-		root_thread.solvedValue = alpha;
-		root_thread.isSolved = true;
+		valueMap.put(root_thread.state, (double) alpha);
 		return alpha;
 	}
 
@@ -672,64 +677,5 @@ public class LastGoatStanding extends FactorGamer {
 		}
 		return first.value;
 	}
-
-	protected int alphabeta(XNode node, int alpha, int beta) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException {
-		if (solver_machine.isTerminal(node.state)) return solver_machine.getGoal(node.state, self_index);
-
-
-		for (Move move : node.legalMoves) {
-			int minValue = beta;
-
-			for (List<Move> jointMove : node.legalJointMoves.get(move)) {
-				XNode child = node.children.get(jointMove);
-				int result;
-				if (child.isSolved) result = child.solvedValue;
-				else {
-					result = alphabeta(child, alpha, minValue);
-					child.solvedValue = result;
-					child.isSolved = true;
-				}
-				if (result <= alpha) {
-					minValue = alpha;
-					break;
-				}
-				if (result == 0) {
-					minValue = 0;
-					break;
-				}
-				if (result < minValue) minValue = result;
-			}
-			if (minValue >= beta) return beta;
-			if (minValue == 100) return 100;
-			if (minValue > alpha) alpha = minValue;
-		}
-
-		return alpha;
-	}
-
-	protected MoveStruct bestMove_solved(XNode node) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		int maxValue = -1;
-		Move m = node.legalMoves[0];
-
-		for (Move move : node.legalMoves) {
-			int minValue = 101;
-			for (List<Move> jointMove : node.legalJointMoves.get(move)) {
-				XNode child = node.children.get(jointMove);
-				if (child.solvedValue < minValue) {
-					minValue = child.solvedValue;
-				}
-			}
-			if (minValue < 101) {
-				if (minValue > maxValue) {
-					maxValue = minValue;
-					m = move;
-				}
-			}
-		}
-		System.out.println(" Max Move: " + m + " Max Value: " + maxValue);
-		return new MoveStruct(m, maxValue);
-
-	}
-
 }
 

@@ -374,9 +374,6 @@ public class X_MCTS_threadpool extends XStateMachineGamer {
 	protected void Backpropogate(double val, List<XNode> path, int num) {
 		int size = path.size();
 		XNode nod = path.get(size - 1);
-		if (background_machine.isTerminal(nod.state)) {
-			nod.isTerminal = true;
-		}
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
