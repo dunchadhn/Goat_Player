@@ -645,7 +645,7 @@ public class ThreadStateMachine extends XMachine {
 		if (n.isSolved) return n.solvedValue;
 		OpenBitSet state = n.state;
 		while(!isTerminal(state)) {
-			state = getRandomNextStateBit(state);
+			state = getRandomNextState(state);
 		}
 		return getCurrGoal(state, self_index);
 	}
