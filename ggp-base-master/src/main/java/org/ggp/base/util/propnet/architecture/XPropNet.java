@@ -316,9 +316,11 @@ public final class XPropNet
 		for (int i = 0; i < numInputs; ++i) {
 			inputPropositions[i] = inputOffset + i;
 			Proposition in = inputs.get(i);
-			if (compIndices.get(in) != (inputOffset + i)) {
-				System.out.println("compIndices.get(in) != (inputOffset + i)");
-				System.exit(0);
+			if (in != null) {
+				if (compIndices.get(in) != (inputOffset + i)) {
+					System.out.println("compIndices.get(in) != (inputOffset + i)");
+					System.exit(0);
+				}
 			}
 		}
 
