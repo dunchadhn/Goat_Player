@@ -433,7 +433,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
 			System.out.println("Getting lock");
 			n.lock.lock();
-			System.out.println("Got lock");
+			System.out.println("Got lock " + n.toString());
 			if (n.expanded) return;
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -457,6 +457,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			n.expanded = true;
 			n.lock.unlock();
+			System.out.println("Release lock " + n.toString());
 			path.add(n.children.get(background_machine.getRandomJointMove(n.state)));
 		} else if (!background_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
@@ -467,7 +468,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		if (!n.expanded && !machine.isTerminal(n.state)) {
 			System.out.println("Getting lock");
 			n.lock.lock();
-			System.out.println("Got lock");
+			System.out.println("Got lock " + n.toString());
 			if (n.expanded) return;
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -488,6 +489,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			n.expanded = true;
 			n.lock.unlock();
+			System.out.println("Release lock " + n.toString());
 		} else if (!machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
@@ -497,7 +499,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
 			System.out.println("Getting lock");
 			n.lock.lock();
-			System.out.println("Got lock");
+			System.out.println("Got lock " + n.toString());
 			if (n.expanded) return;
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -518,6 +520,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 			n.expanded = true;
 			n.lock.unlock();
+			System.out.println("Release lock " + n.toString());
 		} else if (!solver_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
