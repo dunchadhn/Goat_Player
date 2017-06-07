@@ -239,21 +239,25 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				path = new ArrayList<XNode>();
 				path.add(root_thread);
 				//double select_start = System.currentTimeMillis();
+				System.out.println("Select start");
 				try {
 					Select(root_thread, path);
 				} catch (MoveDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				System.out.println("Select end");
 				//total_select += (System.currentTimeMillis() - select_start);
 				XNode n = path.get(path.size() - 1);
 				//double expand_start = System.currentTimeMillis();
+				System.out.println("Expand start");
 				try {
 					Expand(n, path);
 				} catch (MoveDefinitionException | TransitionDefinitionException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				System.out.println("Expand end");
 				n = path.get(path.size() - 1);
 				//total_expand += (System.currentTimeMillis() - expand_start);
 				// spawn off multiple threads
@@ -362,7 +366,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void Backpropogate(double val, List<XNode> path, int num) {
-		System.out.println("Backprop start");
 		int size = path.size();
 		XNode nod = path.get(size - 1);
 		double mean_square = nod.sum_x / nod.n;
@@ -375,7 +378,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			nod.utility += val;
 			nod.updates += num;
 		}
-		System.out.println("Backprop end");
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
