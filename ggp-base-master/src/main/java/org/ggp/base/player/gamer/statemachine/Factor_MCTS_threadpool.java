@@ -158,6 +158,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
+		if (thread.isAlive()) {
+			System.out.println("THREAD IS RUNNING");
+		}
 		depthCharges = 0;
 		//total_select = 0;
 		//total_expand = 0;
