@@ -563,7 +563,7 @@ public final class PropNet
 	public static List<PropNet> factor_propnet(PropNet prop, Role r) {
 		//prop.renderToFile("unfactoredprop.dot");
 
-		int PROP_SIZE_LIMIT = 23000;
+		int PROP_SIZE_LIMIT = 10000;
 		if (prop.getComponents().size() > PROP_SIZE_LIMIT) {
 			List<PropNet> factoredProps = new ArrayList<>();
 			PropNet prop2 = new PropNet(prop.getRoles(), prop.getComponents());
@@ -885,7 +885,33 @@ public final class PropNet
 		System.out.println("Factored legals role: " + prop2.getLegalPropositions().get(r).size());
 
 
-		//PropNet prop3 = new PropNet(prop.getRoles(), trimmedComponents);
+
+
+		//try to factor split on OR terminal
+		/*
+		Proposition terminal = prop2.getTerminalProposition();
+		Set<Component> terminalInputs = terminal.getInputs();
+		if (terminalInputs.size() == 1 && terminal.getSingleInput() instanceof Or) { //terminal connected by ORs
+			Component terminalOr = terminal.getSingleInput();
+			Set<Component> stepCounter = new HashSet<Component>();
+			List<Component> orInputs = new ArrayList<Component>();
+			Iterator<Component> iter = terminalOr.getInputs().iterator();
+			while (iter.hasNext()) {
+				Set<Component> sc = new HashSet<Component>();
+				Component orInput = iter.next();
+				boolean isStepCounter = PropNet.stepCounterDetection(orInput, 0, sc, terminalOr, prop.getInitProposition());
+				if (isStepCounter) {
+					stepCounter = sc;
+				} else {
+					orInputs.add(orInput);
+				}
+			}
+
+
+		}
+		*/
+
+
 
 		List<PropNet> factoredProps = new ArrayList<>();
 		factoredProps.add(prop2);
