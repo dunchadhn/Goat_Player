@@ -760,6 +760,9 @@ public final class PropNet
 			//add legals that may be missing
 			for (Component c : inputGoal) {
 				Proposition l = prop.getLegalInputMap().get((Proposition) c);
+				if (l == null) {
+					continue;
+				}
 				disjointSet.add(l);
 				disjointSet.add(c);
 				System.out.println("Adding: " + l.getName());
