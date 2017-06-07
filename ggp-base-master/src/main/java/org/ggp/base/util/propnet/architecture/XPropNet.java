@@ -200,7 +200,9 @@ public final class XPropNet
 			compIndices.put(i, compId);
 			++compId;
 			++numInputs;
-			total_outputs += i.getOutputs().size();
+			if (i.getOutputs() != null) {
+				total_outputs += i.getOutputs().size();
+			}
 		}
 
 
