@@ -22,7 +22,7 @@ public class XNode {
 		this.sum_x = 0;
 		this.sum_x2 = 0;
 		this.n = 0;
-		this.C_CONST = 50;
+		this.C_CONST = 60;
 		this.expanded = false;
 	}
 	public volatile OpenBitSet state;

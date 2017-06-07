@@ -124,11 +124,11 @@ public class LastGoatStanding extends FactorGamer {
 		solver_machine = new ThreadStateMachine(machine,self_index);
 		Expand(root);
 		thread = new Thread(new runMCTS());
-		//solver = new Thread(new solver());
+		solver = new Thread(new solver());
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
-		//solver.start();
+		solver.start();
 
 		finishBy = timeout - buffer;
 		System.out.println("NumThreads: " + num_threads);
@@ -166,9 +166,9 @@ public class LastGoatStanding extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr, moves);
-		/*if (!solver.isAlive()) {
+		if (!solver.isAlive()) {
 			solver = new Thread(new solver());
-		}*/
+		}
 		if (!thread.isAlive()) {
 			thread = new Thread(new runMCTS());
 		}
@@ -328,7 +328,7 @@ public class LastGoatStanding extends FactorGamer {
 		mean_square *= mean_square;
 		double avg_square = nod.sum_x2 / nod.n;
 		if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
-		if (nod.C_CONST < 50) nod.C_CONST = 50;
+		if (nod.C_CONST < 60) nod.C_CONST = 60;
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
