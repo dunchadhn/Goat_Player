@@ -95,8 +95,6 @@ public final class XPropNet
 		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
 
-		System.exit(0);
-
 		int nLegals = 0;
 		int nInputs = prop.getInputPropositions().keySet().size();
 		for (Entry<Role, Set<Proposition>> e : prop.getLegalPropositions().entrySet()) {
@@ -164,7 +162,7 @@ public final class XPropNet
 		Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
 		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
 		actionsMap = new HashMap<Role, List<Move>>();
-		rolesIndexMap = new int[roles.length];
+		rolesIndexMap = new int[roles.length + 1];
 		numLegals = 0; legalOffset = compId;
 		for (int i = 0; i < roles.length; ++i) {
 			List<Proposition> rLegals = new ArrayList<Proposition>(moveMap.get(roles[i]));
@@ -189,6 +187,7 @@ public final class XPropNet
 		}
 
 		legalArray = legalArr.toArray(new Move[legalArr.size()]);
+		rolesIndexMap[roles.length] = legalArray.length;
 
 
 /*
@@ -803,35 +802,6 @@ public final class XPropNet
     		}
     	}
 
-
-    	ArrayDeque<Component> q = new ArrayDeque<Component>();
-    	for (Component c : prop.getComponents()) if (!useful.contains(c)) q.push(c);
-    	HashSet<Component> removed = new HashSet<Component>();
-    	while (!q.isEmpty()) {
-    		Component c = q.pop();
-    		if (removed.contains(c)) continue;
-    		if (!useful.contains(c)) {
-     			if (c.getOutputs().isEmpty()) {
-
-     				for (Component in : c.getInputs()) {
-     					in.getOutputs().remove(c);
-     					if (!useful.contains(in))
-     						q.push(in);
-     				}
-         			prop.removeComponent(c);
-         			removed.add(c);
-         		} else if (c.getInputs().isEmpty()) {
-
-         			for (Component out : c.getOutputs()) {
-         				out.getInputs().remove(c);
-         				if (!useful.contains(out))
-         					q.push(out);
-         			}
-         			prop.removeComponent(c);
-         			removed.add(c);
-         		}
-     		}
-    	}
 
 
     	int postSize = prop.getComponents().size();

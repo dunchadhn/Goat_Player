@@ -597,11 +597,55 @@ public class ThreadStateMachine extends XMachine {
         return 0;
     }
 
+	public OpenBitSet getNextStateBit(OpenBitSet state, OpenBitSet moves) {
+
+		setBases((OpenBitSet)state.clone());
+    	setActions(moves);
+    	propagate();
+
+    	return (OpenBitSet) nextState.clone();
+    }
+
+	public OpenBitSet getRandomNextStateBit(OpenBitSet state) throws MoveDefinitionException, TransitionDefinitionException
+    {
+        OpenBitSet random = getRandomJointMoveBit(state);
+        setBases((OpenBitSet)state.clone());
+    	setActions(random);
+    	propagate();
+
+    	return (OpenBitSet) nextState.clone();
+    }
+
+	public OpenBitSet getRandomJointMoveBit(OpenBitSet state)
+    {
+    	setState(state, null);
+
+    	int size = machine.roles.length;
+    	OpenBitSet nextLegals = new OpenBitSet(machine.numLegals);
+    	List<Integer> moves;
+
+    	for (int i = 0; i < size; ++i) {
+    		moves = new ArrayList<Integer>();
+    		int roleIndex = machine.rolesIndexMap[i];
+    		int nextRoleIndex = machine.rolesIndexMap[i + 1];
+
+    		for (int j = roleIndex; j < nextRoleIndex; ++j) {
+    			if (currLegals.fastGet(j)) {
+    				moves.add(j);
+    			}
+    		}
+    		nextLegals.fastSet(moves.get(rand.nextInt(moves.size())));
+    	}
+
+        return nextLegals;
+
+    }
+
 	public double Playout(XNode n) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
 		if (n.isSolved) return n.solvedValue;
 		OpenBitSet state = n.state;
 		while(!isTerminal(state)) {
-			state = getRandomNextState(state);
+			state = getRandomNextStateBit(state);
 		}
 		return getCurrGoal(state, self_index);
 	}
