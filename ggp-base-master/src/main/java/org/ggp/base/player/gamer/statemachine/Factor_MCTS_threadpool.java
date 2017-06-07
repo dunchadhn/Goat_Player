@@ -55,7 +55,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private volatile double play_loops = 0;
 	private int num_players = 1;
 	private boolean single = true;
-	private int buffer = 3000;
+	private int buffer = 2500;
 
 	public class Struct {
 		public double v;
