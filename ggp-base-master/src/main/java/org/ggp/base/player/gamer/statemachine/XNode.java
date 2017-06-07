@@ -3,12 +3,15 @@ package org.ggp.base.player.gamer.statemachine;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.lucene.util.OpenBitSet;
 import org.ggp.base.util.statemachine.Move;
 
 public class XNode {
 	public XNode(OpenBitSet state) {
+		this.started = new AtomicBoolean(false);
 		this.state = state;
 		this.isTerminal = false;
 		this.isSolved = false;
@@ -23,7 +26,7 @@ public class XNode {
 		this.n = 0;
 		this.C_CONST = 50;
 		this.expanded = false;
-		this.started = new AtomicBoolean(false);
+		this.lock = new ReentrantLock();
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
@@ -41,4 +44,5 @@ public class XNode {
 	public volatile double C_CONST;
 	public volatile boolean expanded;
 	public volatile AtomicBoolean started;
+	public Lock lock;
 }

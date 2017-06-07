@@ -431,11 +431,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
-			if(n.started.getAndSet(true)) {
-				while(true) {
-					if (n.expanded) return;
-				}
-			}
+			n.lock.lock();
+			if (n.expanded) return;
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			if (size < 1) {
@@ -457,6 +454,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.children.put(jointMove, child);
 			}
 			n.expanded = true;
+			n.lock.unlock();
 			path.add(n.children.get(background_machine.getRandomJointMove(n.state)));
 		} else if (!background_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
@@ -465,13 +463,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !machine.isTerminal(n.state)) {
-			System.out.println(n.started);
-			if(n.started.getAndSet(true)) {
-				System.out.println(n.started);
-				while(true) {
-					if (n.expanded) return;
-				}
-			}
+			n.lock.lock();
+			if (n.expanded) return;
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -490,6 +483,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.children.put(jointMove, child);
 			}
 			n.expanded = true;
+			n.lock.unlock();
 		} else if (!machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
@@ -497,11 +491,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
-			if(n.started.getAndSet(true)) {
-				while(true) {
-					if (n.expanded) return;
-				}
-			}
+			n.lock.lock();
+			if (n.expanded) return;
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -520,6 +511,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.children.put(jointMove, child);
 			}
 			n.expanded = true;
+			n.lock.unlock();
 		} else if (!solver_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
