@@ -284,7 +284,8 @@ public class LastGoatStanding extends FactorGamer {
 	    }
 	}
 
-	protected MoveStruct bestMove(XNode n) throws MoveDefinitionException {
+	protected MoveStruct bestMove(XNode n) throws MoveDefinitionException, TransitionDefinitionException {
+		Expand(n);
 		double maxValue = Double.NEGATIVE_INFINITY;
 		Move maxMove = n.legalMoves[0];
 		int size = n.legalMoves.length;
