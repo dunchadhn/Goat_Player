@@ -294,7 +294,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		}
 		@Override
 		public Struct call() throws InterruptedException{
-			System.out.println("Start Playout");
 			double start = System.currentTimeMillis();
 			double val = 0;
 			double curr = 0;
@@ -325,7 +324,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			++play_loops;
 			Struct s = new Struct(val, p, num);
 			total_threadpool += (System.currentTimeMillis() - start);
-			System.out.println("End Playout");
 			return s;
 	    }
 	}
@@ -364,6 +362,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void Backpropogate(double val, List<XNode> path, int num) {
+		System.out.println("Backprop start");
 		int size = path.size();
 		XNode nod = path.get(size - 1);
 		double mean_square = nod.sum_x / nod.n;
@@ -371,14 +370,12 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		double avg_square = nod.sum_x2 / nod.n;
 		if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
 		if (nod.C_CONST < 50) nod.C_CONST = 50;
-		if (background_machine.isTerminal(nod.state)) {
-			nod.isTerminal = true;
-		}
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
 			nod.updates += num;
 		}
+		System.out.println("Backprop end");
 	}
 
 	protected void Select(XNode n, List<XNode> path) throws MoveDefinitionException {
