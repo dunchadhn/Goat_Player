@@ -3,5 +3,5 @@
 #Sample usage: ./playerRunner.sh 9147 RandomGamer
 #For a GUI-based player runner, try: ./gradlew player
 
-./gradlew playerRunner -Pport=$1 -Pgamer=$2
+./gradlew playerRunner -Pport=$1 -Pgamer=$2 
 
