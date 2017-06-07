@@ -211,8 +211,7 @@ public abstract class FactorGamer extends Gamer
         	PropNet prop = OptimizingPropNetFactory.create(description);
         	role = new Role(getRoleName());
         	List<PropNet> prop_list = new ArrayList<PropNet>();
-        	//prop_list = PropNet.factor_propnet(prop,role);
-        	prop_list.add(prop);
+        	prop_list = PropNet.factor_propnet(prop,role);
         	if (prop_list.size() == 1) {
         		single_prop = true;
         		stateMachine = getInitialStateMachine();

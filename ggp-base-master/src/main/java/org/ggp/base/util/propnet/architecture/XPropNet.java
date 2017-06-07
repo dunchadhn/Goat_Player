@@ -93,7 +93,7 @@ public final class XPropNet
 		System.out.println("XPropNet initializing...");
 
 		//test factoring
-		prop = PropNet.factor_propnet(prop, prop.getRoles().get(0)).get(0);
+		//prop = PropNet.factor_propnet(prop, prop.getRoles().get(0)).get(0);
 
 
 		//prop.renderToFile("preOpt.dot");
