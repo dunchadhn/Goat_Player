@@ -152,12 +152,16 @@ public class LastGoatStanding extends FactorGamer {
 	protected void initializeMCTS(OpenBitSet currentState, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		if (root == null) System.out.println("NULL ROOT");
 		if (root.state.equals(currentState)) return;
-		root = root.children.get(moves);
-		if (root == null) {
-			System.out.println("ERROR. Current State not in tree");
-			root = new XNode(currentState);
-			Expand(root);
+		for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
+			OpenBitSet nextState = machine.getNextState(root.state, jointMove);
+			if (currentState.equals(nextState)) {
+				root = root.children.get(jointMove);
+				if (root == null) System.out.println("NOT IN MAP");
+				return;
+			}
 		}
+		System.out.println("ERROR. Current State not in tree");
+		root = new XNode(currentState);
 	}
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
