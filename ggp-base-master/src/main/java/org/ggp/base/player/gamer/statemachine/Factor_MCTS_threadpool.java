@@ -158,10 +158,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
-		if(!solver.isAlive()) {
-			solver = new Thread(new solver());
-			solver.run();
-		}
 		depthCharges = 0;
 		//total_select = 0;
 		//total_expand = 0;
@@ -188,6 +184,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr, moves);
+		if(!solver.isAlive()) {
+			solver = new Thread(new solver());
+			solver.run();
+		}
 		thread_pool.getQueue().clear();
 		graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
