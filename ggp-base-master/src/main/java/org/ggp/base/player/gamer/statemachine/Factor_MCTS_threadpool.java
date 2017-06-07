@@ -146,7 +146,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
-		solver.start();
+		//solver.start();
 
 		finishBy = timeout - buffer;
 		System.out.println("NumThreads: " + num_threads);
