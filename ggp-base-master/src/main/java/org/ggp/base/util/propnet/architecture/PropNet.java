@@ -924,10 +924,7 @@ public final class PropNet
 
 		Set<Component> trimmedComponents = new HashSet<Component>();
 		trimmedComponents.addAll(disjointSets.get(0));
-		//trimmedComponents.addAll(noops);
-		//trimmedComponents.addAll(trimmedLegals);
-		//trimmedComponents.add(factoredConstant);
-		//trimmedComponents.add(prop.getInitProposition());
+
 		PropNet prop2 = new PropNet(prop.getRoles(), trimmedComponents);
 
 		//add pseudo NOOPS if needed
@@ -941,11 +938,7 @@ public final class PropNet
 				c.addOutput(noopLegal);
 				noopLegal.addInput(c);
 				Proposition noopInput = new Proposition(new GdlRelation(GdlPool.getConstant("does"), body));
-				//noopInput.setValue(true);
 
-				//pseudoNoop.add(noop);
-
-				//prop.getLegalPropositions().put(r, pseudoNoop);
 				trimmedComponents.add(noopLegal);
 				trimmedComponents.add(noopInput);
 				trimmedComponents.add(c);
@@ -959,13 +952,17 @@ public final class PropNet
 
 		//prop2.renderToFile("factoredprop.dot");
 
+		System.out.println("Original roles: " + prop.getRoles().size());
+		System.out.println("Original components: " + prop.getComponents().size());
+		System.out.println("Original inputs: " + prop.getInputPropositions().values().size());
+		System.out.println("Original legal proposition map: " + prop.getLegalPropositions().size());
+		System.out.println("Original legals role: " + prop.getLegalPropositions().get(r).size());
 
-		System.out.println("Trimmed roles: " + prop2.getRoles().size());
-		System.out.println("Trimmed components: " + prop2.getComponents().size());
-		System.out.println("Trimmed inputs: " + prop2.getInputPropositions().values().size());
-		System.out.println("Trimmed legal proposition map: " + prop2.getLegalPropositions().size());
-		System.out.println("Trimmed legals role: " + prop2.getLegalPropositions().get(r).size());
-		//System.out.println("Trimmed legals 1: " + prop.getLegalPropositions().get(prop.getRoles().get(1)).size());
+		System.out.println("Factored roles: " + prop2.getRoles().size());
+		System.out.println("Factored components: " + prop2.getComponents().size());
+		System.out.println("Factored inputs: " + prop2.getInputPropositions().values().size());
+		System.out.println("Factored legal proposition map: " + prop2.getLegalPropositions().size());
+		System.out.println("Factored legals role: " + prop2.getLegalPropositions().get(r).size());
 
 		List<PropNet> factoredProps = new ArrayList<>();
 		factoredProps.add(prop2);
