@@ -21,6 +21,8 @@ public class XNode {
 		this.n = 0;
 		this.C_CONST = 60;
 		this.expanded = false;
+		this.solved = false;
+		this.solvedValue = 0;
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
@@ -35,4 +37,6 @@ public class XNode {
 	public volatile double C_CONST;
 	public volatile boolean expanded;
 	public volatile AtomicBoolean started;
+	public volatile boolean solved;
+	public volatile double solvedValue;
 }
