@@ -197,10 +197,10 @@ public final class XPropNet
 		props.addAll(inputs);
 		numInputs = 0; inputOffset = compId;
 		for (Proposition i : inputs) {
-			compIndices.put(i, compId);
-			++compId;
-			++numInputs;
 			if (i != null) {
+				compIndices.put(i, compId);
+				++compId;
+				++numInputs;
 				total_outputs += i.getOutputs().size();
 			}
 		}
