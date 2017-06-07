@@ -33,7 +33,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private Stack<data> stack;
 	private List<Role> roles;
 	private int self_index, num_threads;
-	private volatile int depthCharges, last_depthCharges;
+	private volatile double depthCharges, last_depthCharges;
 	private long finishBy;
 	private volatile XNode root;
 	private List<XNode> path;
@@ -51,9 +51,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private volatile double total_background = 0;
 	private volatile double total_threadpool = 0;
 	//private volatile double total_playout = 0;
-	private volatile int loops = 0;
+	private volatile double loops = 0;
 	//private volatile double total_backpropagate = 0;
-	private volatile int play_loops = 0;
+	private volatile double play_loops = 0;
 	private int num_players = 1;
 	private boolean single = true;
 	private int buffer = 3000;
@@ -158,9 +158,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
-		if (thread.isAlive()) {
-			System.out.println("THREAD IS RUNNING");
-		}
 		depthCharges = 0;
 		//total_select = 0;
 		//total_expand = 0;
