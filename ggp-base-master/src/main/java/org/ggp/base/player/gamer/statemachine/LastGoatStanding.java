@@ -624,10 +624,12 @@ public class LastGoatStanding extends FactorGamer {
 				}
 				if ((d.moves_ind == d.moves_max) && (d.joint_ind == d.joint_max)) {
 					if (d.min >= d.beta) {
+						valueMap.put(d.n.state, (double) d.beta);
 						d.value = d.beta;
 						continue;
 					}
 					if (d.min == 100) {
+						valueMap.put(d.n.state, (double) 100);
 						d.value = 100;
 						continue;
 					}
@@ -640,10 +642,12 @@ public class LastGoatStanding extends FactorGamer {
 				}
 				if (d.joint_ind == d.joint_max) {
 					if (d.min >= d.beta) {
+						valueMap.put(d.n.state, (double) d.beta);
 						d.value = d.beta;
 						continue;
 					}
 					if (d.min == 100) {
+						valueMap.put(d.n.state, (double) 100);
 						d.value = 100;
 						continue;
 					}
