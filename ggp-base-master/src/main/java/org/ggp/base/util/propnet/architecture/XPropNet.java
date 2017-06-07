@@ -90,9 +90,11 @@ public final class XPropNet
 	public XPropNet(PropNet prop)
 	{
 		System.out.println("XPropNet initializing...");
-		//prop.renderToFile("preOpt.dot");
+		prop.renderToFile("preOpt.dot");
 		optimizeProp(prop);
-		//prop.renderToFile("postOpt.dot");
+		prop.renderToFile("postOpt.dot");
+
+		System.exit(0);
 
 		int nLegals = 0;
 		int nInputs = prop.getInputPropositions().keySet().size();
@@ -157,6 +159,8 @@ public final class XPropNet
 
 
 		List<List<Proposition>> legals  = new ArrayList<List<Proposition>>();
+		List<Proposition> inputs = new ArrayList<Proposition>();
+		Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
 		List<Move> legalArr = new ArrayList<Move>();//List of all moves in the game, in order of role
 		actionsMap = new HashMap<Role, List<Move>>();
 		rolesIndexMap = new int[roles.length];
@@ -173,6 +177,7 @@ public final class XPropNet
 				compIndices.put(l, compId);
 				++compId;
 				total_outputs += l.getOutputs().size();
+				inputs.add(legalInputMap.get(l));
 
 			}
 
@@ -189,7 +194,6 @@ public final class XPropNet
  * Define Proposition ordering from Inputs. Set numInputs and inputOffset
  */
 
-		List<Proposition> inputs = new ArrayList<Proposition>(prop.getInputPropositions().values());
 		props.addAll(inputs);
 		numInputs = 0; inputOffset = compId;
 		for (Proposition i : inputs) {
@@ -198,6 +202,7 @@ public final class XPropNet
 			++numInputs;
 			total_outputs += i.getOutputs().size();
 		}
+
 
 
 /*
@@ -770,34 +775,6 @@ public final class XPropNet
     	useful.add(prop.getInitProposition());
 
 
-    	ArrayDeque<Component> toRemove = new ArrayDeque<Component>();
-    	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
-    		Component c = it.next();
-    		/*if (c instanceof Not) {
-    			Not n =
-    		}*/
-    		if (c instanceof And) {
-    			And a = (And)c;
-    			Set<Component> inputs = a.getInputs();
-    			for (Component in : inputs) {
-    				if (in instanceof And) {
-    					System.out.println("Here");
-    					And a2 = (And)in;
-    					a.removeInput(a2);
-    					Set<Component> inputs2 = a2.getInputs();
-    					for (Component in2 : inputs2) {
-    						a.addInput(in2);
-    						in2.addOutput(a);
-    					}
-    					toRemove.add(a2);
-    				}
-
-    			}
-    		}
-    	}
-
-    	clearQ(toRemove, prop);
-
 
     	for (Iterator<Proposition> it = prop.getPropositions().iterator(); it.hasNext();)  {
     		Proposition p = it.next();
@@ -825,46 +802,6 @@ public final class XPropNet
     		}
     	}
 
-    	int round1size = prop.getComponents().size();
-    	System.out.println("Round1: " + (initSize - round1size));
-
-    //Remove all constants except for a single true and false
-    	Component t = null;
-    	Component f = null;
-    	for (Iterator<Component> it = prop.getComponents().iterator(); it.hasNext();) {
-    		Component c = it.next();
-    		if (c instanceof Constant) {
-    			useful.add(c);
-				if (c.getValue()) {
-    				if (t == null) {
-    					t = c;
-    				} else {
-    					Set<Component> outputs = c.getOutputs();
-    					it.remove();
-    					prop.removeComponent(c);
-    					for (Component out : outputs) {
-    						t.addOutput(out);
-    						out.addInput(t);
-    					}
-    				}
-    			} else {
-    				if (f == null) {
-    					f = c;
-    				} else {
-    					Set<Component> outputs = c.getOutputs();
-    					it.remove();
-    					prop.removeComponent(c);
-    					for (Component out : outputs) {
-    						f.addOutput(out);
-    						out.addInput(f);
-    					}
-    				}
-    			}
-			}
-    	}
-
-    	int round2size = prop.getComponents().size();
-    	System.out.println("Round2: " + (round1size - round2size));
 
     	ArrayDeque<Component> q = new ArrayDeque<Component>();
     	for (Component c : prop.getComponents()) if (!useful.contains(c)) q.push(c);
@@ -894,9 +831,6 @@ public final class XPropNet
          		}
      		}
     	}
-
-    	int round3size = prop.getComponents().size();
-    	System.out.println("Round3: " + (round2size - round3size));
 
 
     	int postSize = prop.getComponents().size();
