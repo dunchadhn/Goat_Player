@@ -108,7 +108,6 @@ public final class PropNet
 	//pairwise distances between components
 	private int[][] dependencyMatrix;
 
-
 	public void addComponent(Component c)
 	{
 		components.add(c);
@@ -626,8 +625,6 @@ public final class PropNet
 		for (Set<Component> s : disjointSets) {
 			System.out.println(s.size());
 		}
-		List<Set<Component>> rawDisjointSets = new ArrayList<>(disjointSets);
-
 
 		/*
 		//get graph distance between all components
@@ -683,118 +680,27 @@ public final class PropNet
 		}
 
 
-		//create a map for every goal containing a connected input with its graph distance
+		//create a map for the best goal containing a connected input with its graph distance
 		Set<Proposition> goals = prop.getGoalPropositions().get(r);
-		List<Map<Component, Integer>> inputGoalDependency = new ArrayList<>();
-		List<Proposition> goalList = new ArrayList<>();
+		Pair<Proposition, Integer> bestGoal = Pair.of(null, -1);
 		for (Proposition g : goals) {
 			GdlRelation relation = (GdlRelation) g.getName();
 	        GdlConstant constant = (GdlConstant) relation.get(1);
 	        int goalVal = Integer.parseInt(constant.toString());
-			if (goalVal == 0) {
-				continue;
-			}
-			goalList.add(g);
-			int gIdx = cMap.get(g);
-			Map<Component, Integer> goalDependency = new HashMap<>();
-			Set<Component> seen = new HashSet<>();
-			inputDFS(g, 0, goalDependency, seen, prop, g.toString());
-			for (Component noop : noops) {
-				goalDependency.put(noop, -1);
-			}
-			inputGoalDependency.add(goalDependency);
-		}
-
-		for (int i=0;i<inputGoalDependency.size();++i) {
-			Map<Component, Integer> goalDependency = inputGoalDependency.get(i);
-			Proposition g = goalList.get(i);
-			System.out.println("Goal: " + g.getName());
-			for (Component c : goalDependency.keySet()) {
-				System.out.println(((Proposition) c).getName() + " dist: " + goalDependency.get(c));
+			if (goalVal > bestGoal.right) {
+				bestGoal = Pair.of(g, goalVal);
 			}
 		}
-
-
-
-		/*
-		//connect disjoint sets by input/legals
-		List<Set<Component>> connectedSets = new ArrayList<>();
-		for (int i=0;i<disjointSets.size();++i) {
-			Set<Component> disjointSet1 = disjointSets.get(i);
-			Set<Component> mergeComponents = new HashSet<Component>();
-			for (Component c1 : disjointSet1) {
-				if (!(c1 instanceof Proposition)) {
-					continue;
-				}
-				Proposition p1 = prop.getLegalInputMap().get((Proposition) c1);
-				if (p1 == null) {
-					continue;
-				}
-				System.out.println(p1.getName());
-				for (int j=i+1;j<disjointSets.size();++j) {
-					Set<Component> disjointSet2 = disjointSets.get(j);
-					boolean mergeSets = false;
-					for (Component c2 : disjointSet2) {
-						if (!(c2 instanceof Proposition)) {
-							continue;
-						}
-						if (p1.equals(c2)) {
-							//System.out.println("Found input/legal pair: " + ((Proposition) c1).getName());
-							mergeComponents.addAll(disjointSet2);
-							mergeSets = true;
-							break;
-						}
-					}
-					if (mergeSets) {
-						disjointSet2.clear();
-					}
-				}
-			}
-			disjointSet1.addAll(mergeComponents);
-			connectedSets.add(disjointSet1);
+		System.out.println("Goal: " + bestGoal.left.getName());
+		Map<Component, Integer> goalDependency = new HashMap<>();
+		Set<Component> seen = new HashSet<>();
+		inputDFS(bestGoal.left, 0, goalDependency, seen, prop, bestGoal.left.toString());
+		//do the same for terminal state, bc it seems like a good idea
+		inputDFS(prop.getTerminalProposition(), 0, goalDependency, seen, prop, prop.getTerminalProposition().toString());
+		for (Component noop : noops) {
+			goalDependency.put(noop, -1);
 		}
-		*/
 
-		/*
-		System.out.println("Number of connected sets: " + connectedSets.size());
-		for (Set<Component> s : connectedSets) {
-			System.out.println(s.size());
-		}
-		*/
-
-
-		//System.out.println(roles.length);
-		//Map<Role, Set<Proposition>> gMap = prop.getGoalPropositions();
-
-
-		/*
-		//find the set of moves (legals)
-		Set<Component> disjointLegals = null;
-		for (Proposition p : prop.getLegalPropositions().get(prop.getRoles().get(0))) {
-			for (Set<Component> disjointSet : disjointSets) {
-				if (disjointSet.contains(p)) {
-					disjointLegals = disjointSet;
-					break;
-				}
-			}
-			if (disjointLegals != null) {
-				System.out.println("FOUND LEGAL SET of " + disjointLegals.size());
-				break;
-			}
-		}
-		*/
-
-
-
-		//add constant connecting moves
-		/*Constant factoredConstant = null;
-		for (Component c : disjointLegals) {
-			if (c instanceof Constant) {
-				factoredConstant = (Constant) c;
-				break;
-			}
-		}
-		factoredConstant.removeAllOutputs();*/
 
 		//remove sets which have no goal value > 0
 		it = disjointSets.iterator();
@@ -840,9 +746,7 @@ public final class PropNet
 		//remove legals which are not part of our new propnet
 		Iterator<Set<Component>> disjointIter = disjointSets.iterator();
 		Iterator<Set<Component>> inputIter = disjointInputs.iterator();
-		List<Set<Proposition>> factoredLegals = new ArrayList<>();
-		Set<Component> inputGoal = inputGoalDependency.get(0).keySet();
-		int disjointIdx = 0;
+		Set<Component> inputGoal = new HashSet<>(goalDependency.keySet());
 		while (disjointIter.hasNext()) {
 			Set<Component> disjointInput = inputIter.next();
 			Set<Component> disjointSet = disjointIter.next();
@@ -875,31 +779,39 @@ public final class PropNet
 					continue;
 				}
 				Proposition p = (Proposition) c;
+				Proposition l = prop.getLegalInputMap().get(p);
 				if (!inputGoal.contains(p)) {
-					Proposition l = prop.getLegalInputMap().get(p);
 					for (Component in : l.getInputs()) {
 						in.removeOutput(l);
 					}
 					System.out.println("Removing: " + l.getName());
-					System.out.println("Removing: " + p.getName());
+					System.out.println("Detaching: " + p.getName());
 
 					toRemove.add(l);
 					//i think we should be doing this
-					toRemove.add(p);
 					for (Component in : p.getInputs()) {
 						in.removeOutput(p);
 					}
+					p.removeAllInputs();
+					for (Component out : p.getOutputs()) {
+						out.removeInput(p);
+					}
+					p.removeAllOutputs();
 				}
 			}
 			for (Component c : toRemove) {
 				disjointSet.remove(c);
 			}
-			//remove all legals/inputs without a matching pair in the disjoint set
+
+			//remove all legals without a matching input in the disjoint set
 			for (Component c : disjointSet) {
 				if (!(c instanceof Proposition)) {
 					continue;
 				}
 				Proposition p = (Proposition) c;
+				if (prop.getInputPropositions().values().contains(p)) {
+					continue;
+				}
 				Proposition li = prop.getLegalInputMap().get(p);
 				if (li != null && !disjointSet.contains(li)) {
 					for (Component in : p.getInputs()) {
@@ -912,14 +824,7 @@ public final class PropNet
 			for (Component rem : toRemove) {
 				disjointSet.remove(rem);
 			}
-
-
-
-
-			++disjointIdx;
 		}
-
-
 
 
 		Set<Component> trimmedComponents = new HashSet<Component>();
@@ -928,12 +833,14 @@ public final class PropNet
 		PropNet prop2 = new PropNet(prop.getRoles(), trimmedComponents);
 
 		//add pseudo NOOPS if needed
-		for (Role rol : prop.getRoles()) {
-			if ( prop.getLegalPropositions().get(rol) == null ) {
+		//when is it need one may ask?
+		//well, whenever we trim the move set of either role
+		//but not our own role
+		for (Role rol : prop2.getRoles()) {
+			if ( !rol.equals(r) && (prop2.getLegalPropositions().get(rol) == null || prop2.getLegalPropositions().get(rol).size() < prop.getLegalPropositions().get(rol).size()) ) {
 				//Set<Proposition> pseudoNoop = new HashSet<>();
 				ImmutableList<GdlTerm> body = ImmutableList.of((GdlTerm) rol.getName(), new GdlConstant("noope"));
 				Proposition noopLegal = new Proposition(new GdlRelation(GdlPool.getConstant("legal"), body));
-				//noopLegal.setValue(true);
 				Constant c = new Constant(true);
 				c.addOutput(noopLegal);
 				noopLegal.addInput(c);
@@ -958,14 +865,20 @@ public final class PropNet
 		System.out.println("Original legal proposition map: " + prop.getLegalPropositions().size());
 		System.out.println("Original legals role: " + prop.getLegalPropositions().get(r).size());
 
+
 		System.out.println("Factored roles: " + prop2.getRoles().size());
 		System.out.println("Factored components: " + prop2.getComponents().size());
 		System.out.println("Factored inputs: " + prop2.getInputPropositions().values().size());
 		System.out.println("Factored legal proposition map: " + prop2.getLegalPropositions().size());
 		System.out.println("Factored legals role: " + prop2.getLegalPropositions().get(r).size());
 
+
+		//PropNet prop3 = new PropNet(prop.getRoles(), trimmedComponents);
+
 		List<PropNet> factoredProps = new ArrayList<>();
 		factoredProps.add(prop2);
+		//factoredProps.add(prop3);
+
 		return factoredProps;
 	}
 
@@ -973,6 +886,7 @@ public final class PropNet
 		if (seen.contains(c)) {
 			return;
 		}
+		seen.add(c);
 		if ((c instanceof Proposition)){
 			Proposition p = (Proposition) c;
 			boolean isInput = prop.getInputPropositions().values().contains(p);
@@ -980,7 +894,6 @@ public final class PropNet
 				goalDependency.put(p, dist);
 			}
 		}
-		seen.add(c);
 		for (Component in : c.getInputs()) {
 			inputDFS(in, dist+1, goalDependency, seen, prop, path+" "+in);
 		}

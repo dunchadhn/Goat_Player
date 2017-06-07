@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -91,6 +92,10 @@ public final class XPropNet
 	{
 		System.out.println("XPropNet initializing...");
 
+		//test factoring
+		prop = PropNet.factor_propnet(prop, prop.getRoles().get(0)).get(0);
+
+
 		//prop.renderToFile("preOpt.dot");
 		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
@@ -102,13 +107,13 @@ public final class XPropNet
 		}
 		System.out.println("NumLegals: " + nLegals + " NumInputs: " + nInputs);
 
-		for (Proposition i : prop.getInputPropositions().values()) {
+		/*for (Proposition i : prop.getInputPropositions().values()) {
 			if (prop.getLegalInputMap().get(i) == null) {
 				System.out.println(i.toString());
 				System.out.println("   Outputs:");
 				for (Component out : i.getOutputs()) System.out.println("    " + out.toString());
 			}
-		}
+		}*/
 		//if (nLegals != nInputs) System.exit(0);
 
 		oldProp = prop;
@@ -186,6 +191,13 @@ public final class XPropNet
 			numLegals += rLegals.size();
 			props.addAll(rLegals);
 			legals.add(rLegals);
+		}
+
+		for (Proposition input : prop.getInputPropositions().values()) {
+			if (inputs.contains(input)) {
+				continue;
+			}
+			inputs.add(input);
 		}
 
 		legalArray = legalArr.toArray(new Move[legalArr.size()]);
@@ -327,6 +339,7 @@ public final class XPropNet
 		}
 
 		roleMoves = new HashMap<Move, int[]>();
+		int[] pseudoNoops = new int[roles.length];
 		for (Proposition i : inputs) {
 
 			List<GdlTerm> iGdl = i.getName().getBody();
@@ -334,10 +347,15 @@ public final class XPropNet
 			Role r = new Role((GdlConstant) iGdl.get(0));
 			if(!roleMoves.containsKey(m)) {
 				roleMoves.put(m, new int[roles.length]);
+				Arrays.fill(roleMoves.get(m), -1);
 			}
 
 			int inIndex = compIndices.get(i) - inputOffset;
 			roleMoves.get(m)[roleMap.get(r)] = inIndex;
+
+			if (iGdl.get(1).toString().equals("noope")) {
+				pseudoNoops[roleMap.get(r)] = inIndex;
+			}
 
 			long type = NOT_TRIGGER;
 			long num_inputs = ((long)i.getInputs().size()) << INPUT_SHIFT;
@@ -350,6 +368,14 @@ public final class XPropNet
 			for (Component out : outputs) {
 				connecTable[outputIndex] = compIndices.get(out);
 				++outputIndex;
+			}
+		}
+
+		for (int[] inIndexes : roleMoves.values()) {
+			for (int i=0;i<inIndexes.length;++i) {
+				if (inIndexes[i] == -1) {
+					inIndexes[i] = pseudoNoops[i];
+				}
 			}
 		}
 
@@ -446,6 +472,7 @@ public final class XPropNet
 				}
 
 			}
+
 		}
 		size = consts.size();
 		constants = (consts.isEmpty() ? null : new int[size]);
