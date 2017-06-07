@@ -554,7 +554,7 @@ public class LastGoatStanding extends FactorGamer {
 			for (List<Move> jointMove : root_thread.legalJointMoves.get(move)) {
 				XNode child = root_thread.children.get(jointMove);
 				int result = iterative(child, alpha, minValue, root_thread);
-
+				if (result == -1) return -1;
 				if (result <= alpha) {
 					minValue = alpha;
 					break;

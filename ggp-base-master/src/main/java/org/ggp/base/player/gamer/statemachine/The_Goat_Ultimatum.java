@@ -199,7 +199,7 @@ public class The_Goat_Ultimatum extends FactorGamer {
 				while(true) {
 					if (Solver() > -1) break;
 				}
-			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException | InterruptedException | ThreadDeath e) {
 				e.printStackTrace();
 			}
 		}
@@ -534,7 +534,7 @@ public class The_Goat_Ultimatum extends FactorGamer {
 		return null;
 	}
 
-	protected int Solver() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
+	protected int Solver() throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ThreadDeath {
 		System.out.println("Starting solver!");
 		int alpha = 0;
 		XNode root_thread = root;
@@ -548,6 +548,7 @@ public class The_Goat_Ultimatum extends FactorGamer {
 			for (List<Move> jointMove : root_thread.legalJointMoves.get(move)) {
 				XNode child = root_thread.children.get(jointMove);
 				int result = iterative(child, alpha, minValue, root_thread);
+				if (result == -1) return -1;
 
 				if (result <= alpha) {
 					minValue = alpha;
@@ -596,6 +597,47 @@ public class The_Goat_Ultimatum extends FactorGamer {
 			alpha = a;
 			beta = m;
 		}
+	}
+
+	protected int alphabeta(XNode n, int alpha, int beta, XNode solver_root) throws GoalDefinitionException, MoveDefinitionException, TransitionDefinitionException, InterruptedException, ThreadDeath {
+		if (solver_machine.isTerminal(n.state)) return machine.getGoal(n.state, self_index);
+
+		List<Move> legals = solver_machine.getLegalMoves(n.state, self_index);
+
+		for (Move move : legals) {
+			int minValue = beta;
+
+			for (List<Move> jointMove : solver_machine.getLegalJointMoves(n.state, self_index, move)) {
+				if (!solver_root.equals(root)) {
+					stack.clear();
+					return -1;
+				}
+				Expand(n);
+				XNode nextState = n.children.get(jointMove);
+				int result;
+				if (nextState.solved) result = (int) nextState.solvedValue;
+				else {
+					result = alphabeta(nextState, alpha, minValue, solver_root);
+					if (result == -1) return -1;
+					nextState.solvedValue = result;
+					nextState.solved = true;
+				}
+				if (result <= alpha) {
+					minValue = alpha;
+					break;
+				}
+				if (result == 0) {
+					minValue = 0;
+					break;
+				}
+				if (result < minValue) minValue = result;
+			}
+			if (minValue >= beta) return beta;
+			if (minValue == 100) return 100;
+			if (minValue > alpha) alpha = minValue;
+		}
+
+		return alpha;
 	}
 
 	protected int iterative(XNode node, int alpha, int beta, XNode solver_root) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
