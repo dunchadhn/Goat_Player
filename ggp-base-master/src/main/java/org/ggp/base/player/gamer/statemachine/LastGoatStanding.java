@@ -162,6 +162,12 @@ public class LastGoatStanding extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr, moves);
+		if (!solver.isAlive()) {
+			solver = new Thread(new solver());
+		}
+		if (!thread.isAlive()) {
+			thread = new Thread(new runMCTS());
+		}
 		thread_pool.getQueue().clear();
 		valueMap.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
