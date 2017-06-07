@@ -268,23 +268,31 @@ public class LastGoatStanding extends FactorGamer {
 			double start = System.currentTimeMillis();
 			double val = 0;
 			double curr = 0;
-			int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
-			ThreadStateMachine mac = thread_machines[thread_ind];
-			for (int i = 0; i < num; ++i) {
-				try {
-					Double c = valueMap.get(node.state);
-					if (c == null) {
-						curr = mac.Playout(node);
-					} else {
-						curr = c;
+			Double c = valueMap.get(node.state);
+			if (c != null) {
+				val += (curr * num);
+				node.sum_x += (curr*num);
+				node.sum_x2 += num*(curr*curr);
+				node.n += num;
+			} else {
+				int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
+				ThreadStateMachine mac = thread_machines[thread_ind];
+				for (int i = 0; i < num; ++i) {
+					try {
+						c = valueMap.get(node.state);
+						if (c == null) {
+							curr = mac.Playout(node);
+						} else {
+							curr = c;
+						}
+					} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+						e.printStackTrace();
 					}
-				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
-					e.printStackTrace();
+					val += curr;
+					node.sum_x += curr;
+					node.sum_x2 += (curr*curr);
+					++node.n;
 				}
-				val += curr;
-				node.sum_x += curr;
-				node.sum_x2 += (curr*curr);
-				++node.n;
 			}
 
 			++play_loops;
