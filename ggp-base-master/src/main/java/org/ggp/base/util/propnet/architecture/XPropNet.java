@@ -176,7 +176,9 @@ public final class XPropNet
 				compIndices.put(l, compId);
 				++compId;
 				total_outputs += l.getOutputs().size();
-				inputs.add(legalInputMap.get(l));
+				if (legalInputMap.get(l) != null) {
+					inputs.add(legalInputMap.get(l));
+				}
 
 			}
 
@@ -201,8 +203,6 @@ public final class XPropNet
 				++compId;
 				++numInputs;
 				total_outputs += i.getOutputs().size();
-			} else {
-				inputs.remove(i);
 			}
 		}
 		props.addAll(inputs);
