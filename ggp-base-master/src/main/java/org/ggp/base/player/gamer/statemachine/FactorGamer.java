@@ -17,7 +17,6 @@ import org.ggp.base.player.gamer.exception.AbortingException;
 import org.ggp.base.player.gamer.exception.MetaGamingException;
 import org.ggp.base.player.gamer.exception.MoveSelectionException;
 import org.ggp.base.player.gamer.exception.StoppingException;
-import org.ggp.base.util.Pair;
 import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlDistinct;
 import org.ggp.base.util.gdl.grammar.GdlFunction;
@@ -212,16 +211,15 @@ public abstract class FactorGamer extends Gamer
         	PropNet prop = OptimizingPropNetFactory.create(description);
         	role = new Role(getRoleName());
         	List<PropNet> prop_list = new ArrayList<PropNet>();
-        	prop_list.add(prop);
-        	//prop_list = PropNet.factor_propnet(prop,role);
+        	prop_list = PropNet.factor_propnet(prop,role);
         	if (prop_list.size() == 1) {
         		single_prop = true;
         		stateMachine = getInitialStateMachine();
         		stateMachine.initialize(prop_list.get(0));
         		currentState = stateMachine.getInitialState();
-        		Pair<PropNet,Integer> p = PropNet.removeStepCounter(prop);
+        		//Pair<PropNet,Integer> p = PropNet.removeStepCounter(prop_list.get(0));
         		//if (p != null) {
-        		if(false) {
+        		/*if(false) {
         			solverMachine = new XStateMachine();
         			solverMachine.initialize(p.left);
         			solverState = solverMachine.getInitialState();
@@ -233,10 +231,10 @@ public abstract class FactorGamer extends Gamer
         			stateMachineMetaGame(timeout, currentState,role);
         			if (task.get()) {
         				game_solved = true;
-        			}
-        		} else {
-        			stateMachineMetaGame(timeout, currentState,role);
-        		}
+        			}*/
+        		//} else {
+        		stateMachineMetaGame(timeout, currentState,role);
+        		//}
         	} else {
         		num_threads = prop_list.size();
         		threadpool = (ThreadPoolExecutor) Executors.newFixedThreadPool(num_threads);
