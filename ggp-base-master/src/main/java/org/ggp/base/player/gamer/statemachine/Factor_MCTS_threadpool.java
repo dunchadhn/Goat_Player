@@ -32,7 +32,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private Stack<data> stack;
 	private List<Role> roles;
 	private int self_index, num_threads;
-	private volatile double depthCharges, last_depthCharges;
+	private volatile int depthCharges, last_depthCharges;
 	private long finishBy;
 	private volatile XNode root;
 	private List<XNode> path;
@@ -55,7 +55,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private volatile double play_loops = 0;
 	private int num_players = 1;
 	private boolean single = true;
-	private int buffer = 3000;
+	private int buffer = 2500;
 
 	public class Struct {
 		public double v;
@@ -426,11 +426,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
-			if(n.started.getAndSet(true)) {
+			/*if(n.started.getAndSet(true)) {
 				while(true) {
 					if (n.expanded) return;
 				}
-			}
+			}*/
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			if (size < 1) {
@@ -460,11 +460,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !machine.isTerminal(n.state)) {
-			if(n.started.getAndSet(true)) {
+			/*if(n.started.getAndSet(true)) {
 				while(true) {
 					if (n.expanded) return;
 				}
-			}
+			}*/
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -490,11 +490,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
-			if(n.started.getAndSet(true)) {
+			/*if(n.started.getAndSet(true)) {
 				while(true) {
 					if (n.expanded) return;
 				}
-			}
+			}*/
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);

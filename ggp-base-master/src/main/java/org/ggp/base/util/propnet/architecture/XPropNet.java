@@ -109,7 +109,7 @@ public final class XPropNet
 				for (Component out : i.getOutputs()) System.out.println("    " + out.toString());
 			}
 		}
-		if (nLegals != nInputs) System.exit(0);
+		//if (nLegals != nInputs) System.exit(0);
 
 		oldProp = prop;
 		Set<Component> pComponents = prop.getComponents();
