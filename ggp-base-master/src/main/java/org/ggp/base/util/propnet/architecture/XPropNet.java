@@ -97,7 +97,7 @@ public final class XPropNet
 
 
 		//prop.renderToFile("preOpt.dot");
-		optimizeProp(prop);
+		//optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
 
 		int nLegals = 0;
