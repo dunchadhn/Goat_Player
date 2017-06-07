@@ -142,7 +142,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		solver_machine = new ThreadStateMachine(machine,self_index);
 		Expand(root);
 		thread = new Thread(new runMCTS());
-		solver = new Thread(new solver());
+		//solver = new Thread(new solver());
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
