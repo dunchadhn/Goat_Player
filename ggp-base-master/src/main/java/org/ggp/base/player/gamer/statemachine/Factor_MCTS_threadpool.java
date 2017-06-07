@@ -431,7 +431,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
+			System.out.println("Getting lock");
 			n.lock.lock();
+			System.out.println("Got lock");
 			if (n.expanded) return;
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -463,7 +465,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !machine.isTerminal(n.state)) {
+			System.out.println("Getting lock");
 			n.lock.lock();
+			System.out.println("Got lock");
 			if (n.expanded) return;
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -491,7 +495,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
+			System.out.println("Getting lock");
 			n.lock.lock();
+			System.out.println("Got lock");
 			if (n.expanded) return;
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
