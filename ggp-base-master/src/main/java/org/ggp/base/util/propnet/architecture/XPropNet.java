@@ -95,8 +95,6 @@ public final class XPropNet
 		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
 
-		System.exit(0);
-
 		int nLegals = 0;
 		int nInputs = prop.getInputPropositions().keySet().size();
 		for (Entry<Role, Set<Proposition>> e : prop.getLegalPropositions().entrySet()) {

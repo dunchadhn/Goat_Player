@@ -399,6 +399,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 						++succNode.visits;
 						path.add(succNode);
 						return;
+					} else if(succNode.isSolved) {
+						++succNode.visits;
+						path.add(succNode);
+						return;
 					}
 					double nodeValue = uctMin(succNode, parentVal);
 					if (nodeValue > minValue) {
@@ -603,6 +607,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				System.out.println();
 				System.out.println("GAME SOLVED");
 				System.out.println();
+				root_thread.solvedValue = 100;
+				root_thread.isSolved = true;
 				return minValue;
 			}
 			if (minValue > alpha) {
@@ -612,6 +618,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		System.out.println();
 		System.out.println("GAME SOLVED, MAX SCORE: " + alpha);
 		System.out.println();
+		root_thread.solvedValue = alpha;
+		root_thread.isSolved = true;
 		return alpha;
 	}
 
