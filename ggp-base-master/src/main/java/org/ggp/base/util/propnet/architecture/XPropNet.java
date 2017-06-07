@@ -97,7 +97,7 @@ public final class XPropNet
 
 
 		//prop.renderToFile("preOpt.dot");
-		//optimizeProp(prop);
+		optimizeProp(prop);
 		//prop.renderToFile("postOpt.dot");
 
 		int nLegals = 0;
@@ -787,6 +787,7 @@ public final class XPropNet
 
     	int initSize = prop.getComponents().size();
 
+    	/*
     	Map<Proposition, Proposition> legalInputMap = prop.getLegalInputMap();
     	HashSet<Proposition> is = new HashSet<Proposition>(prop.getInputPropositions().values());
     	for (Proposition i : is) {
@@ -797,6 +798,7 @@ public final class XPropNet
     			}
     		}
     	}
+    	*/
 
     	HashSet<Component> useful = new HashSet<Component>();
     	useful.addAll(prop.getLegalInputMap().keySet());
