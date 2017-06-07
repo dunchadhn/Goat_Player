@@ -4,7 +4,6 @@ package org.ggp.base.player.gamer.statemachine;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -45,7 +44,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
 	private volatile int num_per;
-	private volatile Map<OpenBitSet, XNode> graph;
+	private HashMap<OpenBitSet, XNode> graph;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
 	private volatile double total_background = 0;
@@ -142,11 +141,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		solver_machine = new ThreadStateMachine(machine,self_index);
 		Expand(root);
 		thread = new Thread(new runMCTS());
-		solver = new Thread(new solver());
+		//solver = new Thread(new solver());
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
-		solver.start();
+		//solver.start();
 
 		finishBy = timeout - buffer;
 		System.out.println("NumThreads: " + num_threads);
@@ -184,10 +183,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr, moves);
-		if(!solver.isAlive()) {
+		/*if(!solver.isAlive()) {
 			solver = new Thread(new solver());
 			solver.run();
-		}
+		}*/
 		thread_pool.getQueue().clear();
 		graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
@@ -369,9 +368,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		double avg_square = nod.sum_x2 / nod.n;
 		if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
 		if (nod.C_CONST < 50) nod.C_CONST = 50;
-		if (background_machine.isTerminal(nod.state)) {
-			nod.isTerminal = true;
-		}
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
@@ -527,7 +523,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	public void stateMachineStop() {
 		thread_pool.shutdownNow();
 		thread.stop();
-		solver.stop();
+		//solver.stop();
+		root = null;
+		graph = null;
+		stack = null;
+		System.gc();
 	}
 
 	@SuppressWarnings("deprecation")
@@ -536,7 +536,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		// TODO Auto-generated method stub
 		thread_pool.shutdownNow();
 		thread.stop();
-		solver.stop();
+		//solver.stop();
+		root = null;
+		graph = null;
+		stack = null;
+		System.gc();
 	}
 
 
@@ -571,6 +575,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		int alpha = 0;
 		XNode root_thread = root;
 		Expand(root_thread);
+		if (solver_machine.isTerminal(root_thread.state)) {
+			return solver_machine.getGoal(root_thread.state, self_index);
+		}
 		for (Move move : root_thread.legalMoves) {
 
 			int minValue = 100;
@@ -603,6 +610,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				System.out.println();
 				System.out.println("GAME SOLVED");
 				System.out.println();
+				root_thread.solvedValue = 100;
+				root_thread.isSolved = true;
 				return minValue;
 			}
 			if (minValue > alpha) {
@@ -612,6 +621,8 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		System.out.println();
 		System.out.println("GAME SOLVED, MAX SCORE: " + alpha);
 		System.out.println();
+		root_thread.solvedValue = alpha;
+		root_thread.isSolved = true;
 		return alpha;
 	}
 

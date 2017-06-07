@@ -9,6 +9,7 @@ import org.ggp.base.util.statemachine.Move;
 
 public class XNode {
 	public XNode(OpenBitSet state) {
+		this.started = new AtomicBoolean(false);
 		this.state = state;
 		this.isTerminal = false;
 		this.isSolved = false;
@@ -23,7 +24,6 @@ public class XNode {
 		this.n = 0;
 		this.C_CONST = 50;
 		this.expanded = false;
-		this.started = new AtomicBoolean(false);
 	}
 	public volatile OpenBitSet state;
 	public volatile double utility;
