@@ -2,12 +2,11 @@ package org.ggp.base.player.gamer.statemachine;
 
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
@@ -45,7 +44,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
 	private volatile int num_per;
-	private volatile Map<OpenBitSet, XNode> graph;
+	private ConcurrentHashMap<OpenBitSet, XNode> graph;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
 	private volatile double total_background = 0;
@@ -122,7 +121,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void initialize(long timeout, OpenBitSet curr, Role role) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		graph = new HashMap<OpenBitSet, XNode>();
+		graph = new ConcurrentHashMap<OpenBitSet, XNode>();
 		if(single) {
 			machine = getStateMachine();
 		}
@@ -431,12 +430,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n, List<XNode> path) throws MoveDefinitionException, TransitionDefinitionException {
 		if (!n.expanded && !background_machine.isTerminal(n.state)) {
-			System.out.println("Getting lock");
-			n.lock.lock();
-			System.out.println("Got lock " + n.toString());
-			if (n.expanded) {
-				n.lock.unlock();
-				return;
+			if(n.started.getAndSet(true)) {
+				while(true) {
+					if (n.expanded) return;
+				}
 			}
 			List<Move> moves = background_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -449,22 +446,16 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
 			for (List<Move> jointMove: background_machine.getLegalJointMoves(n.state)) {
-				System.out.println("Get next state");
 				OpenBitSet state = background_machine.getNextState(n.state, jointMove);
-				System.out.println("Get graph state");
 				XNode child = graph.get(state);
 				if(child == null) {
 					child = new XNode(state);
-					System.out.println("Put graph state");
 					graph.put(state, child);
 				}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
-				System.out.println("End loop");
 			}
 			n.expanded = true;
-			n.lock.unlock();
-			System.out.println("Release lock " + n.toString());
 			path.add(n.children.get(background_machine.getRandomJointMove(n.state)));
 		} else if (!background_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
@@ -473,10 +464,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !machine.isTerminal(n.state)) {
-			n.lock.lock();
-			if (n.expanded) {
-				n.lock.unlock();
-				return;
+			if(n.started.getAndSet(true)) {
+				while(true) {
+					if (n.expanded) return;
+				}
 			}
 			List<Move> moves = machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
@@ -496,7 +487,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				n.children.put(jointMove, child);
 			}
 			n.expanded = true;
-			n.lock.unlock();
 		} else if (!machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
@@ -504,14 +494,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected void Expand_solver(XNode n) throws MoveDefinitionException, TransitionDefinitionException {//Assume only expand from max node
 		if (!n.expanded && !solver_machine.isTerminal(n.state)) {
-			System.out.println("Getting lock");
-			n.lock.lock();
-			System.out.println("Got lock " + n.toString());
-			if (n.expanded) {
-				n.lock.unlock();
-				return;
+			if(n.started.getAndSet(true)) {
+				while(true) {
+					if (n.expanded) return;
+				}
 			}
-			System.out.println("Get legal moves");
 			List<Move> moves = solver_machine.getLegalMoves(n.state, self_index);
 			int size = moves.size();
 			n.legalMoves = moves.toArray(new Move[size]);
@@ -519,24 +506,17 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				Move move = n.legalMoves[i];
 				n.legalJointMoves.put(move, new ArrayList<List<Move>>());
 			}
-			System.out.println("Get legal joint moves");
 			for (List<Move> jointMove: solver_machine.getLegalJointMoves(n.state)) {
-				System.out.println("Get next state");
 				OpenBitSet state = solver_machine.getNextState(n.state, jointMove);
-				System.out.println("Get graph state");
 				XNode child = graph.get(state);
 				if(child == null) {
 					child = new XNode(state);
-					System.out.println("Put graph state");
 					graph.put(state, child);
 				}
 				n.legalJointMoves.get(jointMove.get(self_index)).add(jointMove);
 				n.children.put(jointMove, child);
-				System.out.println("End loop");
 			}
 			n.expanded = true;
-			n.lock.unlock();
-			System.out.println("Release lock " + n.toString());
 		} else if (!solver_machine.isTerminal(n.state)) {
 			//System.out.println("ERROR. Tried to expand node that was previously expanded");
 		}
