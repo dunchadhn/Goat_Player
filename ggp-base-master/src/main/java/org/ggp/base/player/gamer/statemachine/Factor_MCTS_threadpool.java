@@ -142,11 +142,11 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		solver_machine = new ThreadStateMachine(machine,self_index);
 		Expand(root);
 		thread = new Thread(new runMCTS());
-		//solver = new Thread(new solver());
+		solver = new Thread(new solver());
 		depthCharges = 0;
 		last_depthCharges = 0;
 		thread.start();
-		//solver.start();
+		solver.start();
 
 		finishBy = timeout - buffer;
 		System.out.println("NumThreads: " + num_threads);
@@ -184,10 +184,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr, moves);
-		if(!solver.isAlive()) {
+		/*if(!solver.isAlive()) {
 			solver = new Thread(new solver());
 			solver.run();
-		}
+		}*/
 		thread_pool.getQueue().clear();
 		graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
