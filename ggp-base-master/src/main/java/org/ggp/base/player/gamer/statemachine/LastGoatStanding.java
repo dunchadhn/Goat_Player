@@ -2,11 +2,11 @@ package org.ggp.base.player.gamer.statemachine;
 
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
@@ -44,7 +44,7 @@ public class LastGoatStanding extends FactorGamer {
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
 	private volatile int num_per;
-	private HashMap<OpenBitSet, Double> valueMap;
+	private ConcurrentHashMap<OpenBitSet, Double> valueMap;
 	private volatile double total_background = 0;
 	private volatile double total_threadpool = 0;
 	private volatile double loops = 0;
@@ -104,7 +104,7 @@ public class LastGoatStanding extends FactorGamer {
 	}
 
 	protected void initialize(long timeout, OpenBitSet curr, Role role) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		valueMap = new HashMap<OpenBitSet, Double>();
+		valueMap = new ConcurrentHashMap<OpenBitSet, Double>();
 		if(single) {
 			machine = getStateMachine();
 		}
