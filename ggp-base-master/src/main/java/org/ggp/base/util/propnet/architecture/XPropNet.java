@@ -90,9 +90,10 @@ public final class XPropNet
 	public XPropNet(PropNet prop)
 	{
 		System.out.println("XPropNet initializing...");
-		prop.renderToFile("preOpt.dot");
+
+		//prop.renderToFile("preOpt.dot");
 		optimizeProp(prop);
-		prop.renderToFile("postOpt.dot");
+		//prop.renderToFile("postOpt.dot");
 
 		System.exit(0);
 
