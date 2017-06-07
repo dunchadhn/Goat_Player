@@ -170,6 +170,7 @@ public class LastGoatStanding extends FactorGamer {
 			solver = new Thread(new solver());
 		}
 		if (!thread.isAlive()) {
+			valueMap.clear();
 			thread = new Thread(new runMCTS());
 		}
 		thread_pool.getQueue().clear();
@@ -201,6 +202,7 @@ public class LastGoatStanding extends FactorGamer {
 			try {
 				while(true) {
 					if (Solver() > -1) break;
+					valueMap.clear();
 				}
 			} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
 				e.printStackTrace();
