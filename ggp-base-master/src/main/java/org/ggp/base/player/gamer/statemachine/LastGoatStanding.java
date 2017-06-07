@@ -156,6 +156,7 @@ public class LastGoatStanding extends FactorGamer {
 		if (root == null) {
 			System.out.println("ERROR. Current State not in tree");
 			root = new XNode(currentState);
+			Expand(root);
 		}
 	}
 
