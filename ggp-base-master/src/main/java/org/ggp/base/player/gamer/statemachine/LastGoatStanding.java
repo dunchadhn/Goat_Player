@@ -32,7 +32,7 @@ public class LastGoatStanding extends FactorGamer {
 	private Stack<data> stack;
 	private List<Role> roles;
 	private int self_index, num_threads;
-	private volatile double depthCharges, last_depthCharges;
+	private volatile int depthCharges, last_depthCharges;
 	private long finishBy;
 	private volatile XNode root;
 	private List<XNode> path;
