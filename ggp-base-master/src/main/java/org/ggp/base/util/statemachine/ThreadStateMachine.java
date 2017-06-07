@@ -592,7 +592,7 @@ public class ThreadStateMachine extends XMachine {
         	}
 
         }
-        System.out.println("ERROR! Reward not defined in state " + state.toString());
+        System.out.println("ERROR! Curr Reward not defined in state " + state.toString());
         System.exit(0);
         return 0;
     }
