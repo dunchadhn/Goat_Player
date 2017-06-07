@@ -351,6 +351,7 @@ public class The_Goat_Ultimatum extends FactorGamer {
 			++n.visits;
 			if (background_machine.isTerminal(n.state)) return;
 			if (n.children.isEmpty()) return;
+			if (n.solved) return;
 
 			double maxValue = Double.NEGATIVE_INFINITY;
 			double parentVal = n.C_CONST * Math.sqrt(Math.log(n.visits));
