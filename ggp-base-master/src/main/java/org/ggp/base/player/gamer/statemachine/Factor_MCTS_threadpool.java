@@ -2,11 +2,11 @@ package org.ggp.base.player.gamer.statemachine;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
@@ -44,7 +44,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private ThreadStateMachine background_machine;
 	private ThreadStateMachine solver_machine;
 	private volatile int num_per;
-	private ConcurrentHashMap<OpenBitSet, XNode> graph;
+	private HashMap<OpenBitSet, XNode> graph;
 	//private volatile double total_select = 0;
 	//private volatile double total_expand = 0;
 	private volatile double total_background = 0;
@@ -121,7 +121,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected void initialize(long timeout, OpenBitSet curr, Role role) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
-		graph = new ConcurrentHashMap<OpenBitSet, XNode>();
+		graph = new HashMap<OpenBitSet, XNode>();
 		if(single) {
 			machine = getStateMachine();
 		}
