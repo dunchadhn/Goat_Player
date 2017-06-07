@@ -33,7 +33,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private Stack<data> stack;
 	private List<Role> roles;
 	private int self_index, num_threads;
-	private volatile int depthCharges, last_depthCharges;
+	private volatile double depthCharges, last_depthCharges;
 	private long finishBy;
 	private volatile XNode root;
 	private List<XNode> path;
@@ -51,9 +51,9 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private volatile double total_background = 0;
 	private volatile double total_threadpool = 0;
 	//private volatile double total_playout = 0;
-	private volatile int loops = 0;
+	private volatile double loops = 0;
 	//private volatile double total_backpropagate = 0;
-	private volatile int play_loops = 0;
+	private volatile double play_loops = 0;
 	private int num_players = 1;
 	private boolean single = true;
 	private int buffer = 3000;
@@ -158,10 +158,6 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			GoalDefinitionException, InterruptedException, ExecutionException {
 		//More efficient to use Compulsive Deliberation for one player games
 		//Use two-player implementation for two player games
-		if(!solver.isAlive()) {
-			solver = new Thread(new solver());
-			solver.run();
-		}
 		depthCharges = 0;
 		//total_select = 0;
 		//total_expand = 0;
@@ -188,6 +184,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 
 	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
 		initializeMCTS(curr, moves);
+		if(!solver.isAlive()) {
+			solver = new Thread(new solver());
+			solver.run();
+		}
 		thread_pool.getQueue().clear();
 		graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
@@ -297,22 +297,29 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			double start = System.currentTimeMillis();
 			double val = 0;
 			double curr = 0;
-			int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
-			ThreadStateMachine mac = thread_machines[thread_ind];
-			for (int i = 0; i < num; ++i) {
-				//double start = System.currentTimeMillis();
-				try {
-					curr = mac.Playout(node);
-				} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+			if (node.isSolved) {
+				val += (curr * num);
+				node.sum_x += (curr * num);
+				node.sum_x2 += num*(curr*curr);
+				node.n += num;
+			} else {
+				int thread_ind = (int) (Thread.currentThread().getId() % num_threads);
+				ThreadStateMachine mac = thread_machines[thread_ind];
+				for (int i = 0; i < num; ++i) {
+					//double start = System.currentTimeMillis();
+					try {
+						curr = mac.Playout(node);
+					} catch (MoveDefinitionException | TransitionDefinitionException | GoalDefinitionException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					val += curr;
+					node.sum_x += curr;
+					node.sum_x2 += (curr*curr);
+					++node.n;
+					//++play_loops;
+					//total_playout += (System.currentTimeMillis() - start);
 				}
-				val += curr;
-				node.sum_x += curr;
-				node.sum_x2 += (curr*curr);
-				++node.n;
-				//++play_loops;
-				//total_playout += (System.currentTimeMillis() - start);
 			}
 			++play_loops;
 			Struct s = new Struct(val, p, num);
@@ -331,18 +338,16 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			double visits = 0;
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				XNode succNode = n.children.get(jointMove);
-				if (succNode.updates != 0) {
-					if (succNode.isSolved) {
-						if (succNode.solvedValue < minValue) {
-							visits = -1;
-							minValue = succNode.solvedValue;
-						}
-					} else {
-						double nodeValue = succNode.utility / succNode.updates;
-						if (nodeValue < minValue) {
-							visits = succNode.updates;
-							minValue = nodeValue;
-						}
+				if (succNode.isSolved) {
+					if (succNode.solvedValue < minValue) {
+						visits = -1;
+						minValue = succNode.solvedValue;
+					}
+				} else if (succNode.updates != 0) {
+					double nodeValue = succNode.utility / succNode.updates;
+					if (nodeValue < minValue) {
+						visits = succNode.updates;
+						minValue = nodeValue;
 					}
 				}
 			}
@@ -391,6 +396,10 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 				for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 					XNode succNode = n.children.get(jointMove);
 					if (succNode.visits == 0) {
+						++succNode.visits;
+						path.add(succNode);
+						return;
+					} else if (succNode.isSolved) {
 						++succNode.visits;
 						path.add(succNode);
 						return;
