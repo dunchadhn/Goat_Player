@@ -909,6 +909,9 @@ public final class PropNet
 					System.out.println("Removing2: " + p.getName() + "  " + li.getName());
 				}
 			}
+			for (Component rem : toRemove) {
+				disjointSet.remove(rem);
+			}
 
 
 
