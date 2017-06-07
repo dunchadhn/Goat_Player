@@ -30,6 +30,7 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 public class Factor_MCTS_threadpool extends FactorGamer {
 	protected Player p;
 	private XStateMachine machine;
+	private Stack<data> stack;
 	private List<Role> roles;
 	private int self_index, num_threads;
 	private volatile int depthCharges, last_depthCharges;
@@ -55,7 +56,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	private volatile int play_loops = 0;
 	private int num_players = 1;
 	private boolean single = true;
-	private int buffer = 2500;
+	private int buffer = 3000;
 
 	public class Struct {
 		public double v;
@@ -172,26 +173,21 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		play_loops = 0;
 		System.out.println("Background Depth Charges: " + last_depthCharges);
 		finishBy = timeout - buffer;
-		return MCTS(curr);
+		return MCTS(curr, moves);
 	}
 
-	protected void initializeMCTS(OpenBitSet currentState) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
+	protected void initializeMCTS(OpenBitSet currentState, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, InterruptedException {
 		if (root == null) System.out.println("NULL ROOT");
 		if (root.state.equals(currentState)) return;
-		for (List<Move> jointMove : machine.getLegalJointMoves(root.state)) {
-			OpenBitSet nextState = machine.getNextState(root.state, jointMove);
-			if (currentState.equals(nextState)) {
-				root = root.children.get(jointMove);
-				if (root == null) System.out.println("NOT IN MAP");
-				return;
-			}
+		root = root.children.get(moves);
+		if (root == null) {
+			System.out.println("ERROR. Current State not in tree");
+			root = new XNode(currentState);
 		}
-		System.out.println("ERROR. Current State not in tree");
-		root = new XNode(currentState);
 	}
 
-	protected MoveStruct MCTS(OpenBitSet curr) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
-		initializeMCTS(curr);
+	protected MoveStruct MCTS(OpenBitSet curr, List<Move> moves) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException, InterruptedException, ExecutionException {
+		initializeMCTS(curr, moves);
 		thread_pool.getQueue().clear();
 		graph.clear();
 		int num_rests = (int) ((finishBy - System.currentTimeMillis()) / 1000);
@@ -526,6 +522,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	public void stateMachineStop() {
 		thread_pool.shutdownNow();
 		thread.stop();
+		solver.stop();
 	}
 
 	@SuppressWarnings("deprecation")
@@ -534,6 +531,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 		// TODO Auto-generated method stub
 		thread_pool.shutdownNow();
 		thread.stop();
+		solver.stop();
 	}
 
 
@@ -607,7 +605,7 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 			}
 		}
 		System.out.println();
-		System.out.println("GAME SOLVED, NO 100");
+		System.out.println("GAME SOLVED, MAX SCORE: " + alpha);
 		System.out.println();
 		return alpha;
 	}
@@ -631,11 +629,12 @@ public class Factor_MCTS_threadpool extends FactorGamer {
 	}
 
 	protected int iterative(XNode node, int alpha, int beta, XNode solver_root) throws MoveDefinitionException, TransitionDefinitionException, GoalDefinitionException {
-		Stack<data> stack = new Stack<data>();
+		stack = new Stack<data>();
 		data first = new data(node, alpha, beta);
 		stack.push(first);
 		while(!stack.isEmpty()) {
 			if (!solver_root.equals(root)) {
+				stack.clear();
 				return -1;
 			}
 			data d = stack.pop();
