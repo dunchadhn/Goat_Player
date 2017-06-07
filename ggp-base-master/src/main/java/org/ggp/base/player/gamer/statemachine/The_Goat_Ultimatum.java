@@ -310,15 +310,16 @@ public class The_Goat_Ultimatum extends FactorGamer {
 			for (List<Move> jointMove : n.legalJointMoves.get(move)) {
 				XNode succNode = n.children.get(jointMove);
 				double nodeValue = 0;
-				double s = 100;
-				double u = 100;
-				if (succNode.solved) s = succNode.solvedValue;
-				if (succNode.updates != 0) u = succNode.utility / succNode.updates;
-				if (s < u) nodeValue = s;
-				else nodeValue = u;
-				if (nodeValue < minValue) {
-					visits = succNode.updates;
-					minValue = nodeValue;
+				if (succNode.solved) {
+					if(succNode.solvedValue < minValue) {
+						minValue = succNode.solvedValue;
+					}
+				} else if (succNode.updates != 0) {
+					nodeValue = succNode.utility/succNode.updates;
+					if (nodeValue < minValue) {
+						visits = succNode.updates;
+						minValue = nodeValue;
+					}
 				}
 			}
 			System.out.println("Move: " + move + " Value: " + (minValue == Double.POSITIVE_INFINITY ? "N/A" : String.valueOf(minValue)) + " Visits: " + visits);
