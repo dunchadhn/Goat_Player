@@ -339,7 +339,7 @@ public class The_Goat_Ultimatum extends FactorGamer {
 		mean_square *= mean_square;
 		double avg_square = nod.sum_x2 / nod.n;
 		if (avg_square > mean_square) nod.C_CONST = Math.sqrt(avg_square - mean_square);
-		if (nod.C_CONST < 60) nod.C_CONST = 60;
+		if (nod.C_CONST < 70) nod.C_CONST = 70;
 		for (int i = 0; i < size; ++i) {
 			nod = path.get(i);
 			nod.utility += val;
